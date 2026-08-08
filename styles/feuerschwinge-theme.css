@@ -224,6 +224,360 @@
   text-shadow: 0 0 5px rgba(239, 88, 24, .42);
 }
 
+/* Foundry chat messages: luminous identity details without animated effects. */
+:is(#chat-log, .chat-log, .chat-popout) .chat-message .message-header .message-sender {
+  color: var(--tovf-color-gold-light);
+  font-weight: 700;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, .95),
+    0 0 5px rgba(255, 196, 105, .78),
+    0 0 11px rgba(239, 88, 24, .42);
+  animation: none;
+}
+
+:is(#chat-log, .chat-log, .chat-popout) .chat-message .message-header .message-timestamp {
+  color: var(--tovf-color-ember-hot);
+  font-weight: 600;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, .95),
+    0 0 5px rgba(255, 138, 43, .72),
+    0 0 10px rgba(239, 88, 24, .38);
+  animation: none;
+}
+
+/* Foundry chat: keep the Feuerschwinge treatment isolated from other sidebar tabs. */
+:is(#chat, #chat-popout, #chat-notifications) {
+  color: var(--tovf-color-text);
+  font-family: var(--tovf-font-ui);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-scroll {
+  border: 1px solid rgba(117, 64, 31, .72);
+  border-radius: var(--tovf-radius);
+  background:
+    radial-gradient(circle at 14% 0%, rgba(239, 88, 24, .14), transparent 34%),
+    linear-gradient(180deg, rgba(29, 16, 11, .94), rgba(8, 6, 5, .97));
+  box-shadow: inset 0 0 22px rgba(0, 0, 0, .46), 0 0 10px rgba(239, 88, 24, .1);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message {
+  color: var(--tovf-color-text);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(239, 88, 24, .12), transparent 42%),
+    linear-gradient(145deg, rgba(48, 25, 16, .96), rgba(17, 10, 8, .98));
+  border: 1px solid var(--tovf-color-bronze);
+  border-left: 3px solid var(--tovf-color-bronze-light);
+  box-shadow: var(--tovf-shadow-panel);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message:is(.whisper, .blind) {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(181, 91, 184, .13), transparent 42%),
+    linear-gradient(145deg, rgba(43, 25, 39, .97), rgba(15, 9, 14, .98));
+  border-color: #805578;
+  border-left-color: #b276a8;
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.emote {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(213, 161, 93, .14), transparent 42%),
+    linear-gradient(145deg, rgba(50, 31, 18, .97), rgba(17, 11, 7, .98));
+  border-color: var(--tovf-color-gold);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message .message-header {
+  padding-bottom: .25rem;
+  border-bottom: 1px solid rgba(179, 106, 50, .42);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message :is(.flavor-text, .whisper-to) {
+  color: var(--tovf-color-text-muted);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message .message-content {
+  color: var(--tovf-color-text);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message a:not(.button) {
+  color: var(--tovf-color-ember-hot);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .chat-card .card-header > header {
+  color: var(--tovf-color-text);
+  background:
+    radial-gradient(circle at 0% 50%, rgba(239, 88, 24, .16), transparent 48%),
+    linear-gradient(180deg, rgba(56, 30, 19, .96), rgba(24, 14, 10, .98));
+  border-color: var(--tovf-color-bronze-light);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, .34);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .chat-card .card-header > header img {
+  border-color: var(--tovf-color-ember-hot);
+  background: rgba(8, 6, 5, .86);
+  box-shadow: 0 0 7px rgba(239, 88, 24, .38);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .chat-card .card-header > header .name h5 {
+  color: var(--tovf-color-gold-light);
+  text-shadow: 0 1px 2px #000, 0 0 5px rgba(239, 88, 24, .34);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .chat-card .card-header > header .name p {
+  color: var(--tovf-color-text-muted);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .chat-card .card-header > header .fa-chevron-down {
+  color: var(--tovf-color-gold);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .chat-card .menu .light-button {
+  --text-color: var(--tovf-color-gold-light);
+  color: var(--tovf-color-gold-light);
+  background: var(--tovf-surface-control);
+  border-color: var(--tovf-color-bronze-light);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, .36);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .chat-card .menu .light-button::after {
+  border-color: rgba(213, 161, 93, .46);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .chat-card .menu .light-button:not([disabled]):is(:hover, :focus-visible) {
+  --text-color: #fff2d1;
+  color: #fff2d1;
+  background: var(--tovf-surface-control-hover);
+  border-color: var(--tovf-color-ember-hot);
+  box-shadow: var(--tovf-shadow-ember), inset 0 0 8px rgba(0, 0, 0, .3);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .chat-card .tags .tag {
+  color: var(--tovf-color-gold-light);
+  background: linear-gradient(180deg, rgba(98, 52, 28, .96), rgba(43, 24, 16, .98));
+  border-color: var(--tovf-color-bronze-light);
+  box-shadow: inset 0 0 5px rgba(0, 0, 0, .28);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-form {
+  padding-top: var(--tovf-space-sm);
+  border-top: 1px solid var(--tovf-color-bronze);
+  background: linear-gradient(180deg, rgba(30, 16, 11, .9), rgba(8, 6, 5, .96));
+  box-shadow: 0 -5px 15px rgba(0, 0, 0, .3);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) #chat-message > .editor-container {
+  color: var(--tovf-color-text);
+  background: rgba(8, 6, 5, .9);
+  border-color: var(--tovf-color-bronze);
+  border-radius: var(--tovf-radius-small);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, .38);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) #chat-message > .editor-container:focus-within {
+  border-color: var(--tovf-color-ember-hot);
+  outline: 1px solid rgba(239, 88, 24, .34);
+  box-shadow: var(--tovf-shadow-ember), inset 0 0 10px rgba(0, 0, 0, .38);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) #chat-message menu {
+  color: var(--tovf-color-gold-light);
+  background:
+    radial-gradient(circle at 8% 50%, rgba(239, 88, 24, .13), transparent 38%),
+    linear-gradient(180deg, rgba(53, 28, 18, .98), rgba(20, 12, 9, .99));
+  border: 1px solid var(--tovf-color-bronze);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, .34), 0 2px 8px rgba(0, 0, 0, .3);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) #chat-message menu :is(button, .pm-dropdown) {
+  color: var(--tovf-color-gold-light);
+  text-shadow: 0 1px 2px #000, 0 0 4px rgba(239, 88, 24, .28);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) #chat-message menu :is(button, .pm-dropdown):is(:hover, :focus-visible, .active) {
+  color: #fff2d1;
+  background: linear-gradient(180deg, rgba(198, 75, 23, .82), rgba(91, 30, 13, .9));
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, .28), 0 0 6px rgba(239, 88, 24, .34);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) #chat-message menu button.source-code-action {
+  color: var(--tovf-color-ember-hot);
+  background: rgba(79, 28, 13, .72);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) #chat-message menu .pm-dropdown ul {
+  color: var(--tovf-color-text);
+  background: var(--tovf-surface-panel);
+  border: 1px solid var(--tovf-color-bronze-light);
+  box-shadow: var(--tovf-shadow-panel);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) #chat-message menu .pm-dropdown ul li:is(:hover, :focus-within) {
+  color: #fff2d1;
+  background: rgba(154, 59, 24, .58);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) #chat-controls :is(button, select),
+:is(#chat, #chat-popout, #chat-notifications) .jump-to-bottom {
+  color: var(--tovf-color-gold-light);
+  background: var(--tovf-surface-control);
+  border-color: var(--tovf-color-bronze);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) #chat-controls :is(button, select):is(:hover, :focus-visible),
+:is(#chat, #chat-popout, #chat-notifications) .jump-to-bottom:is(:hover, :focus-visible) {
+  color: #fff2d1;
+  background: var(--tovf-surface-control-hover);
+  border-color: var(--tovf-color-ember-hot);
+  box-shadow: var(--tovf-shadow-ember);
+}
+
+/* Black Flag PC, NPC and Item sheets. */
+:is(.black-flag.actor.sheet, .black-flag.item.sheet) {
+  --bf-background-color-blue: var(--tovf-color-bronze);
+  --bf-background-color-dark-blue: var(--tovf-color-bronze-dark);
+  --bf-background-color-gray: var(--tovf-color-coal-soft);
+  --bf-background-color-white: var(--tovf-color-coal);
+  --bf-background-color-half-white: rgba(41, 25, 17, .84);
+  --bf-background-color-quarter-white: rgba(41, 25, 17, .52);
+  --bf-border-color-black: var(--tovf-color-void);
+  --bf-border-color-blue: var(--tovf-color-bronze-light);
+  --bf-border-color-light-blue: var(--tovf-color-ember-hot);
+  --bf-border-color-gray: var(--tovf-color-bronze);
+  --bf-button-background-color-regular: var(--tovf-color-bronze-dark);
+  --bf-button-background-color-focus: var(--tovf-color-bronze);
+  --bf-button-text-color-regular: var(--tovf-color-gold-light);
+  --bf-button-text-color-focus: #fff2d1;
+  --bf-button-shadow-blue: rgba(239, 88, 24, .58);
+  --bf-icon-color-black: var(--tovf-color-text);
+  --bf-icon-color-blue: var(--tovf-color-ember-hot);
+  --bf-scrollbar-color: var(--tovf-color-ember);
+  --bf-text-color-black: var(--tovf-color-text);
+  --bf-text-color-blue: var(--tovf-color-gold-light);
+  --bf-text-color-light-label: var(--tovf-color-text-muted);
+  --bf-text-color-white: #fff2d1;
+  --bf-text-shadow-blue: rgba(239, 88, 24, .7);
+  --bf-gradiant-blue: linear-gradient(180deg, #8c441f, #4a2113 52%, #24110c);
+  --color-text-primary: var(--tovf-color-text);
+  --color-text-secondary: var(--tovf-color-text-muted);
+  --color-warm-1: var(--tovf-color-ember-hot);
+  --color-warm-2: var(--tovf-color-ember);
+  color: var(--tovf-color-text);
+  font-family: var(--tovf-font-ui);
+}
+
+:is(.black-flag.actor.sheet, .black-flag.item.sheet) .window-header {
+  color: var(--tovf-color-gold-light);
+  background:
+    radial-gradient(circle at 18% 120%, rgba(255, 112, 28, .34), transparent 34%),
+    linear-gradient(180deg, #541f10, #160907);
+  border-bottom: var(--tovf-border-strong);
+  box-shadow: inset 0 -1px var(--tovf-color-ember), 0 3px 10px rgba(239, 88, 24, .2);
+}
+
+:is(.black-flag.actor.sheet, .black-flag.item.sheet) .window-content {
+  color: var(--tovf-color-text);
+  background: var(--tovf-surface-window);
+}
+
+:is(.black-flag.actor.sheet, .black-flag.item.sheet) .sheet-header {
+  padding: var(--tovf-space-sm);
+  border: 1px solid var(--tovf-color-bronze);
+  border-radius: var(--tovf-radius);
+  background: var(--tovf-surface-panel);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, .34);
+}
+
+:is(.black-flag.actor.sheet, .black-flag.item.sheet) .sheet-header .profile,
+:is(.black-flag.actor.sheet, .black-flag.item.sheet) .sheet-header .icon > img {
+  border-color: var(--tovf-color-ember-hot);
+  box-shadow: 0 0 8px rgba(239, 88, 24, .4);
+}
+
+:is(.black-flag.actor.sheet, .black-flag.item.sheet) .document-name {
+  color: var(--tovf-color-gold-light);
+  text-shadow: 0 1px 2px #000, 0 0 7px rgba(239, 88, 24, .32);
+}
+
+:is(.black-flag.actor.sheet, .black-flag.item.sheet) :is(fieldset, .block, .stat-block) {
+  color: var(--tovf-color-text);
+  background: var(--tovf-surface-panel);
+  border-color: var(--tovf-color-bronze);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, .28);
+}
+
+:is(.black-flag.actor.sheet, .black-flag.item.sheet) :is(legend, h1, h2, h3, h4, h5) {
+  color: var(--tovf-color-gold-light);
+  text-shadow: 0 1px 2px #000, 0 0 5px rgba(239, 88, 24, .25);
+}
+
+:is(.black-flag.actor.sheet, .black-flag.item.sheet) :is(input, select, textarea) {
+  color: var(--tovf-color-text);
+  background: rgba(8, 6, 5, .82);
+  border-color: var(--tovf-color-bronze);
+}
+
+:is(.black-flag.actor.sheet, .black-flag.item.sheet) :is(input, select, textarea):is(:hover:not(:disabled), :focus) {
+  border-color: var(--tovf-color-ember-hot);
+  box-shadow: 0 0 5px rgba(239, 88, 24, .45);
+}
+
+:is(.black-flag.actor.sheet, .black-flag.item.sheet) .sheet-navigation {
+  border-color: var(--tovf-color-bronze);
+}
+
+:is(.black-flag.actor.sheet, .black-flag.item.sheet) .sheet-navigation a {
+  color: var(--tovf-color-text-muted);
+  background: rgba(28, 18, 13, .78);
+  border-color: transparent;
+}
+
+:is(.black-flag.actor.sheet, .black-flag.item.sheet) .sheet-navigation a:is(:hover, :focus) {
+  color: var(--tovf-color-gold-light);
+  border-color: var(--tovf-color-ember);
+  background: rgba(92, 34, 15, .48);
+}
+
+:is(.black-flag.actor.sheet, .black-flag.item.sheet) .sheet-navigation a.active {
+  color: #fff2d1;
+  background: var(--tovf-surface-control);
+  border-color: var(--tovf-color-ember-hot);
+  box-shadow: inset 0 -2px var(--tovf-color-ember-hot), 0 0 7px rgba(239, 88, 24, .3);
+}
+
+:is(.black-flag.actor.sheet, .black-flag.item.sheet) :is(.items-header, .item-list .item, .items-list .item, table thead) {
+  color: var(--tovf-color-text);
+  background: rgba(45, 25, 17, .86);
+  border-color: var(--tovf-color-bronze);
+}
+
+:is(.black-flag.actor.sheet, .black-flag.item.sheet) :is(.item-list .item, .items-list .item):is(:hover, :focus-within) {
+  background: rgba(100, 42, 20, .55);
+  box-shadow: inset 3px 0 var(--tovf-color-ember-hot);
+}
+
+.black-flag.pc.sheet .abilities .ability .value {
+  color: var(--tovf-color-gold-light);
+  background: radial-gradient(circle, rgba(83, 38, 21, .96), rgba(20, 12, 9, .99));
+  border-color: var(--tovf-color-bronze-light);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, .38), 0 0 6px rgba(239, 88, 24, .18);
+}
+
+.black-flag.stat-block.sheet .sheet-header {
+  color: #fff2d1;
+  background: linear-gradient(90deg, #6f2c15, #30150e 72%, #180b08);
+  border-color: var(--tovf-color-ember-hot);
+}
+
+.black-flag.item.sheet:not(.concept) {
+  --item-background: rgba(29, 17, 12, .94);
+}
+
+.black-flag.item.sheet:not(.concept) [data-container-id="sheet-body"] {
+  color: var(--tovf-color-text);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(239, 88, 24, .1), transparent 34%),
+    linear-gradient(145deg, rgba(34, 19, 13, .96), rgba(10, 7, 6, .98));
+}
+
 /* Shared Foundry aliases used throughout the existing module styles. */
 :where(
   .application[class*="tovf-"],

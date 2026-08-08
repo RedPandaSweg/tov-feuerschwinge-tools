@@ -190,7 +190,13 @@ const damagePartsFor = (candidate) => {
 export function getTooltipDamageParts(item) {
     for (const candidate of combatActivityCandidates(item)) {
         const parts = damagePartsFor(candidate);
-        if (parts.length) return normalizeDamageParts(parts);
+        if (parts.length) {
+            const unique = new Map();
+            for (const part of normalizeDamageParts(parts)) {
+                unique.set(`${part.formula}\u0000${part.damageType ?? ""}`, part);
+            }
+            return [...unique.values()];
+        }
     }
     return [];
 }
@@ -345,16 +351,19 @@ export function initConfig() {
                 properties = [];
                 let property;
                 dt = getTooltipDamageParts(item).map(d => d.damageType);
-                damageTypes = dt && dt.length ? dt : [];
+                damageTypes = dt?.length ? [...new Set(dt.filter(Boolean))] : [];
                 materialComponents = "";
 
                 switch (itemType) {
                     case "weapon":
                         subtitle = CONFIG.BlackFlag.weaponTypes.localized[sourceItem.system.type?.value];
-                        property = game.i18n.localize(`BF.ACTIVITY.Type.${getActionType(item)}`);
+                        property = CONFIG.BlackFlag.actionTypes?.localized?.[getActionType(item)];
                         if (property) properties.push(property);
                         for (const propName of sourceItem.system.properties) {
-                            let prop = CONFIG.BlackFlag.weaponProperties.includes(propName) ? game.i18n.localize(`BF.WEAPON.Property.${propName}`) : undefined;
+                            const localizationKey = `BF.WEAPON.Property.${propName.charAt(0).toUpperCase()}${propName.slice(1)}`;
+                            let prop = CONFIG.BlackFlag.weaponProperties.includes(propName) && game.i18n.has(localizationKey)
+                                ? game.i18n.localize(localizationKey)
+                                : undefined;
                             if (prop) properties.push(prop);
                         }
                         break;
@@ -1144,7 +1153,8 @@ export function initConfig() {
 
             get label() {
                 if(!this.isActivity) return super.label;
-                return this.activity.name + ` (${this.item.name})`;
+                if (this.item.type === "weapon") return this.activity.name;
+                return `${this.activity.name} (${this.item.name})`;
             }
 
             get targets() {
@@ -1181,6 +1191,10 @@ export function initConfig() {
             }
 
             async _onLeftClick(event) {
+                if (this._isWeaponSet) {
+                    this.activityPanel?.toggle();
+                    return;
+                }
                 const activity = this.activity;
                 const used = await activity?.activate?.({ event, legacy: false }, { event });
                 if (used) {
@@ -1227,6 +1241,17 @@ export function initConfig() {
 
             async render(...args) {
                 await super.render(...args);
+                if (this._isWeaponSet) {
+                    this.activityPanel?.element?.remove();
+                    const buttons = activityList(this.item).map(activity => new DND5eItemButton({ item: activity }));
+                    this.activityPanel = new ARGON.MAIN.BUTTON_PANELS.ButtonPanel({
+                        id: `weapon-activities-${this._isPrimary ? "primary" : "secondary"}`,
+                        buttons
+                    });
+                    this.activityPanel._parent = this;
+                    ui.ARGON.buttonPanelContainer.appendChild(this.activityPanel.element);
+                    await this.activityPanel.render();
+                }
                 if (this.activity) {
                     const weapons = this.actor.items.filter((item) => item.consume?.target === this.activity.id);
                     ui.ARGON.updateItemButtons(weapons);
@@ -1248,7 +1273,7 @@ export function initConfig() {
                     }
                 }
                 if (useAmmo) {
-                    const ammoItem = this.item.system.ammunitionOptions[0]?.item;
+                    const ammoItem = this.item.system.ammunitionOptions?.[0]?.item;
                     if (!ammoItem) return null;
                     return Math.floor(ammoItem.system.quantity ?? 0);
                 } else if (consumeType === "attribute") {
