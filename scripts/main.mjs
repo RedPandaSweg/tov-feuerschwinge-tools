@@ -119,12 +119,13 @@ Hooks.once("init", () => {
 
 Hooks.once("ready", async () => {
   if (game.system.id !== "black-flag") return;
+  let namespaceMigrationSucceeded = true;
   try {
     await migrateToolNamespace();
   } catch (error) {
+    namespaceMigrationSucceeded = false;
     console.error(`${MODULE_ID} | Namespace migration failed`, error);
     ui.notifications.error(`Feuerschwinge-Tools: Die Übernahme alter Einstellungen und Flags ist fehlgeschlagen: ${error.message}`, { permanent: true });
-    return;
   }
   installLegacyNamespaceGuard();
   orderModuleMenus();
@@ -139,10 +140,12 @@ Hooks.once("ready", async () => {
     characterCreationOverrides: characterCreationOverridesApi,
     weaponOptionActivities: weaponOptionActivitiesApi
   });
-  try {
-    await runMigrations();
-  } catch (error) {
-    console.error(`${MODULE_ID} | Migration failed`, error);
-    ui.notifications.error(game.i18n.format("TOVF.Migration.Error", { message: error.message }));
+  if (namespaceMigrationSucceeded) {
+    try {
+      await runMigrations();
+    } catch (error) {
+      console.error(`${MODULE_ID} | Migration failed`, error);
+      ui.notifications.error(game.i18n.format("TOVF.Migration.Error", { message: error.message }));
+    }
   }
 });

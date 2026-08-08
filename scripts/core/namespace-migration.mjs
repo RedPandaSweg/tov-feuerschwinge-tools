@@ -18,6 +18,9 @@ function clone(value) {
 }
 
 function equal(left, right) {
+  if (typeof foundry.utils.equals === "function") {
+    return foundry.utils.equals(left, right);
+  }
   if (typeof foundry.utils.objectsEqual === "function") {
     return foundry.utils.objectsEqual(left, right);
   }
@@ -84,22 +87,45 @@ function worldDocuments() {
   return [...documents.values()];
 }
 
+function sourceFlags(document) {
+  if (document.documentName === "ActorDelta" && document.parent) {
+    return document.parent._source?.delta?.flags ?? {};
+  }
+  return document._source?.flags ?? {};
+}
+
+async function updateSourceFlags(document, flags) {
+  if (document.documentName === "ActorDelta" && document.parent) {
+    await document.parent.update({ [`delta.flags.${MODULE_ID}`]: flags });
+    return;
+  }
+  await document.update({ [`flags.${MODULE_ID}`]: flags });
+}
+
 async function migrateFlags() {
   let copied = 0;
   let retained = 0;
   const verified = [];
-  for (const document of worldDocuments()) {
-    const legacy = document.flags?.[LEGACY_MODULE_SCOPE];
+  for (const discovered of worldDocuments()) {
+    // Updating an embedded parent (notably a Scene Token) can replace its
+    // ActorDelta instance. Resolve the UUID again so that migration and
+    // verification do not operate on a stale embedded-document reference.
+    const document = await fromUuid(discovered.uuid).catch(() => null) ?? discovered;
+    // Prepared ActorDelta flags include values inherited from the base Actor.
+    // Only flags persisted on the Token's delta source belong to the delta.
+    const persistedFlags = sourceFlags(document);
+    const legacy = persistedFlags[LEGACY_MODULE_SCOPE];
     if (!legacy || typeof legacy !== "object") continue;
-    const current = document.flags?.[MODULE_ID];
+    const current = persistedFlags[MODULE_ID];
     const merged = foundry.utils.mergeObject(clone(legacy), clone(current ?? {}), { inplace: false });
     if (!current || !equal(current, merged)) {
-      await document.update({ [`flags.${MODULE_ID}`]: merged });
+      await updateSourceFlags(document, merged);
       copied++;
     } else {
       retained++;
     }
-    if (!equal(document.flags?.[MODULE_ID], merged)) {
+    const verifiedDocument = await fromUuid(document.uuid).catch(() => null) ?? document;
+    if (!equal(sourceFlags(verifiedDocument)[MODULE_ID], merged)) {
       throw new Error(`Flag verification failed: ${document.uuid}`);
     }
     verified.push(document.uuid);

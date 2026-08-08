@@ -1305,7 +1305,7 @@
   width: 180px;
   min-width: 160px;
   height: 350px;
-  margin-left: -100px;
+  margin-left: -60px;
   background: url("../assets/HUD/sidePhoenix.webp") center / contain no-repeat;
   filter: drop-shadow(0 3px 5px #000) drop-shadow(0 0 7px rgba(239, 88, 24, .38));
   animation: tovf-side-phoenix-pulse 3.2s ease-in-out infinite;
