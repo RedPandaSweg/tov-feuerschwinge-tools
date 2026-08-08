@@ -1,0 +1,435 @@
+/*
+ * Shared Feuerschwinge design system.
+ *
+ * Keep structural, feature-specific layout in the owning stylesheet. This file
+ * supplies stable colors, typography and reusable surface treatments so module
+ * applications can migrate to one visual language without duplicating values.
+ */
+
+:root {
+  --tovf-color-void: #080605;
+  --tovf-color-soot: #100b08;
+  --tovf-color-coal: #1c120d;
+  --tovf-color-coal-soft: #291911;
+  --tovf-color-bronze-dark: #4a2817;
+  --tovf-color-bronze: #75401f;
+  --tovf-color-bronze-light: #b36a32;
+  --tovf-color-gold: #d5a15d;
+  --tovf-color-gold-light: #f0d2a0;
+  --tovf-color-ember: #ef5818;
+  --tovf-color-ember-hot: #ff8a2b;
+  --tovf-color-text: #ead0a5;
+  --tovf-color-text-muted: #bfa786;
+  --tovf-color-danger: #cf3f2f;
+  --tovf-color-success: #8ca65a;
+  --tovf-surface-window:
+    radial-gradient(circle at 12% 0%, rgba(239, 88, 24, .2), transparent 30%),
+    radial-gradient(circle at 92% 100%, rgba(154, 39, 12, .14), transparent 34%),
+    linear-gradient(145deg, rgba(34, 17, 11, .985), rgba(8, 6, 5, .99));
+  --tovf-surface-panel:
+    radial-gradient(circle at 0% 50%, rgba(239, 88, 24, .12), transparent 42%),
+    linear-gradient(180deg, rgba(50, 23, 14, .94), rgba(14, 9, 7, .97));
+  --tovf-surface-control: linear-gradient(180deg, #763117, #3e160c);
+  --tovf-surface-control-hover: linear-gradient(180deg, #c64b17, #6f200d);
+  --tovf-border: 1px solid var(--tovf-color-bronze);
+  --tovf-border-strong: 1px solid var(--tovf-color-bronze-light);
+  --tovf-shadow-panel: 0 0 0 1px rgba(10, 5, 3, .9), 0 5px 16px rgba(0, 0, 0, .42), inset 0 0 18px rgba(0, 0, 0, .34);
+  --tovf-shadow-ember: 0 0 5px rgba(255, 138, 43, .5), 0 0 15px rgba(239, 88, 24, .28);
+  --tovf-radius-small: 3px;
+  --tovf-radius: 5px;
+  --tovf-space-xs: .3rem;
+  --tovf-space-sm: .5rem;
+  --tovf-space-md: .75rem;
+  --tovf-space-lg: 1rem;
+  --tovf-font-ui: "Roboto Condensed", "Signika", Arial, sans-serif;
+}
+
+.tov-contested-result { padding: .35rem .5rem; border-left: 3px solid var(--color-border-light-2); }
+.tov-contested-result.success { border-left-color: #3f8f4f; }
+.tov-contested-result.failure { border-left-color: #a33f3f; }
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.tov-macro-activity
+) {
+  --color-text-primary: var(--tovf-color-text);
+  --color-text-secondary: var(--tovf-color-text-muted);
+  --color-border-light-tertiary: var(--tovf-color-bronze);
+  --color-border-light-2: var(--tovf-color-bronze);
+  --color-warm-1: var(--tovf-color-ember-hot);
+  --color-warm-2: var(--tovf-color-ember);
+  color: var(--tovf-color-text);
+  font-family: var(--tovf-font-ui);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.tov-macro-activity
+) .window-header {
+  background:
+    radial-gradient(circle at 18% 120%, rgba(255, 112, 28, .34), transparent 34%),
+    linear-gradient(180deg, #541f10, #160907);
+  border-bottom: var(--tovf-border-strong);
+  color: var(--tovf-color-gold-light);
+  box-shadow: inset 0 -1px var(--tovf-color-ember), 0 3px 10px rgba(239, 88, 24, .2);
+  text-shadow: 0 1px 2px #000, 0 0 7px rgba(255, 112, 28, .32);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.tov-macro-activity
+) .window-content {
+  color: var(--tovf-color-text);
+  background: var(--tovf-surface-window);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.tov-macro-activity
+) :is(h1, h2, h3, h4, legend, summary) {
+  color: var(--tovf-color-gold-light);
+  font-family: var(--tovf-font-ui);
+  text-shadow: 0 1px 2px #000, 0 0 6px rgba(239, 88, 24, .3);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.tov-macro-activity
+) :is(fieldset, section.tovf-panel, .tovf-theme-panel) {
+  border: 1px solid color-mix(in srgb, var(--tovf-color-ember) 48%, var(--tovf-color-bronze));
+  border-radius: var(--tovf-radius);
+  background: var(--tovf-surface-panel);
+  box-shadow: inset 3px 0 9px rgba(239, 88, 24, .08), inset 0 0 14px rgba(0, 0, 0, .3);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.tov-macro-activity
+) :is(button, a.button) {
+  border: var(--tovf-border);
+  border-radius: var(--tovf-radius-small);
+  color: var(--tovf-color-gold-light);
+  background: var(--tovf-surface-control);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, .3);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.tov-macro-activity
+) :is(button, a.button):is(:hover, :focus-visible, .active) {
+  border-color: var(--tovf-color-ember-hot);
+  color: #fff2d1;
+  background: var(--tovf-surface-control-hover);
+  box-shadow: var(--tovf-shadow-ember), inset 0 0 9px rgba(0, 0, 0, .34);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.tov-macro-activity
+) :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  border: var(--tovf-border);
+  border-radius: var(--tovf-radius-small);
+  color: var(--tovf-color-text);
+  background: rgba(8, 6, 5, .82);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.tov-macro-activity
+) :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus {
+  border-color: var(--tovf-color-ember-hot);
+  outline: 1px solid rgba(239, 88, 24, .4);
+  box-shadow: var(--tovf-shadow-ember);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.tov-macro-activity
+) :is(.tabs, nav.tabs) {
+  border-color: var(--tovf-color-bronze);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.tov-macro-activity
+) :is(.tabs, nav.tabs) [data-tab].active {
+  color: var(--tovf-color-ember-hot);
+  background: linear-gradient(180deg, rgba(154, 59, 24, .28), rgba(71, 24, 10, .18));
+  box-shadow: inset 0 -2px var(--tovf-color-ember-hot);
+  text-shadow: 0 0 8px rgba(239, 88, 24, .62);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.tov-macro-activity
+) table {
+  border: var(--tovf-border);
+  color: var(--tovf-color-text);
+  background: rgba(10, 7, 6, .58);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.tov-macro-activity
+) table thead {
+  color: var(--tovf-color-gold-light);
+  background: linear-gradient(180deg, rgba(112, 39, 15, .9), rgba(49, 20, 12, .92));
+  box-shadow: inset 0 -1px rgba(239, 88, 24, .5);
+}
+
+/* Opt-in utilities for staged per-window migrations. */
+.tovf-theme-panel {
+  padding: var(--tovf-space-md);
+}
+
+.tovf-theme-divider {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(90deg, transparent, var(--tovf-color-ember-hot), transparent);
+  box-shadow: 0 0 8px rgba(239, 88, 24, .42);
+}
+
+.tovf-theme-muted {
+  color: var(--tovf-color-text-muted);
+}
+
+.tovf-theme-ember {
+  color: var(--tovf-color-ember-hot);
+  text-shadow: 0 0 5px rgba(239, 88, 24, .42);
+}
+
+/* Shared Foundry aliases used throughout the existing module styles. */
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.bfi-weapon-enchantment,
+  .application.tov-macro-activity
+) {
+  --background: rgba(13, 9, 7, .98);
+  --color-bg: var(--tovf-color-soot);
+  --color-bg-option: var(--tovf-color-coal-soft);
+  --color-border-highlight: var(--tovf-color-ember-hot);
+  --color-border-light-primary: var(--tovf-color-bronze-light);
+  --color-border-light-1: var(--tovf-color-bronze-light);
+  --color-text-subtle: var(--tovf-color-text-muted);
+  --color-text-hyperlink: var(--tovf-color-ember-hot);
+  --color-level-success: var(--tovf-color-success);
+  --color-level-warning: var(--tovf-color-gold);
+  --color-level-error: var(--tovf-color-danger);
+  border-color: var(--tovf-color-bronze-light);
+  box-shadow: var(--tovf-shadow-panel), 0 0 14px rgba(239, 88, 24, .16);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.bfi-weapon-enchantment,
+  .application.tov-macro-activity
+) :is(label, p, li, td, th, .hint, .notes) {
+  color: inherit;
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.bfi-weapon-enchantment,
+  .application.tov-macro-activity
+) :is(.hint, .notes, small, .subtitle) {
+  color: var(--tovf-color-text-muted);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.bfi-weapon-enchantment,
+  .application.tov-macro-activity
+) a:not(.button) {
+  color: var(--tovf-color-ember-hot);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.bfi-weapon-enchantment,
+  .application.tov-macro-activity
+) :is(input[type="checkbox"], input[type="radio"], progress) {
+  accent-color: var(--tovf-color-ember);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.bfi-weapon-enchantment,
+  .application.tov-macro-activity
+) :is(
+  .sc-row,
+  .sc-recipe,
+  .sc-project,
+  .sc-config-section,
+  .sc-dashboard-summary,
+  .sc-dashboard-downtime,
+  .sc-dashboard-projects,
+  .sc-session-players,
+  .sc-session-actor,
+  .sc-station-preset,
+  .sc-session-level,
+  .sc-session-item,
+  .tovf-gm-project,
+  .bfi-definition,
+  .bfi-macro-config
+) {
+  border-color: color-mix(in srgb, var(--tovf-color-ember) 42%, var(--tovf-color-bronze));
+  background: var(--tovf-surface-panel);
+  box-shadow: inset 3px 0 8px rgba(239, 88, 24, .1), inset 0 0 12px rgba(0, 0, 0, .3);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.bfi-weapon-enchantment,
+  .application.tov-macro-activity
+) :is(.sc-row, .sc-recipe, .sc-project, .sc-config-section):hover {
+  border-color: var(--tovf-color-ember-hot);
+  background:
+    radial-gradient(circle at 0% 50%, rgba(255, 112, 28, .2), transparent 38%),
+    linear-gradient(180deg, rgba(74, 29, 15, .94), rgba(20, 10, 8, .97));
+  box-shadow: inset 3px 0 10px rgba(255, 112, 28, .18), 0 0 8px rgba(239, 88, 24, .14);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.bfi-weapon-enchantment,
+  .application.tov-macro-activity
+) :is(
+  .recipe-drop-zone,
+  .target-drop-zone,
+  .tool-drop-zone,
+  .ingredient-drop-zone,
+  .item-drop-zone,
+  .setting-item-drop,
+  .sc-session-item-drop
+) {
+  border-color: var(--tovf-color-bronze-light);
+  color: var(--tovf-color-text-muted);
+  background: rgba(8, 6, 5, .48);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.bfi-weapon-enchantment,
+  .application.tov-macro-activity
+) :is(
+  .recipe-drop-zone,
+  .target-drop-zone,
+  .tool-drop-zone,
+  .ingredient-drop-zone,
+  .item-drop-zone,
+  .setting-item-drop,
+  .sc-session-item-drop
+):hover {
+  border-color: var(--tovf-color-ember-hot);
+  color: var(--tovf-color-gold-light);
+  background: rgba(91, 31, 12, .35);
+  box-shadow: inset 0 0 12px rgba(239, 88, 24, .12);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.bfi-weapon-enchantment,
+  .application.tov-macro-activity
+) table tbody tr:nth-child(even) {
+  background: rgba(70, 37, 19, .16);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.bfi-weapon-enchantment,
+  .application.tov-macro-activity
+) table tbody tr:hover {
+  background: rgba(154, 59, 24, .2);
+}
+
+:where(
+  .application[class*="tovf-"],
+  .application.downtime-manager,
+  .application.bfi-weapon-config,
+  .application.bfi-weapon-enchantment,
+  .application.tov-macro-activity
+) ::-webkit-scrollbar-thumb {
+  border: 2px solid var(--tovf-color-soot);
+  background: linear-gradient(180deg, var(--tovf-color-bronze-light), var(--tovf-color-bronze-dark));
+}
+
+/* The enchantment editor does not use the module's tovf-/downtime class names. */
+.application.bfi-weapon-enchantment .window-header {
+  color: var(--tovf-color-gold-light);
+  background:
+    radial-gradient(circle at 18% 120%, rgba(255, 112, 28, .34), transparent 34%),
+    linear-gradient(180deg, #541f10, #160907);
+  border-bottom: var(--tovf-border-strong);
+  box-shadow: inset 0 -1px var(--tovf-color-ember), 0 3px 10px rgba(239, 88, 24, .2);
+}
+
+.application.bfi-weapon-enchantment .window-content {
+  color: var(--tovf-color-text);
+  background: var(--tovf-surface-window);
+}
+
+.application.bfi-weapon-enchantment :is(button, a.button) {
+  border: var(--tovf-border);
+  color: var(--tovf-color-gold-light);
+  background: var(--tovf-surface-control);
+}
+
+.application.bfi-weapon-enchantment :is(button, a.button):hover {
+  border-color: var(--tovf-color-ember-hot);
+  background: var(--tovf-surface-control-hover);
+  box-shadow: var(--tovf-shadow-ember);
+}
+
+.application.bfi-weapon-enchantment :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  border: var(--tovf-border);
+  color: var(--tovf-color-text);
+  background: rgba(8, 6, 5, .82);
+}

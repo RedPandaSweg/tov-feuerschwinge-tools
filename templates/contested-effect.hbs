@@ -1,0 +1,19 @@
+<section class="tab activity-{{ tab.id }} {{ tab.cssClass }}" data-tab="{{ tab.id }}" data-group="{{ tab.group }}">
+  <fieldset>
+    <legend>{{localize "TOV.ContestedActivity.Contest"}}</legend>
+    {{formField systemFields.contest.fields.attacker value=source.system.contest.attacker
+                options=contestCheckOptions label=(localize "TOV.ContestedActivity.AttackerCheck")
+                localize=false rootId=partId}}
+    {{formField systemFields.contest.fields.defender value=source.system.contest.defender
+                options=contestCheckOptions label=(localize "TOV.ContestedActivity.DefenderCheck")
+                localize=false rootId=partId}}
+    <div class="form-group">
+      <label>{{localize "TOV.ContestedActivity.Ties.Label"}}</label>
+      <div class="form-fields"><select name="system.contest.ties">{{selectOptions contestTieOptions selected=source.system.contest.ties valueAttr="value" labelAttr="label" localize=false}}</select></div>
+    </div>
+    <p class="hint">{{localize "TOV.ContestedActivity.MultipleHint"}}</p>
+    <p class="hint">{{localize "TOV.ContestedActivity.TargetHint"}}</p>
+  </fieldset>
+  {{> "systems/black-flag/templates/activity/parts/damage-damage.hbs" }}
+  {{> "systems/black-flag/templates/activity/parts/activity-effects.hbs" }}
+</section>

@@ -1,0 +1,10 @@
+<div class="form-group">
+  <label>{{localize "TOVF.Argon.Prepared.Label"}}</label>
+  <div class="form-fields">
+    <select name="flags.tov-feuerschwinge-tools.showPrepared">
+      <option value="preparedOnly" {{#if (eq actor.flags.tov-feuerschwinge-tools.showPrepared "preparedOnly")}}selected{{/if}}>{{localize "TOVF.Argon.Prepared.PreparedOnly"}}</option>
+      <option value="auto" {{#if (eq actor.flags.tov-feuerschwinge-tools.showPrepared "auto")}}selected{{/if}}>{{localize "TOVF.Argon.Prepared.Auto"}}</option>
+      <option value="all" {{#if (eq actor.flags.tov-feuerschwinge-tools.showPrepared "all")}}selected{{/if}}>{{localize "TOVF.Argon.Prepared.All"}}</option>
+    </select>
+  </div>
+</div>

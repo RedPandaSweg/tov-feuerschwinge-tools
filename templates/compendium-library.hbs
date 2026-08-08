@@ -1,0 +1,117 @@
+<div class="tovf-library-root">
+  <nav class="tovf-library-categories">
+    {{#each categories}}
+    <button type="button" class="{{#if active}}active{{/if}}" data-action="selectCategory" data-category="{{id}}">
+      <i class="{{icon}}" inert></i>
+      <span>{{localize label}}</span>
+      <small>{{count}}</small>
+    </button>
+    {{/each}}
+  </nav>
+
+  <section class="tovf-library-content">
+    <header>
+      <input type="search" value="{{query}}" placeholder="{{localize 'TOVF.Library.Search'}}" data-library-search>
+      <details class="tovf-library-source-filter">
+        <summary>{{sourceSelectionLabel}}</summary>
+        <div>
+          <label><input type="checkbox" value="" data-library-source {{checked allSourcesSelected}}>
+            {{localize "TOVF.Library.AllSources"}}</label>
+          {{#each sources}}
+          <label><input type="checkbox" value="{{value}}" data-library-source {{checked selected}}>
+            {{label}}</label>
+          {{/each}}
+        </div>
+      </details>
+      <div class="tovf-library-layout" role="group" aria-label="Layout">
+        <button type="button" class="{{#if listLayout}}active{{/if}}" data-action="setLayout" data-layout="list"
+                title="List View"><i class="fa-solid fa-list" inert></i></button>
+        <button type="button" class="{{#if gridLayout}}active{{/if}}" data-action="setLayout" data-layout="grid"
+                title="Grid View"><i class="fa-solid fa-grid-2" inert></i></button>
+      </div>
+    </header>
+    <div class="tovf-library-filter-area">
+    {{#if challengeRatings.length}}
+    <nav class="tovf-library-filters" aria-label="{{localize 'TOVF.Library.ChallengeRating'}}">
+      <strong class="filter-label">{{localize "TOVF.Library.ChallengeRating"}}</strong>
+      <select data-library-filter="challengeRating">
+        <option value="">{{localize "TOVF.Library.AllChallengeRatings"}}</option>
+        {{selectOptions challengeRatings selected=selectedChallengeRating valueAttr="value" labelAttr="label"}}
+      </select>
+    </nav>
+    {{/if}}
+    <nav class="tovf-library-filters" aria-label="Subcategories">
+      <strong class="filter-label">{{subcategoryLabel}}</strong>
+      {{#if compactSubcategories}}
+      <select data-library-filter="subcategory">
+        <option value="">All</option>
+        {{selectOptions subcategories selected=selectedSubcategory valueAttr="value" labelAttr="displayLabel"}}
+      </select>
+      {{else}}
+      <button type="button" class="{{#unless selectedSubcategory}}active{{/unless}}"
+              data-action="selectSubcategory" data-subcategory="">All</button>
+      {{#each subcategories}}
+      <button type="button" class="{{#if active}}active{{/if}}"
+              data-action="selectSubcategory" data-subcategory="{{value}}">{{label}} <small>{{count}}</small></button>
+      {{/each}}
+      {{/if}}
+    </nav>
+    {{#if details.length}}
+    <nav class="tovf-library-filters secondary" aria-label="Types">
+      <strong class="filter-label">{{detailLabel}}</strong>
+      {{#if compactDetails}}
+      <select data-library-filter="detail">
+        <option value="">All</option>
+        {{selectOptions details selected=selectedDetail valueAttr="value" labelAttr="displayLabel"}}
+      </select>
+      {{else}}
+      <button type="button" class="{{#unless selectedDetail}}active{{/unless}}"
+              data-action="selectDetail" data-detail="">All</button>
+      {{#each details}}
+      <button type="button" class="{{#if active}}active{{/if}}"
+              data-action="selectDetail" data-detail="{{value}}">{{label}} <small>{{count}}</small></button>
+      {{/each}}
+      {{/if}}
+    </nav>
+    {{/if}}
+    {{#if extras.length}}
+    <nav class="tovf-library-filters secondary" aria-label="School of Magic">
+      <strong class="filter-label">{{extraLabel}}</strong>
+      {{#if compactExtras}}
+      <select data-library-filter="extra">
+        <option value="">All</option>
+        {{selectOptions extras selected=selectedExtra valueAttr="value" labelAttr="displayLabel"}}
+      </select>
+      {{else}}
+      <button type="button" class="{{#unless selectedExtra}}active{{/unless}}"
+              data-action="selectExtra" data-extra="">All</button>
+      {{#each extras}}
+      <button type="button" class="{{#if active}}active{{/if}}"
+              data-action="selectExtra" data-extra="{{value}}">{{label}} <small>{{count}}</small></button>
+      {{/each}}
+      {{/if}}
+    </nav>
+    {{/if}}
+    </div>
+    <p class="hint" data-library-count>{{localize "TOVF.Library.Results" count=resultCount}}</p>
+
+    <ol class="tovf-library-results {{#if gridLayout}}grid{{/if}}">
+      {{#each entries}}
+      <li draggable="true" data-library-entry data-uuid="{{uuid}}" data-document-type="{{documentType}}"
+          data-name="{{lowerName}}">
+        <img src="{{img}}" alt="">
+        <button type="button" data-action="openDocument">
+          <strong>{{name}}</strong>
+          <span title="{{packLabel}}">{{packLabel}}</span>
+        </button>
+        <button type="button" class="source" data-action="openPack" data-pack="{{pack}}"
+                title="{{sourceSummary}} · {{packLabel}}">
+          {{shortSourceLabel}}{{#if hasDuplicates}} · {{duplicateCount}}{{/if}}
+        </button>
+      </li>
+      {{else}}
+      <li class="empty">{{localize "TOVF.Library.Empty"}}</li>
+      {{/each}}
+    </ol>
+  </section>
+</div>

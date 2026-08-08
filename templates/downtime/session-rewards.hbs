@@ -1,0 +1,13 @@
+<div class="sc-body sc-session-rewards">
+  <p class="notes">{{localize "DOWNTIME_MANAGER.Session.ConfigHint"}}</p>
+  <fieldset class="sc-passive-config">
+    <legend>{{localize "DOWNTIME_MANAGER.Session.PassiveConfig"}}</legend>
+    <label class="checkbox"><input type="checkbox" name="passive.enabled" {{checked passive.enabled}}> {{localize "DOWNTIME_MANAGER.Session.PassiveEnabled"}}</label>
+    <label><span>{{localize "DOWNTIME_MANAGER.Session.PassivePeriod"}}</span><select name="passive.period"><option value="month" {{#if (eq passive.period "month")}}selected{{/if}}>{{localize "DOWNTIME_MANAGER.Session.Monthly"}}</option><option value="week" {{#if (eq passive.period "week")}}selected{{/if}}>{{localize "DOWNTIME_MANAGER.Session.Weekly"}}</option></select></label>
+    <label><span>{{localize "DOWNTIME_MANAGER.Session.PassiveRate"}}</span><span class="sc-input-suffix"><input type="number" name="passive.rate" value="{{passive.ratePercent}}" min="0" step="any"><span>%</span></span></label>
+    <label><span>{{localize "DOWNTIME_MANAGER.Session.PassiveCap"}}</span><span class="sc-input-suffix"><input type="number" name="passive.capMultiplier" value="{{passive.capMultiplier}}" min="0" step="any"><span>×</span></span></label>
+    <p class="notes">{{localize "DOWNTIME_MANAGER.Session.PassiveHint"}}</p>
+  </fieldset>
+  <div class="sc-session-levels">{{#each levels}}<section class="sc-session-level"><h3>{{localize "DOWNTIME_MANAGER.Session.Level"}} {{level}}</h3><div class="sc-session-items">{{#each items}}<div class="sc-session-item"><img src="{{img}}" alt=""><span>{{name}}</span><input type="number" name="levels.{{../index}}.items.{{itemIndex}}.quantity" value="{{quantity}}" min="0" step="any"><button type="button" data-action="removeItem" data-level-index="{{../index}}" data-item-index="{{itemIndex}}"><i class="fa-solid fa-trash"></i></button></div>{{/each}}<div class="sc-session-item-drop" data-item-zone data-level-index="{{index}}"><i class="fa-solid fa-plus"></i> {{localize "DOWNTIME_MANAGER.Session.DropItem"}}</div></div></section>{{/each}}</div>
+  <div class="sc-session-footer"><button type="button" data-action="reset">{{localize "DOWNTIME_MANAGER.Session.Reset"}}</button><button type="button" data-action="save"><i class="fa-solid fa-floppy-disk"></i> {{localize "DOWNTIME_MANAGER.Actions.Save"}}</button></div>
+</div>

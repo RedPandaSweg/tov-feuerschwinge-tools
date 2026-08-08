@@ -1,0 +1,22 @@
+# Codex- und lokale Arbeitsanweisungen
+/.agents/
+/.codex/
+/AGENTS.md
+
+# Lokale Diagnose-, Sicherungs- und Build-Artefakte
+/debug.log
+/development/
+/module.release.tmp.zip
+
+# Abhängigkeiten und Testausgaben
+/node_modules/
+/coverage/
+
+# Betriebssystem- und Editor-Dateien
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+
+# module.zip bleibt absichtlich versioniert: Das Foundry-Manifest lädt sie direkt.
+# packs/ bleibt absichtlich versioniert: Es ist der eigentliche Kompendiumsinhalt.

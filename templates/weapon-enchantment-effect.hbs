@@ -1,0 +1,17 @@
+<section class="tab activity-{{ tab.id }} {{ tab.cssClass }}" data-tab="{{ tab.id }}" data-group="{{ tab.group }}">
+  <fieldset>
+    <legend>{{ localize "BFI.Enchantment.Title" }}</legend>
+    {{ formField systemFields.abilityOverride value=source.system.abilityOverride options=abilityOptions localize=true rootId=partId }}
+    {{ formField systemFields.abilityMode value=source.system.abilityMode options=abilityModes localize=true rootId=partId }}
+    {{ formField systemFields.damageMode value=source.system.damageMode options=damageModes localize=true rootId=partId }}
+    {{ formField systemFields.damageDenomination value=source.system.damageDenomination options=dieOptions localize=true rootId=partId }}
+    {{ formField systemFields.damageFormula value=source.system.damageFormula localize=true rootId=partId }}
+    <p class="hint">{{ localize "BFI.Enchantment.DamageFormulaHint" }}</p>
+    {{ formField systemFields.magical value=source.system.magical localize=true rootId=partId }}
+    {{ formField systemFields.attackBonus value=source.system.attackBonus localize=true rootId=partId }}
+    {{ formField systemFields.damageBonus value=source.system.damageBonus localize=true rootId=partId }}
+    <p class="hint">{{ localize "BFI.Enchantment.BonusFormulaHint" }}</p>
+    {{ formField systemFields.durationSeconds value=source.system.durationSeconds localize=true rootId=partId }}
+    <p class="hint">{{ localize "BFI.Enchantment.DurationHint" }}</p>
+  </fieldset>
+</section>

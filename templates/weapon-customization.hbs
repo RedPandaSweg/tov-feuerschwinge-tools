@@ -1,0 +1,94 @@
+<div class="bfi-weapon-customization-root">
+  <p class="hint">{{ localize "BFI.Weapon.Settings.Explanation" }}</p>
+
+  {{#each sections as |section|}}
+    <details class="bfi-category">
+      <summary>{{ localize section.label }}</summary>
+      <div class="bfi-category-content">
+        {{#each section.entries as |entry|}}
+          <details class="bfi-definition">
+            <summary>{{#if entry.label}}{{ entry.label }}{{else}}{{ localize "BFI.Weapon.NewEntry" }}{{/if}}</summary>
+            <div class="bfi-definition-content">
+              <header>
+                <span></span>
+                <button type="button" class="icon-button" data-action="deleteDefinition" data-kind="{{ section.kind }}"
+                        data-index="{{ @index }}" aria-label="{{ localize 'BFI.Weapon.Delete' }}">
+                  <i class="fa-solid fa-trash" inert></i>
+                </button>
+              </header>
+              <div class="form-group">
+                <label>{{ localize "BFI.Weapon.Id" }}</label>
+                <div class="form-fields"><input name="{{ section.kind }}.{{ @index }}.id" value="{{ entry.id }}" required></div>
+              </div>
+              <div class="form-group">
+                <label>{{ localize "BFI.Weapon.Label" }}</label>
+                <div class="form-fields"><input name="{{ section.kind }}.{{ @index }}.label" value="{{ entry.label }}" required></div>
+              </div>
+              <div class="form-group stacked">
+                <label>{{ localize "BFI.Weapon.Description" }}</label>
+                <textarea name="{{ section.kind }}.{{ @index }}.description" rows="2">{{ entry.description }}</textarea>
+              </div>
+              <div class="form-group">
+                <label>{{ localize "BFI.Weapon.MechanicLabel" }}</label>
+                <div class="form-fields">
+                  <select name="{{ section.kind }}.{{ @index }}.mechanic">
+                    {{ selectOptions @root.mechanics selected=entry.mechanic valueAttr="value" labelAttr="label" localize=true }}
+                  </select>
+                </div>
+              </div>
+              <div class="bfi-parameters">
+                <label>{{ localize "BFI.Weapon.DieSteps" }} <input type="number" min="1" step="1" name="{{ section.kind }}.{{ @index }}.dieSteps" value="{{ entry.dieSteps }}"></label>
+                <label>{{ localize "BFI.Weapon.ReachBonus" }} <input type="number" step="0.1" name="{{ section.kind }}.{{ @index }}.reachBonus" value="{{ entry.reachBonus }}"></label>
+                <label>{{ localize "BFI.Weapon.AttackBonus" }} <input name="{{ section.kind }}.{{ @index }}.attackBonus" value="{{ entry.attackBonus }}" placeholder="1 oder @prof"></label>
+                <label>{{ localize "BFI.Weapon.DamageBonus" }} <input name="{{ section.kind }}.{{ @index }}.damageBonus" value="{{ entry.damageBonus }}" placeholder="1d4"></label>
+              </div>
+              <details class="bfi-macro-config">
+                <summary>{{ localize "BFI.Weapon.Macro.Title" }}</summary>
+                <div class="form-group">
+                  <label>{{ localize "BFI.Weapon.Macro.ButtonLabel" }}</label>
+                  <div class="form-fields"><input name="{{ section.kind }}.{{ @index }}.buttonLabel" value="{{ entry.buttonLabel }}" placeholder="{{ entry.label }}"></div>
+                </div>
+                <div class="form-group">
+                  <label>{{ localize "BFI.Weapon.Macro.Mode" }}</label>
+                  <div class="form-fields">
+                    <select name="{{ section.kind }}.{{ @index }}.macroMode">
+                      <option value="linked" {{#if (eq entry.macroMode "linked")}}selected{{/if}}>{{ localize "BFI.Weapon.Macro.Linked" }}</option>
+                      <option value="inline" {{#if (eq entry.macroMode "inline")}}selected{{/if}}>{{ localize "BFI.Weapon.Macro.Inline" }}</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>{{ localize "BFI.Weapon.Macro.Visibility" }}</label>
+                  <div class="form-fields">
+                    <select name="{{ section.kind }}.{{ @index }}.macroVisibility">
+                      <option value="owner" {{#if (eq entry.macroVisibility "owner")}}selected{{/if}}>{{ localize "BFI.Weapon.Macro.Owner" }}</option>
+                      <option value="all" {{#if (eq entry.macroVisibility "all")}}selected{{/if}}>{{ localize "BFI.Weapon.Macro.All" }}</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group stacked">
+                  <label>{{ localize "BFI.Weapon.Macro.Uuid" }}</label>
+                  <input name="{{ section.kind }}.{{ @index }}.macroUuid" value="{{ entry.macroUuid }}" placeholder="Macro.… oder Compendium.…">
+                </div>
+                <div class="form-group stacked">
+                  <label>{{ localize "BFI.Weapon.Macro.Command" }}</label>
+                  <textarea name="{{ section.kind }}.{{ @index }}.command" rows="7" spellcheck="false">{{ entry.command }}</textarea>
+                </div>
+                <p class="hint">{{ localize "BFI.Weapon.Macro.Hint" }}</p>
+              </details>
+            </div>
+          </details>
+        {{else}}
+          <p class="hint">{{ localize "BFI.Weapon.Empty" }}</p>
+        {{/each}}
+        <button type="button" class="light-button" data-action="{{ section.addAction }}">
+          <i class="fa-solid fa-plus" inert></i> {{ localize "BFI.Weapon.Add" }}
+        </button>
+      </div>
+    </details>
+  {{/each}}
+
+  <footer class="form-footer">
+    <button type="submit" class="light-button"><i class="fa-solid fa-save" inert></i> {{ localize "BFI.Weapon.Save" }}</button>
+  </footer>
+</div>

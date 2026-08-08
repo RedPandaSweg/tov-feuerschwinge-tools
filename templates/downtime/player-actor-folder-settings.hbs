@@ -1,0 +1,16 @@
+<div class="sc-body sc-config-body">
+  <p class="notes">{{localize "DOWNTIME_MANAGER.Settings.PlayerActorFolders.Hint"}}</p>
+  {{#if actorFolders.length}}
+    <div class="form-group">
+      <label for="downtime-manager-actor-folder-search">{{localize "DOWNTIME_MANAGER.Settings.PlayerActorFolders.Selection"}}</label>
+      <div class="form-fields">
+        <input id="downtime-manager-actor-folder-search" type="search" name="playerActorFolderSearch" value="{{selectedActorFolderName}}" list="downtime-manager-actor-folders" placeholder="{{localize 'DOWNTIME_MANAGER.Settings.PlayerActorFolders.All'}}" autocomplete="off">
+        <input type="hidden" name="playerActorFolderId" value="{{selectedActorFolderId}}">
+      </div>
+    </div>
+    <datalist id="downtime-manager-actor-folders">{{#each actorFolders}}<option value="{{name}}" data-folder-id="{{id}}"></option>{{/each}}</datalist>
+  {{else}}
+    <p class="notes">{{localize "DOWNTIME_MANAGER.Settings.PlayerActorFolders.NoFolders"}}</p>
+  {{/if}}
+  <footer class="form-footer"><button type="submit"><i class="fa-solid fa-floppy-disk"></i> {{localize "DOWNTIME_MANAGER.Actions.Save"}}</button></footer>
+</div>

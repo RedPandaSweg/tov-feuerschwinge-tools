@@ -1,0 +1,35 @@
+<section class="tab activity-{{ tab.id }} {{ tab.cssClass }}" data-tab="{{ tab.id }}" data-group="{{ tab.group }}">
+  <fieldset class="tov-activity-chain" data-tov-chain-editor>
+    <legend>{{localize "TOV.ActivityChain.Title"}}</legend>
+    <p class="hint">{{localize "TOV.ActivityChain.Hint"}}</p>
+    <input type="hidden" name="flags.tov-feuerschwinge-tools.activityChain" value="{{chainJson}}" data-tov-chain-value>
+
+    <div class="tov-chain-rules" data-tov-chain-rules>
+      {{#each chainEditorRules as |rule index|}}
+        <div class="form-group tov-chain-rule" data-chain-index="{{index}}">
+          <div class="form-fields">
+            <select data-chain-field="trigger" aria-label="{{localize 'TOV.ActivityChain.Trigger.Label'}}">
+              {{selectOptions ../chainTriggerOptions selected=rule.trigger valueAttr="value" labelAttr="label" localize=false}}
+            </select>
+            <select data-chain-field="activityId" aria-label="{{localize 'TOV.ActivityChain.Activity'}}">
+              {{selectOptions ../chainActivityOptions selected=rule.activityId valueAttr="value" labelAttr="label" localize=false}}
+            </select>
+            <select data-chain-field="execution" aria-label="{{localize 'TOV.ActivityChain.Execution.Label'}}">
+              {{selectOptions ../chainExecutionOptions selected=rule.execution valueAttr="value" labelAttr="label" localize=false}}
+            </select>
+            <select data-chain-field="targets" aria-label="{{localize 'TOV.ActivityChain.Targets.Label'}}">
+              {{selectOptions ../chainTargetOptions selected=rule.targets valueAttr="value" labelAttr="label" localize=false}}
+            </select>
+            <button type="button" class="icon fa-solid fa-trash" data-action="deleteChainRule"
+                    aria-label="{{localize 'TOV.ActivityChain.Delete'}}"></button>
+          </div>
+        </div>
+      {{/each}}
+    </div>
+
+    <button type="button" data-action="addChainRule">
+      <i class="fa-solid fa-plus" inert></i> {{localize "TOV.ActivityChain.Add"}}
+    </button>
+    <p class="hint">{{localize "TOV.ActivityChain.ConsumptionHint"}}</p>
+  </fieldset>
+</section>

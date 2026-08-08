@@ -1,0 +1,32 @@
+<section class="tab activity-{{ tab.id }} {{ tab.cssClass }}" data-tab="{{ tab.id }}" data-group="{{ tab.group }}">
+  <fieldset>
+    <legend>{{ localize "TOV.MacroActivity.Section" }}</legend>
+
+    <div class="form-group">
+      <label for="{{ partId }}-mode">{{ localize "TOV.MacroActivity.Mode.Label" }}</label>
+      <div class="form-fields">
+        <select id="{{ partId }}-mode" name="system.mode">
+          {{ selectOptions modes selected=system.mode valueAttr="value" labelAttr="label" localize=false }}
+        </select>
+      </div>
+    </div>
+
+    {{#if isLinked}}
+      <div class="form-group stacked" data-tov-macro-drop>
+        <label for="{{ partId }}-macro-uuid">{{ localize "TOV.MacroActivity.MacroUuid.Label" }}</label>
+        <div class="form-fields">
+          <input id="{{ partId }}-macro-uuid" type="text" name="system.macroUuid" value="{{ system.macroUuid }}"
+                 placeholder="Macro.abc123 oder Compendium.…">
+        </div>
+        <p class="hint">{{ localize "TOV.MacroActivity.MacroUuid.Hint" }}</p>
+      </div>
+    {{else}}
+      <div class="form-group stacked">
+        <label for="{{ partId }}-command">{{ localize "TOV.MacroActivity.Command.Label" }}</label>
+        <textarea id="{{ partId }}-command" name="system.command" rows="14"
+                  spellcheck="false">{{ system.command }}</textarea>
+        <p class="hint">{{ localize "TOV.MacroActivity.Command.Hint" }}</p>
+      </div>
+    {{/if}}
+  </fieldset>
+</section>

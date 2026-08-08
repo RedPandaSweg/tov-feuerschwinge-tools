@@ -1,0 +1,94 @@
+{
+  "id": "tov-feuerschwinge-tools",
+  "title": "Feuerschwinge – Tools",
+  "description": "Kampagnenspezifische Werkzeuge, Downtime- und Sessionverwaltung und Integrationen für Tales of the Valiant: Feuerschwinge.",
+  "version": "3.0.0",
+  "compatibility": {
+    "minimum": "13.348",
+    "verified": "14"
+  },
+  "authors": [
+    {
+      "name": "RedPandaSweg"
+    }
+  ],
+  "url": "https://github.com/RedPandaSweg/tov-feuerschwinge-tools",
+  "manifest": "https://raw.githubusercontent.com/RedPandaSweg/tov-feuerschwinge-tools/main/module.json",
+  "download": "https://raw.githubusercontent.com/RedPandaSweg/tov-feuerschwinge-tools/main/module.zip",
+  "relationships": {
+    "recommends": [
+      {
+        "id": "item-piles",
+        "type": "module",
+        "compatibility": {
+          "minimum": "3.2.7"
+        }
+      },
+      {
+        "id": "enhancedcombathud",
+        "type": "module",
+        "compatibility": {
+          "minimum": "5.0.1"
+        }
+      }
+    ],
+    "conflicts": [
+      {
+        "id": "downtime-manager",
+        "type": "module"
+      },
+      {
+        "id": "item-piles-black-flag",
+        "type": "module"
+      },
+      {
+        "id": "black-flag-doom-panel",
+        "type": "module"
+      },
+      {
+        "id": "enhancedcombathud-black-flag",
+        "type": "module"
+      }
+    ],
+    "systems": [
+      {
+        "id": "black-flag",
+        "type": "system",
+        "compatibility": {
+          "minimum": "2.0.074"
+        }
+      }
+    ],
+    "requires": [
+      {
+        "id": "tov-feuerschwinge",
+        "type": "module",
+        "compatibility": {
+          "minimum": "3.0.0"
+        }
+      }
+    ]
+  },
+  "esmodules": [
+    "scripts/main.mjs",
+    "scripts/macro-activity.mjs",
+    "scripts/item-piles-integration.mjs",
+    "scripts/weapon-customization.mjs",
+    "scripts/weapon-enchantment.mjs"
+  ],
+  "styles": [
+    "styles/tov-feuerschwinge.css"
+  ],
+  "languages": [
+    {
+      "lang": "de",
+      "name": "Deutsch",
+      "path": "lang/de.json"
+    },
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ]
+}

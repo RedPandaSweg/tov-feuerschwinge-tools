@@ -1,0 +1,90 @@
+<div class="tovf-audit-root">
+  <header>
+    <div class="tovf-audit-summary">
+      <span class="integrity-error">{{localize "TOVF.Audit.Integrity.Errors"}}: {{integrityCounts.error}}</span>
+      <span class="integrity-warning">{{localize "TOVF.Audit.Integrity.Warnings"}}: {{integrityCounts.warning}}</span>
+      <span class="exact">{{localize "TOVF.Audit.Status.Exact"}}: {{counts.exact}}</span>
+      <span class="modified">{{localize "TOVF.Audit.Status.Modified"}}: {{counts.modified}}</span>
+      <span class="ambiguous">{{localize "TOVF.Audit.Status.Ambiguous"}}: {{counts.ambiguous}}</span>
+      <span class="unique">{{localize "TOVF.Audit.Status.Unique"}}: {{counts.unique}}</span>
+    </div>
+    <div class="tovf-audit-actions">
+      <button type="button" data-action="exportReport">
+        <i class="fa-solid fa-file-export" inert></i> {{localize "TOVF.Audit.Export"}}
+      </button>
+      {{#if duplicateCount}}
+      <button type="button" data-action="cleanupDuplicates" class="danger">
+        <i class="fa-solid fa-broom-wide" inert></i>
+        {{localize "TOVF.Audit.Cleanup.Action" count=duplicateCount}}
+      </button>
+      {{/if}}
+    </div>
+  </header>
+
+  <p class="hint">{{localize "TOVF.Audit.Hint"}}</p>
+  <details class="tovf-audit-details" open>
+    <summary>{{localize "TOVF.Audit.Integrity.Show" count=integrityCount documents=documentsChecked references=referencesChecked}}</summary>
+    <div class="tovf-audit-table">
+      {{#if integrityIssues.length}}
+      <table>
+        <thead>
+          <tr>
+            <th>{{localize "TOVF.Audit.Local"}}</th>
+            <th>{{localize "TOVF.Audit.Integrity.Problem"}}</th>
+            <th>{{localize "TOVF.Audit.Integrity.Path"}}</th>
+            <th>{{localize "TOVF.Audit.Integrity.Value"}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each integrityIssues}}
+          <tr class="integrity-{{severity}}">
+            <td>
+              <button type="button" data-action="openLocal" data-uuid="{{documentUuid}}">{{documentName}}</button>
+              <small>{{pack}} · {{documentType}}</small>
+            </td>
+            <td>{{localize kindLabel}}</td>
+            <td><code>{{path}}</code></td>
+            <td><code>{{value}}</code></td>
+          </tr>
+          {{/each}}
+        </tbody>
+      </table>
+      {{else}}
+      <p>{{localize "TOVF.Audit.Integrity.None"}}</p>
+      {{/if}}
+    </div>
+  </details>
+  <details class="tovf-audit-details">
+    <summary>{{localize "TOVF.Audit.ShowDetails" count=rows.length}}</summary>
+  <div class="tovf-audit-table">
+    <table>
+      <thead>
+        <tr>
+          <th>{{localize "TOVF.Audit.Local"}}</th>
+          <th>{{localize "TOVF.Audit.Status.Label"}}</th>
+          <th>{{localize "TOVF.Audit.Original"}}</th>
+          <th>{{localize "TOVF.Audit.Recommendation.Label"}}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each rows}}
+        <tr class="{{status}}">
+          <td>
+            <button type="button" data-action="openLocal" data-uuid="{{localUuid}}">{{name}}</button>
+            <small>{{localPack}} · {{type}}</small>
+          </td>
+          <td>{{localize statusLabel}}</td>
+          <td>
+            {{#if matchUuid}}
+            <button type="button" data-action="openOriginal" data-uuid="{{matchUuid}}">{{matchName}}</button>
+            <small>{{matchPack}} · {{sourceLabel}}{{#if candidateCount}} · {{localize "TOVF.Audit.Candidates" count=candidateCount}}{{/if}}</small>
+            {{else}}—{{/if}}
+          </td>
+          <td>{{localize recommendation}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+  </details>
+</div>

@@ -1,0 +1,191 @@
+<div class="tovf-session-transfer-root">
+  {{#if isPrimary}}
+    <section>
+      <h2>{{ localize "TOVF.Session.Primary.ExportTitle" }}</h2>
+      <p class="hint">{{ localize "TOVF.Session.Primary.ExportHint" }}</p>
+      <div class="form-group">
+        <label>{{ localize "TOVF.Session.ActorRoot" }}</label>
+        <div class="form-fields">
+          <select name="actorRoot">
+            {{ selectOptions actorFolders valueAttr="id" labelAttr="name" selected=selectedActorRootId }}
+          </select>
+          <button type="button" data-action="saveActorRoot">
+            <i class="fa-solid fa-floppy-disk" inert></i> {{ localize "TOVF.Session.SaveDefault" }}
+          </button>
+        </div>
+        <p class="hint">{{ localize "TOVF.Session.ActorRootHint" }}</p>
+      </div>
+      <div class="form-group">
+        <label>{{ localize "TOVF.Session.SelectionMode.Label" }}</label>
+        <div class="form-fields">
+          <select name="selectionMode">
+            <option value="character" {{#if selectByCharacter}}selected{{/if}}>{{ localize "TOVF.Session.SelectionMode.Character" }}</option>
+            <option value="player" {{#if selectByPlayer}}selected{{/if}}>{{ localize "TOVF.Session.SelectionMode.Player" }}</option>
+          </select>
+        </div>
+      </div>
+      <div class="tovf-actor-selection-actions">
+        <button type="button" data-action="selectActors" data-mode="all">
+          <i class="fa-solid fa-check-double" inert></i> {{localize "TOVF.Session.Primary.SelectAll"}}
+        </button>
+        <button type="button" data-action="selectActors" data-mode="none">
+          <i class="fa-solid fa-xmark" inert></i> {{localize "TOVF.Session.Primary.SelectNone"}}
+        </button>
+        <button type="button" data-action="selectActors" data-mode="connected">
+          <i class="fa-solid fa-users" inert></i> {{localize "TOVF.Session.Primary.SelectConnected"}}
+        </button>
+      </div>
+      {{#if selectByCharacter}}
+      {{#if connectedActors.length}}
+        <h3 class="tovf-connected-actors-heading">
+          <i class="fa-solid fa-signal" inert></i>
+          {{ localize "TOVF.Session.Primary.ConnectedActors" }}
+        </h3>
+        <div class="tovf-actor-list connected">
+          {{#each connectedActors as |actor|}}
+            <label>
+              <input type="checkbox" name="actors" value="{{ actor.id }}" data-connected="true">
+              <img src="{{ actor.img }}" alt="">
+              <span>{{ actor.name }}<small>{{ localize "TOVF.Session.TransferFolder" }}: {{ actor.transferFolder }}</small></span>
+            </label>
+          {{/each}}
+        </div>
+      {{/if}}
+      {{#if otherActors.length}}
+        <h3>{{ localize "TOVF.Session.Primary.OtherActors" }}</h3>
+        <div class="tovf-actor-list">
+          {{#each otherActors as |actor|}}
+            <label>
+              <input type="checkbox" name="actors" value="{{ actor.id }}" data-connected="false">
+              <img src="{{ actor.img }}" alt="">
+              <span>{{ actor.name }}<small>{{ localize "TOVF.Session.TransferFolder" }}: {{ actor.transferFolder }}</small></span>
+            </label>
+          {{/each}}
+        </div>
+      {{/if}}
+      {{/if}}
+      {{#if selectByPlayer}}
+        {{#if connectedPlayers.length}}
+          <h3 class="tovf-connected-actors-heading">{{ localize "TOVF.Session.Primary.ConnectedPlayers" }}</h3>
+          <div class="tovf-actor-list connected">
+            {{#each connectedPlayers as |player|}}
+              <label>
+                <input type="checkbox" name="players" value="{{ player.id }}" data-actor-ids="{{ player.actorIds }}" data-connected="true">
+                <i class="fa-solid fa-user" inert></i>
+                <span>{{ player.name }}<small>{{ player.characters }}</small></span>
+              </label>
+            {{/each}}
+          </div>
+        {{/if}}
+        {{#if otherPlayers.length}}
+          <h3>{{ localize "TOVF.Session.Primary.OtherPlayers" }}</h3>
+          <div class="tovf-actor-list">
+            {{#each otherPlayers as |player|}}
+              <label>
+                <input type="checkbox" name="players" value="{{ player.id }}" data-actor-ids="{{ player.actorIds }}" data-connected="false">
+                <i class="fa-solid fa-user" inert></i>
+                <span>{{ player.name }}<small>{{ player.characters }}</small></span>
+              </label>
+            {{/each}}
+          </div>
+        {{/if}}
+      {{/if}}
+      <fieldset>
+        <legend>{{ localize "TOVF.Session.AdditionalContent" }}</legend>
+        <label class="checkbox">
+          <input type="checkbox" name="includeActorFolders" checked>
+          {{ localize "TOVF.Session.IncludeActorFolders" }}
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" name="includeCompendiums">
+          {{ localize "TOVF.Session.IncludeCompendiums" }}
+        </label>
+        <div class="form-group">
+          <label>{{ localize "TOVF.Transfer.Folder" }}</label>
+          <div class="form-fields">
+            <select name="compendiumFolder">
+              {{ selectOptions compendiumFolders valueAttr="id" labelAttr="name" }}
+            </select>
+          </div>
+        </div>
+      </fieldset>
+      <button type="button" class="light-button" data-action="exportSession">
+        <i class="fa-solid fa-download" inert></i> {{ localize "TOVF.Session.Primary.ExportAction" }}
+      </button>
+    </section>
+
+    <hr>
+
+    <section>
+      <h2>{{ localize "TOVF.Session.Primary.ResultTitle" }}</h2>
+      <p class="hint">{{ localize "TOVF.Session.Primary.ResultHint" }}</p>
+      <div class="form-group">
+        <label>{{ localize "TOVF.Session.File" }}</label>
+        <div class="form-fields"><input type="file" name="resultFile" accept=".json,application/json"></div>
+      </div>
+      <button type="button" class="light-button" data-action="importResult">
+        <i class="fa-solid fa-file-import" inert></i> {{ localize "TOVF.Session.Primary.ResultAction" }}
+      </button>
+    </section>
+  {{/if}}
+
+  {{#if isSession}}
+    <section>
+      <h2>{{ localize "TOVF.Session.Session.ImportTitle" }}</h2>
+      <p class="hint">{{ localize "TOVF.Session.Session.ImportHint" }}</p>
+      <div class="form-group">
+        <label>{{ localize "TOVF.Session.File" }}</label>
+        <div class="form-fields"><input type="file" name="sessionFile" accept=".json,application/json"></div>
+      </div>
+      <button type="button" class="light-button" data-action="importSession">
+        <i class="fa-solid fa-file-import" inert></i> {{ localize "TOVF.Session.Session.ImportAction" }}
+      </button>
+    </section>
+
+    <hr>
+
+    <section>
+      <h2>{{ localize "TOVF.Session.Session.ResultTitle" }}</h2>
+      <p class="hint">{{ localize "TOVF.Session.Session.ResultHint" }}</p>
+      <p>{{ localize "TOVF.Session.ManagedActors" count=managedCount }}</p>
+      <button type="button" class="light-button" data-action="exportResult">
+        <i class="fa-solid fa-file-export" inert></i> {{ localize "TOVF.Session.Session.ResultAction" }}
+      </button>
+    </section>
+  {{/if}}
+
+  <hr>
+
+  <details>
+    <summary><strong>{{ localize "TOVF.Session.Compendiums.Title" }}</strong></summary>
+    <section class="tovf-transfer-specialist">
+      <p class="hint">{{ localize "TOVF.Session.Compendiums.Hint" }}</p>
+      <div class="form-group">
+        <label>{{ localize "TOVF.Transfer.Folder" }}</label>
+        <div class="form-fields">
+          <select name="standaloneCompendiumFolder">
+            {{ selectOptions compendiumFolders valueAttr="id" labelAttr="name" }}
+          </select>
+        </div>
+      </div>
+      <button type="button" data-action="exportCompendiums">
+        <i class="fa-solid fa-download" inert></i> {{ localize "TOVF.Transfer.Export.Action" }}
+      </button>
+      <div class="form-group">
+        <label>{{ localize "TOVF.Transfer.File" }}</label>
+        <div class="form-fields"><input type="file" name="compendiumFile" accept=".json,application/json"></div>
+      </div>
+      <div class="form-group">
+        <label>{{ localize "TOVF.Transfer.Destination" }}</label>
+        <div class="form-fields">
+          <select name="compendiumDestination">
+            {{ selectOptions compendiumDestinations valueAttr="id" labelAttr="name" }}
+          </select>
+        </div>
+      </div>
+      <button type="button" data-action="importCompendiums">
+        <i class="fa-solid fa-upload" inert></i> {{ localize "TOVF.Transfer.Import.Action" }}
+      </button>
+    </section>
+  </details>
+</div>

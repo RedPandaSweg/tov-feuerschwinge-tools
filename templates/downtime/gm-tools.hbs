@@ -1,0 +1,82 @@
+<div class="tovf-gm-tools-root">
+  <header class="tovf-gm-tools-header">
+    <nav class="tabs">
+      {{#each tabs}}
+      <button type="button" data-action="selectTab" data-tab="{{id}}" class="{{#if active}}active{{/if}}">{{label}}</button>
+      {{/each}}
+    </nav>
+    <div class="tovf-gm-tools-global">
+      {{#if undo.available}}<small>{{localize "DOWNTIME_MANAGER.GMTools.LastChange"}}: {{undo.date}}</small>{{/if}}
+      <button type="button" data-action="undo" {{#unless undo.available}}disabled{{/unless}}><i class="fa-solid fa-rotate-left"></i> {{localize "DOWNTIME_MANAGER.GMTools.Undo"}}</button>
+      <button type="button" data-action="refresh" title="{{localize 'DOWNTIME_MANAGER.GMTools.Refresh'}}"><i class="fa-solid fa-rotate"></i></button>
+    </div>
+  </header>
+
+  {{#if (eq tab "characters")}}
+  <section class="tovf-gm-tools-section">
+    <div class="form-group">
+      <label>{{localize "DOWNTIME_MANAGER.GMTools.Character"}}</label>
+      <select data-character-select>
+        {{#each actors}}<option value="{{uuid}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}
+      </select>
+    </div>
+    {{#if selected}}
+    <div data-character-editor>
+      <div class="tovf-gm-character-title"><img src="{{selected.img}}" alt=""><h2>{{selected.name}}</h2><button type="button" data-action="openDocument" data-uuid="{{selected.uuid}}"><i class="fa-solid fa-user"></i> {{localize "DOWNTIME_MANAGER.GMTools.OpenSheet"}}</button></div>
+      <fieldset>
+        <legend>{{localize "DOWNTIME_MANAGER.GMTools.CharacterValues"}}</legend>
+        <div class="tovf-gm-field-grid">
+          <label><span>{{localize "DOWNTIME_MANAGER.GMTools.Downtime"}}</span><input type="number" name="downtime" min="0" step="any" value="{{selected.downtime}}"></label>
+          <label><span>{{localize "DOWNTIME_MANAGER.GMTools.Milestones"}}</span><input type="number" name="milestones" min="0" step="1" value="{{selected.milestones}}"></label>
+          <label><span>{{localize "DOWNTIME_MANAGER.GMTools.SessionsPlayed"}}</span><input type="number" name="sessionsPlayed" min="0" step="1" value="{{selected.sessionsPlayed}}"></label>
+          <label><span>{{localize "DOWNTIME_MANAGER.GMTools.LastMilestoneWeek"}}</span><input type="text" name="lastMilestoneWeek" value="{{selected.lastMilestoneWeek}}" placeholder="2026-W31"></label>
+        </div>
+        <label class="tovf-gm-json-field"><span>{{localize "DOWNTIME_MANAGER.GMTools.PassiveDowntime"}}</span><textarea name="passiveDowntime" rows="5">{{selected.passiveDowntime}}</textarea></label>
+      </fieldset>
+      <footer class="form-footer"><button type="button" data-action="exportCharacter"><i class="fa-solid fa-download"></i> {{localize "DOWNTIME_MANAGER.GMTools.Export"}}</button><button type="button" data-action="saveCharacter"><i class="fa-solid fa-floppy-disk"></i> {{localize "DOWNTIME_MANAGER.GMTools.SaveCharacter"}}</button></footer>
+    </div>
+    {{else}}<p class="notes">{{localize "DOWNTIME_MANAGER.GMTools.NoCharacters"}}</p>{{/if}}
+  </section>
+  {{/if}}
+
+  {{#if (eq tab "projects")}}
+  <section class="tovf-gm-tools-section">
+    <div class="form-group"><label>{{localize "DOWNTIME_MANAGER.GMTools.Character"}}</label><select data-character-select>{{#each actors}}<option value="{{uuid}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></div>
+    {{#each selected.projects}}
+    <article class="tovf-gm-project" data-project-row>
+      <header><div><strong>{{projectName}}</strong><small>{{stationName}}</small></div><code>{{projectUuid}}</code></header>
+      <div class="tovf-gm-project-values">
+        <label><span>{{localize "DOWNTIME_MANAGER.GMTools.Progress"}}</span><input type="number" name="progress" min="0" step="any" value="{{progress}}"></label>
+        <label><span>{{localize "DOWNTIME_MANAGER.GMTools.RequiredProgress"}}</span><input type="number" name="requiredProgress" min="0" step="any" value="{{requiredProgress}}"></label>
+        <label><span>{{localize "DOWNTIME_MANAGER.GMTools.IntervalProgress"}}</span><input type="number" name="intervalProgress" min="0" step="any" value="{{intervalProgress}}"></label>
+      </div>
+      <div class="tovf-gm-project-flags">
+        <label class="checkbox"><input type="checkbox" name="active" {{checked activeChecked}}> {{localize "DOWNTIME_MANAGER.GMTools.Active"}}</label>
+        <label class="checkbox"><input type="checkbox" name="completed" {{checked completedChecked}}> {{localize "DOWNTIME_MANAGER.GMTools.Completed"}}</label>
+        <label class="checkbox"><input type="checkbox" name="pendingRoll" {{checked pendingRollChecked}}> {{localize "DOWNTIME_MANAGER.GMTools.PendingRoll"}}</label>
+        <label class="checkbox"><input type="checkbox" name="awaitingCompletionCheck" {{checked awaitingCompletionCheckChecked}}> {{localize "DOWNTIME_MANAGER.GMTools.AwaitingCompletion"}}</label>
+      </div>
+      <footer><button type="button" class="danger" data-action="removeProject" data-state-id="{{id}}"><i class="fa-solid fa-trash"></i> {{localize "DOWNTIME_MANAGER.GMTools.Remove"}}</button><button type="button" data-action="saveProject" data-state-id="{{id}}"><i class="fa-solid fa-floppy-disk"></i> {{localize "DOWNTIME_MANAGER.GMTools.SaveProject"}}</button></footer>
+    </article>
+    {{else}}<p class="notes">{{localize "DOWNTIME_MANAGER.GMTools.NoProjects"}}</p>{{/each}}
+  </section>
+  {{/if}}
+
+  {{#if (eq tab "session")}}
+  <section class="tovf-gm-tools-section">
+    <h2>{{localize "DOWNTIME_MANAGER.GMTools.ActiveSession"}}</h2>
+    {{#if activeSession.empty}}<p class="notes">{{localize "DOWNTIME_MANAGER.GMTools.NoActiveSession"}}</p>{{else}}
+    <dl class="tovf-gm-session-summary"><dt>Status</dt><dd>{{activeSession.status}}</dd><dt>ID</dt><dd>{{activeSession.id}}</dd><dt>{{localize "DOWNTIME_MANAGER.GMTools.SessionTitle"}}</dt><dd>{{activeSession.title}}</dd></dl>
+    <details><summary>{{localize "DOWNTIME_MANAGER.GMTools.RawData"}}</summary><pre>{{activeSession.json}}</pre></details>
+    <footer class="form-footer"><button type="button" data-action="unlockSession"><i class="fa-solid fa-lock-open"></i> {{localize "DOWNTIME_MANAGER.GMTools.UnlockSession"}}</button><button type="button" class="danger" data-action="resetSession"><i class="fa-solid fa-trash"></i> {{localize "DOWNTIME_MANAGER.GMTools.ResetSession"}}</button></footer>
+    {{/if}}
+  </section>
+  {{/if}}
+
+  {{#if (eq tab "diagnostics")}}
+  <section class="tovf-gm-tools-section">
+    <div class="tovf-gm-diagnostics-heading"><div><h2>{{localize "DOWNTIME_MANAGER.GMTools.Diagnostics.Title"}}</h2><p class="notes">{{localize "DOWNTIME_MANAGER.GMTools.Diagnostics.Hint"}}</p></div><button type="button" data-action="repairSafe" {{#unless hasDiagnostics}}disabled{{/unless}}><i class="fa-solid fa-wand-magic-sparkles"></i> {{localize "DOWNTIME_MANAGER.GMTools.Diagnostics.RepairSafe"}}</button></div>
+    {{#each diagnostics}}<div class="tovf-gm-problem"><i class="fa-solid fa-triangle-exclamation"></i><span>{{#if actorName}}<strong>{{actorName}}:</strong> {{/if}}{{label}}</span>{{#if actorUuid}}<button type="button" data-action="openDocument" data-uuid="{{actorUuid}}"><i class="fa-solid fa-arrow-up-right-from-square"></i></button>{{/if}}</div>{{else}}<p class="tovf-gm-ok"><i class="fa-solid fa-circle-check"></i> {{localize "DOWNTIME_MANAGER.GMTools.Diagnostics.NoProblems"}}</p>{{/each}}
+  </section>
+  {{/if}}
+</div>

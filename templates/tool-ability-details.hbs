@@ -1,0 +1,18 @@
+<section class="tab {{ tab.cssClass }}" data-tab="{{ tab.id }}" data-group="{{ tab.group }}">
+  {{#each detailsParts as |part|}}
+    {{> (part) @root }}
+  {{/each}}
+  <fieldset>
+    <legend>{{localize "TOV.ToolAbility.Title"}}</legend>
+    <div class="form-group">
+      <label>{{localize "TOV.ToolAbility.Label"}}</label>
+      <div class="form-fields">
+        <select name="flags.tov-feuerschwinge-tools.preferredToolAbility">
+          <option value="auto">{{localize "TOV.ToolAbility.Automatic"}}</option>
+          {{selectOptions tovfToolAbility.options selected=tovfToolAbility.selected valueAttr="value" labelAttr="label" localize=false}}
+        </select>
+      </div>
+      <p class="hint">{{#if tovfToolAbility.inferred}}{{localize "TOV.ToolAbility.Inferred"}}{{else}}{{localize "TOV.ToolAbility.Hint"}}{{/if}}</p>
+    </div>
+  </fieldset>
+</section>

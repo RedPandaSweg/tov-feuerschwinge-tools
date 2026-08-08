@@ -1,0 +1,48 @@
+<div class="sc-body sc-config-body">
+  {{#each fields}}
+    <fieldset>
+      <legend>{{label}}</legend>
+      <p class="notes">{{hint}}</p>
+      <div class="setting-item-drop" data-setting="{{setting}}" title="{{localize 'DOWNTIME_MANAGER.Settings.ItemDefaults.DropHint'}}">
+        {{#if item}}
+          <img src="{{item.img}}" alt="">
+          <strong>{{item.name}}</strong>
+        {{else}}
+          <span>{{localize "DOWNTIME_MANAGER.Settings.ItemDefaults.DropItem"}}</span>
+        {{/if}}
+      </div>
+      {{#if uuid}}<button type="button" data-action="clearItem" data-setting="{{setting}}"><i class="fa-solid fa-trash"></i> {{localize "DOWNTIME_MANAGER.Actions.Remove"}}</button>{{/if}}
+    </fieldset>
+  {{/each}}
+  <fieldset>
+    <legend>{{localize "DOWNTIME_MANAGER.Settings.StationCategories.Name"}}</legend>
+    <p class="notes">{{localize "DOWNTIME_MANAGER.Settings.StationCategories.Hint"}}</p>
+    <div class="sc-list">
+      {{#each categories}}<div class="sc-grid-row sc-category-setting-row">
+        <input type="text" name="categories.{{@index}}.id" value="{{id}}" placeholder="research">
+        <input type="text" name="categories.{{@index}}.label" value="{{label}}" placeholder="Research">
+        <button type="button" data-action="removeCategory" data-index="{{@index}}" title="{{localize 'DOWNTIME_MANAGER.Actions.Remove'}}"><i class="fa-solid fa-trash"></i></button>
+      </div>{{/each}}
+    </div>
+    <button type="button" data-action="addCategory"><i class="fa-solid fa-plus"></i> {{localize "DOWNTIME_MANAGER.Settings.StationCategories.Add"}}</button>
+  </fieldset>
+  <fieldset>
+    <legend>{{localize "DOWNTIME_MANAGER.Settings.MilestoneLevels.Name"}}</legend>
+    <p class="notes">{{localize "DOWNTIME_MANAGER.Settings.MilestoneLevels.Hint"}}</p>
+    <label class="checkbox"><input type="checkbox" name="milestoneCatchUp" {{checked milestoneCatchUp}}> <span>{{localize "DOWNTIME_MANAGER.Settings.MilestoneLevels.CatchUp"}}</span></label>
+    <p class="notes">{{localize "DOWNTIME_MANAGER.Settings.MilestoneLevels.CatchUpHint"}}</p>
+    <div class="sc-list">
+      {{#each milestoneBands}}<div class="sc-grid-row sc-milestone-setting-row">
+        <label><span>{{localize "DOWNTIME_MANAGER.Settings.MilestoneLevels.From"}}</span><input type="number" name="milestoneBands.{{@index}}.minLevel" value="{{minLevel}}" min="1" max="20" step="1"></label>
+        <label><span>{{localize "DOWNTIME_MANAGER.Settings.MilestoneLevels.Through"}}</span><input type="number" name="milestoneBands.{{@index}}.maxLevel" value="{{maxLevel}}" min="1" max="20" step="1"></label>
+        <label><span>{{localize "DOWNTIME_MANAGER.Settings.MilestoneLevels.Sessions"}}</span><input type="number" name="milestoneBands.{{@index}}.sessions" value="{{sessions}}" min="1" step="1"></label>
+        <button type="button" data-action="removeMilestoneBand" data-index="{{@index}}" title="{{localize 'DOWNTIME_MANAGER.Actions.Remove'}}"><i class="fa-solid fa-trash"></i></button>
+      </div>{{/each}}
+    </div>
+    <div class="sc-section-actions">
+      <button type="button" data-action="addMilestoneBand"><i class="fa-solid fa-plus"></i> {{localize "DOWNTIME_MANAGER.Settings.MilestoneLevels.Add"}}</button>
+      <button type="button" data-action="resetMilestoneBands"><i class="fa-solid fa-rotate-left"></i> {{localize "DOWNTIME_MANAGER.Settings.MilestoneLevels.Reset"}}</button>
+    </div>
+  </fieldset>
+  <footer class="form-footer"><button type="submit"><i class="fa-solid fa-floppy-disk"></i> {{localize "DOWNTIME_MANAGER.Actions.Save"}}</button></footer>
+</div>

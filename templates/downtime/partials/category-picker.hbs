@@ -1,0 +1,12 @@
+<div class="sc-category-picker">
+  <div class="sc-category-picker-control">
+    <select data-category-select>
+      <option value="">{{localize "DOWNTIME_MANAGER.Settings.StationCategories.Choose"}}</option>
+      {{#each options}}<option value="{{id}}">{{label}}</option>{{/each}}
+    </select>
+    <button type="button" data-action="addCategorySelection"><i class="fa-solid fa-plus"></i> {{localize "DOWNTIME_MANAGER.Actions.Add"}}</button>
+  </div>
+  <div class="sc-category-chips" data-category-chips>
+    {{#each selected}}<span class="sc-category-chip" data-category-id="{{id}}"><input type="hidden" name="categories" value="{{id}}"><span>{{label}}</span><button type="button" data-action="removeCategorySelection" title="{{localize 'DOWNTIME_MANAGER.Actions.Remove'}}"><i class="fa-solid fa-xmark"></i></button></span>{{/each}}
+  </div>
+</div>

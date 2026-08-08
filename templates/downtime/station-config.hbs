@@ -1,0 +1,194 @@
+<div class="sc-body sc-config-body">
+  <h2>{{actorName}}</h2>
+
+  <details class="sc-config-section" data-section="general" open>
+    <summary title="{{localize 'DOWNTIME_MANAGER.Tooltips.Station.General'}}">{{localize "DOWNTIME_MANAGER.Station.General"}}</summary>
+    <fieldset>
+    <div class="sc-general-identity">
+      <div class="form-group" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Station.DisplayName'}}"><label>{{localize "DOWNTIME_MANAGER.Station.DisplayName"}}</label>
+        <input type="text" name="displayName" value="{{station.displayName}}"></div>
+      <label class="checkbox sc-checkbox-control" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Station.Enabled'}}"><input type="checkbox" name="enabled" {{checked station.enabled}}>
+        {{localize "DOWNTIME_MANAGER.Station.Enabled"}}</label>
+      <div class="tool-drop-zone" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Station.RequiredTool'}}">{{#if tool}}<img src="{{tool.img}}" alt=""><span>{{tool.name}}</span><button type="button" data-action="removeStationTool" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.RemoveEntry'}}"><i class="fa-solid fa-xmark"></i></button>{{else}}{{localize "DOWNTIME_MANAGER.Station.DropRequiredTool"}}{{/if}}</div>
+    </div>
+    <div class="form-group stacked" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Station.Description'}}"><label>{{localize "DOWNTIME_MANAGER.Station.Description"}}</label>
+      <textarea name="description">{{station.description}}</textarea></div>
+    <div class="form-group stacked" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Station.Categories'}}"><label>{{localize "DOWNTIME_MANAGER.Station.Categories"}}</label>
+      {{> "modules/tov-feuerschwinge-tools/templates/downtime/partials/category-picker.hbs" selected=categoryPicker.selected options=categoryPicker.options}}<p class="notes">{{localize "DOWNTIME_MANAGER.Station.CategoriesHint"}}</p></div>
+    <div class="sc-general-values">
+      <div class="form-group" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Station.RollInterval'}}"><label>{{localize "DOWNTIME_MANAGER.Station.RollInterval"}}</label>
+        <input type="number" name="rollInterval" value="{{station.rollInterval}}" min="0.000001" step="any"></div>
+      {{#if capabilities.checks}}<label class="checkbox sc-checkbox-control sc-general-toggle"><input type="checkbox" name="requiresRoll" {{checked station.requiresRoll}}> {{localize "DOWNTIME_MANAGER.Station.RequiresRoll"}}</label>
+      <div class="form-group" data-roll-option title="{{localize 'DOWNTIME_MANAGER.Tooltips.Station.EvaluationMode'}}"><label>{{localize "DOWNTIME_MANAGER.Station.EvaluationMode"}}</label>
+        <select name="evaluationMode">
+          <option value="total" {{#if (eq station.evaluationMode "total")}}selected{{/if}}>{{localize "DOWNTIME_MANAGER.Station.EvaluateTotal"}}</option>
+          <option value="natural" {{#if (eq station.evaluationMode "natural")}}selected{{/if}}>{{localize "DOWNTIME_MANAGER.Station.EvaluateNatural"}}</option>
+        </select></div>{{/if}}
+    </div>
+    </fieldset>
+  </details>
+
+  <details class="sc-config-section" data-section="progress-sources" open>
+    <summary>{{localize "DOWNTIME_MANAGER.Station.ProgressSources"}}</summary>
+    <fieldset class="sc-progress-sources">
+      <div class="sc-source-header"><span>{{localize "DOWNTIME_MANAGER.Station.ProgressSource"}}</span><span>{{localize "DOWNTIME_MANAGER.Station.SourceValue"}}</span><span>{{localize "DOWNTIME_MANAGER.Common.Multiplier"}}</span></div>
+      <div class="sc-source-row"><span>{{localize "DOWNTIME_MANAGER.Station.BaseProgress"}}</span><input type="number" name="baseProgress" value="{{station.baseProgress}}" step="any"><span class="notes">—</span></div>
+      {{#if capabilities.actorSources}}<div class="sc-source-row"><span>{{localize "DOWNTIME_MANAGER.Station.CharacterLevel"}}</span><label class="checkbox sc-checkbox-control"><input type="checkbox" name="progressSources.level.enabled" {{checked station.progressSources.level.enabled}}> {{localize "DOWNTIME_MANAGER.Station.UseSource"}}</label><input type="number" name="progressSources.level.multiplier" value="{{station.progressSources.level.multiplier}}" step="any" title="{{localize 'DOWNTIME_MANAGER.Station.SourceMultiplier'}}"></div>
+      <div class="sc-source-row"><span>{{localize "DOWNTIME_MANAGER.Station.ProficiencyBonus"}}</span><label class="checkbox sc-checkbox-control"><input type="checkbox" name="progressSources.proficiency.enabled" {{checked station.progressSources.proficiency.enabled}}> {{localize "DOWNTIME_MANAGER.Station.UseSource"}}</label><input type="number" name="progressSources.proficiency.multiplier" value="{{station.progressSources.proficiency.multiplier}}" step="any" title="{{localize 'DOWNTIME_MANAGER.Station.SourceMultiplier'}}"></div>
+      {{#if capabilities.checks}}<div class="sc-source-row"><span>{{localize "DOWNTIME_MANAGER.Station.CheckProficiency"}}</span><label class="checkbox sc-checkbox-control"><input type="checkbox" name="progressSources.checkProficiency.enabled" {{checked station.progressSources.checkProficiency.enabled}}> {{localize "DOWNTIME_MANAGER.Station.UseSource"}}</label><input type="number" name="progressSources.checkProficiency.multiplier" value="{{station.progressSources.checkProficiency.multiplier}}" step="any" title="{{localize 'DOWNTIME_MANAGER.Station.SourceMultiplier'}}"></div>{{/if}}{{/if}}
+      <div class="sc-source-modifiers">
+        <div class="sc-source-modifier-title"><h4>{{localize "DOWNTIME_MANAGER.Station.AdditionalModifiers"}}</h4><button type="button" data-action="addModifier" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.AddModifier'}}"><i class="fa-solid fa-plus"></i></button></div>
+        <div class="sc-list">{{#each station.modifiers}}
+          <div class="sc-grid-row modifier-row">
+            <input type="text" name="modifiers.{{@index}}.label" value="{{label}}" placeholder="{{localize 'DOWNTIME_MANAGER.Common.Label'}}">
+            <select name="modifiers.{{@index}}.operation" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Station.ModifierOperation'}}"><option value="add" {{#if (eq operation "add")}}selected{{/if}}>+</option><option value="multiply" {{#if (eq operation "multiply")}}selected{{/if}}>×</option></select>
+            <input type="number" name="modifiers.{{@index}}.value" value="{{value}}" step="any" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Station.ModifierValue'}}">
+            <span class="sc-list-controls"><button type="button" data-action="removeModifier" data-index="{{@index}}" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.RemoveRow'}}"><i class="fa-solid fa-trash"></i></button></span>
+          </div>
+        {{/each}}</div>
+      </div>
+      <div class="sc-formula-preview" data-level="{{exampleSources.level}}" data-proficiency="{{exampleSources.proficiency}}" data-check-proficiency="{{exampleSources.checkProficiency}}" data-label-base="{{localize 'DOWNTIME_MANAGER.Station.BaseProgress'}}" data-label-level="{{localize 'DOWNTIME_MANAGER.Station.CharacterLevel'}}" data-label-proficiency="{{localize 'DOWNTIME_MANAGER.Station.ProficiencyBonus'}}" data-label-check-proficiency="{{localize 'DOWNTIME_MANAGER.Station.CheckProficiency'}}" data-label-addition="{{localize 'DOWNTIME_MANAGER.Common.Addition'}}" data-label-multiplier="{{localize 'DOWNTIME_MANAGER.Common.Multiplier'}}" data-label-unnamed="{{localize 'DOWNTIME_MANAGER.Station.UnnamedModifier'}}">
+        <strong>{{localize "DOWNTIME_MANAGER.Station.FormulaPreview"}}</strong>
+        <code data-formula-preview></code>
+        <div class="sc-formula-breakdown" data-formula-breakdown></div>
+        <small class="notes">{{formulaExampleLabel}}</small>
+      </div>
+    </fieldset>
+  </details>
+
+  <details class="sc-config-section" data-section="checks" data-check-options open>
+    <summary title="{{localize 'DOWNTIME_MANAGER.Tooltips.Station.AllowedChecks'}}">{{localize "DOWNTIME_MANAGER.Station.AllowedChecks"}}</summary>
+    <fieldset>
+      <div class="sc-section-actions">
+      <button type="button" data-action="toggleChecks" data-check-type="skill" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.ToggleSkills'}}">
+        <i class="fa-solid fa-list-check"></i>
+        {{localize "DOWNTIME_MANAGER.Actions.ToggleSkillChecks"}}
+      </button>
+      <button type="button" data-action="toggleChecks" data-check-type="ability" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.ToggleAbilities'}}">{{localize "DOWNTIME_MANAGER.Actions.ToggleAbilityChecks"}}</button>
+      <button type="button" data-action="toggleChecks" data-check-type="tool" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.ToggleTools'}}">{{localize "DOWNTIME_MANAGER.Actions.ToggleToolChecks"}}</button>
+      <button type="button" data-action="toggleChecks" data-check-type="all" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.ToggleAllChecks'}}">{{localize "DOWNTIME_MANAGER.Actions.ToggleAllChecks"}}</button>
+      </div>
+    {{#each checkGroups}}
+      <section class="sc-check-group" data-check-group="{{type}}">
+        <h4>{{label}}</h4>
+        <div class="sc-check-grid">{{#each checks}}
+          <label class="checkbox"><input type="checkbox" name="allowedChecks" value="{{id}}" {{checked selected}}> {{label}}</label>
+        {{/each}}</div>
+      </section>
+    {{/each}}
+    </fieldset>
+  </details>
+
+  <details class="sc-config-section" data-section="roll-table" data-roll-options open>
+    <summary title="{{localize 'DOWNTIME_MANAGER.Tooltips.Station.RollTable'}}">{{localize "DOWNTIME_MANAGER.Station.RollTable"}}</summary>
+    <fieldset>
+    <div class="sc-section-actions">
+      <button type="button" data-action="resetRollTable" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.ResetRollTable'}}"><i class="fa-solid fa-rotate-left"></i> {{localize "DOWNTIME_MANAGER.Actions.ReloadRollTablePreset"}}</button>
+      <button type="button" data-action="addRollRow" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.AddRollRow'}}"><i class="fa-solid fa-plus"></i></button></div>
+    {{#if rollTablePresets.length}}
+    <div class="form-group" title="{{localize 'DOWNTIME_MANAGER.Tooltips.RollTable.Preset'}}">
+      <label>{{localize "DOWNTIME_MANAGER.RollTable.Preset"}}</label>
+      <select name="rollTablePreset">
+        <option value="">{{localize "DOWNTIME_MANAGER.RollTable.PresetNone"}}</option>
+        {{#each rollTablePresets}}
+          <option value="{{id}}" {{#if selected}}selected{{/if}} title="{{localize descriptionKey}}">{{localize labelKey}}</option>
+        {{/each}}
+      </select>
+      <p class="notes">{{localize "DOWNTIME_MANAGER.RollTable.PresetHint"}}</p>
+    </div>
+    {{/if}}
+    <p class="notes">{{localize "DOWNTIME_MANAGER.Station.RollTableHint"}}</p>
+    <div class="sc-list roll-table-list">
+      <div class="sc-grid-row roll-row roll-header" aria-hidden="true">
+        <span>{{localize "DOWNTIME_MANAGER.RollTable.Minimum"}}</span>
+        <span>{{localize "DOWNTIME_MANAGER.RollTable.Maximum"}}</span>
+        <span>{{localize "DOWNTIME_MANAGER.RollTable.Label"}}</span>
+        <span>{{localize "DOWNTIME_MANAGER.RollTable.ProgressAddition"}}</span>
+        <span>{{localize "DOWNTIME_MANAGER.RollTable.ProgressMultiplier"}}</span>
+        <span>{{localize "DOWNTIME_MANAGER.RollTable.RewardAddition"}}</span>
+        <span>{{localize "DOWNTIME_MANAGER.RollTable.RewardMultiplier"}}</span>
+        <span>{{localize "DOWNTIME_MANAGER.RollTable.ActorValueChange"}}</span>
+        <span>{{localize "DOWNTIME_MANAGER.RollTable.Actions"}}</span>
+      </div>
+    {{#each station.rollTable}}
+      <div class="sc-grid-row roll-row {{#if natural1}}natural-row{{/if}}{{#if natural20}} natural-row{{/if}}{{#unless enabled}} disabled-natural-row{{/unless}}">
+        {{#if natural1}}
+          <strong class="natural-result-label">{{localize "DOWNTIME_MANAGER.RollTable.Natural1"}}</strong>
+        {{else}}{{#if natural20}}
+          <strong class="natural-result-label">{{localize "DOWNTIME_MANAGER.RollTable.Natural20"}}</strong>
+        {{else}}
+          <input type="number" name="rollTable.{{@index}}.minimum" value="{{minimum}}" step="any" title="{{localize 'DOWNTIME_MANAGER.Tooltips.RollTable.Minimum'}}">
+          <input type="number" name="rollTable.{{@index}}.maximum" value="{{maximum}}" step="any" placeholder="∞" title="{{localize 'DOWNTIME_MANAGER.Tooltips.RollTable.Maximum'}}">
+        {{/if}}{{/if}}
+        <input type="text" name="rollTable.{{@index}}.label" value="{{label}}" placeholder="{{localize 'DOWNTIME_MANAGER.Common.Label'}}" title="{{localize 'DOWNTIME_MANAGER.Tooltips.RollTable.Label'}}">
+        <input type="number" name="rollTable.{{@index}}.addition" value="{{addition}}" step="any" title="{{localize 'DOWNTIME_MANAGER.Tooltips.RollTable.Addition'}}">
+        <input type="number" name="rollTable.{{@index}}.multiplier" value="{{multiplier}}" step="any" title="{{localize 'DOWNTIME_MANAGER.Tooltips.RollTable.Multiplier'}}">
+        <input type="number" name="rollTable.{{@index}}.rewardAddition" value="{{rewardAddition}}" step="any" title="{{localize 'DOWNTIME_MANAGER.Tooltips.RollTable.RewardAddition'}}">
+        <input type="number" name="rollTable.{{@index}}.rewardMultiplier" value="{{rewardMultiplier}}" step="any" title="{{localize 'DOWNTIME_MANAGER.Tooltips.RollTable.RewardMultiplier'}}">
+        <input type="number" name="rollTable.{{@index}}.actorValueChange" value="{{actorValueChange}}" step="any" title="{{localize 'DOWNTIME_MANAGER.Tooltips.RollTable.ActorValueChange'}}">
+        <span class="sc-list-controls">
+          {{#if natural1}}
+          <button type="button" class="sc-action-toggle {{#if enabled}}active{{/if}}" data-action="toggleNaturalRow" data-index="{{@index}}" aria-pressed="{{enabled}}" title="{{localize 'DOWNTIME_MANAGER.Tooltips.RollTable.Enabled'}}"><i class="fa-solid fa-power-off"></i></button>
+          {{else}}{{#if natural20}}
+          <button type="button" class="sc-action-toggle {{#if enabled}}active{{/if}}" data-action="toggleNaturalRow" data-index="{{@index}}" aria-pressed="{{enabled}}" title="{{localize 'DOWNTIME_MANAGER.Tooltips.RollTable.Enabled'}}"><i class="fa-solid fa-power-off"></i></button>
+          {{else}}
+          <button type="button" data-action="removeRollRow" data-index="{{@index}}" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.RemoveRow'}}"><i class="fa-solid fa-trash"></i></button>
+          {{/if}}{{/if}}
+        </span>
+      </div>
+    {{/each}}</div>
+    </fieldset>
+  </details>
+
+  <details class="sc-config-section" data-section="actor-value">
+    <summary title="{{localize 'DOWNTIME_MANAGER.Tooltips.Station.ActorValue'}}">{{localize "DOWNTIME_MANAGER.Station.CharacterValue"}}</summary>
+    <fieldset>
+    <label class="checkbox" title="{{localize 'DOWNTIME_MANAGER.Tooltips.ActorValue.Enabled'}}"><input type="checkbox" name="actorValue.enabled" {{checked station.actorValue.enabled}}> {{localize "DOWNTIME_MANAGER.Station.UseCharacterValue"}}</label>
+    <div data-actor-value-options {{#unless station.actorValue.enabled}}hidden{{/unless}}>
+    <div class="form-group"><label>{{localize "DOWNTIME_MANAGER.Station.CharacterValueScope"}}</label><select name="actorValue.scope"><option value="station" {{#if (eq station.actorValue.scope "station")}}selected{{/if}}>{{localize "DOWNTIME_MANAGER.Station.CharacterValueScopeStation"}}</option><option value="category" {{#if (eq station.actorValue.scope "category")}}selected{{/if}}>{{localize "DOWNTIME_MANAGER.Station.CharacterValueScopeCategory"}}</option></select></div>
+    <div class="form-group" data-character-value-key title="{{localize 'DOWNTIME_MANAGER.Tooltips.ActorValue.Key'}}"><label>{{localize "DOWNTIME_MANAGER.Station.CharacterValueKey"}}</label><input type="text" name="actorValue.key" value="{{station.actorValue.key}}"></div>
+    <div class="form-group" data-character-value-category><label>{{localize "DOWNTIME_MANAGER.Station.CharacterValueCategory"}}</label><select name="actorValue.category"><option value=""></option>{{#each characterValueCategories}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+    <div class="form-group" title="{{localize 'DOWNTIME_MANAGER.Tooltips.ActorValue.Label'}}"><label>{{localize "DOWNTIME_MANAGER.Common.Label"}}</label><input type="text" name="actorValue.label" value="{{station.actorValue.label}}"></div>
+    <div class="sc-grid-row value-fields">
+      <label title="{{localize 'DOWNTIME_MANAGER.Tooltips.ActorValue.Default'}}">{{localize "DOWNTIME_MANAGER.Common.Default"}} <input type="number" name="actorValue.defaultValue" value="{{station.actorValue.defaultValue}}" step="any"></label>
+      <label title="{{localize 'DOWNTIME_MANAGER.Tooltips.ActorValue.Minimum'}}">{{localize "DOWNTIME_MANAGER.Common.Minimum"}} <input type="number" name="actorValue.minimum" value="{{station.actorValue.minimum}}" step="any"></label>
+      <label title="{{localize 'DOWNTIME_MANAGER.Tooltips.ActorValue.Maximum'}}">{{localize "DOWNTIME_MANAGER.Common.Maximum"}} <input type="number" name="actorValue.maximum" value="{{station.actorValue.maximum}}" step="any"></label>
+      <label title="{{localize 'DOWNTIME_MANAGER.Tooltips.ActorValue.CompletionChange'}}">{{localize "DOWNTIME_MANAGER.Station.CompletionChange"}} <input type="number" name="actorValue.completionChange" value="{{station.actorValue.completionChange}}" step="any"></label>
+    </div>
+    <div class="sc-title-row"><h4 title="{{localize 'DOWNTIME_MANAGER.Tooltips.ActorValue.Tiers'}}">{{localize "DOWNTIME_MANAGER.Station.ValueTiers"}}</h4><span><button type="button" data-action="resetValueTiers" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.ResetValueTiers'}}"><i class="fa-solid fa-rotate-left"></i> {{localize "DOWNTIME_MANAGER.Actions.Reset"}}</button><button type="button" data-action="loadValueTierPreset" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.LoadValueTierPreset'}}"><i class="fa-solid fa-bolt"></i> {{localize "DOWNTIME_MANAGER.Actions.LoadValueTierPreset"}}</button><button type="button" data-action="addTier" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.AddTier'}}"><i class="fa-solid fa-plus"></i></button></span></div>
+    <div class="sc-list value-tier-list">
+      <div class="sc-grid-row tier-row tier-header">
+        <span>{{localize "DOWNTIME_MANAGER.Common.Minimum"}}</span>
+        <span>{{localize "DOWNTIME_MANAGER.Common.Maximum"}}</span>
+        <span>{{localize "DOWNTIME_MANAGER.RollTable.ProgressAddition"}}</span>
+        <span>{{localize "DOWNTIME_MANAGER.RollTable.ProgressMultiplier"}}</span>
+        <span>{{localize "DOWNTIME_MANAGER.RollTable.RewardAddition"}}</span>
+        <span>{{localize "DOWNTIME_MANAGER.RollTable.RewardMultiplier"}}</span>
+        <span></span>
+      </div>
+    {{#each station.actorValue.tiers}}
+      <div class="sc-grid-row tier-row">
+        <input type="number" name="actorValue.tiers.{{@index}}.minimum" value="{{minimum}}" step="1" title="{{localize 'DOWNTIME_MANAGER.Common.Minimum'}}">
+        <input type="number" name="actorValue.tiers.{{@index}}.maximum" value="{{maximum}}" step="1" placeholder="∞" readonly title="{{localize 'DOWNTIME_MANAGER.Common.Maximum'}}">
+        <input type="number" name="actorValue.tiers.{{@index}}.addition" value="{{addition}}" step="any" title="{{localize 'DOWNTIME_MANAGER.RollTable.ProgressAddition'}}">
+        <input type="number" name="actorValue.tiers.{{@index}}.multiplier" value="{{multiplier}}" step="any" title="{{localize 'DOWNTIME_MANAGER.RollTable.ProgressMultiplier'}}">
+        <input type="number" name="actorValue.tiers.{{@index}}.rewardAddition" value="{{rewardAddition}}" step="any" title="{{localize 'DOWNTIME_MANAGER.Tooltips.RollTable.RewardAddition'}}">
+        <input type="number" name="actorValue.tiers.{{@index}}.rewardMultiplier" value="{{rewardMultiplier}}" step="any" title="{{localize 'DOWNTIME_MANAGER.Tooltips.RollTable.RewardMultiplier'}}">
+        <span class="sc-list-controls"><button type="button" data-action="moveTier" data-index="{{@index}}" data-direction="-1" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.MoveUp'}}"><i class="fa-solid fa-arrow-up"></i></button><button type="button" data-action="moveTier" data-index="{{@index}}" data-direction="1" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.MoveDown'}}"><i class="fa-solid fa-arrow-down"></i></button><button type="button" data-action="removeTier" data-index="{{@index}}" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.RemoveRow'}}"><i class="fa-solid fa-trash"></i></button></span>
+      </div>
+    {{/each}}</div>
+    </div>
+    </fieldset>
+  </details>
+
+  <details class="sc-config-section" data-section="projects" open>
+    <summary title="{{localize 'DOWNTIME_MANAGER.Tooltips.Station.PublicProjects'}}">{{localize "DOWNTIME_MANAGER.Station.PublicProjects"}}</summary>
+    <fieldset>
+    <div class="sc-section-actions sc-project-create-actions"><button type="button" data-action="createRecipe" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.CreateProject'}}"><i class="fa-solid fa-plus"></i> {{localize "DOWNTIME_MANAGER.Station.CreateProject"}}</button><span class="sc-template-picker"><select data-project-template aria-label="{{localize 'DOWNTIME_MANAGER.Project.Template'}}">{{#each projectTemplates}}<option value="{{id}}">{{name}}</option>{{/each}}</select><button type="button" data-action="createRecipeTemplate"><i class="fa-solid fa-wand-magic-sparkles"></i> {{localize "DOWNTIME_MANAGER.Project.CreateFromTemplate"}}</button></span></div>
+    <div class="project-drop-zone">{{localize "DOWNTIME_MANAGER.Station.DropPublicProject"}}</div>
+    <div class="sc-list">{{#each recipes}}<div class="sc-row"><img src="{{img}}" alt=""><span class="grow">{{name}} <small>({{kind}})</small></span><button type="button" data-action="removeRecipe" data-uuid="{{uuid}}" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.RemoveProject'}}"><i class="fa-solid fa-trash"></i></button></div>{{else}}<p class="notes">{{localize "DOWNTIME_MANAGER.Station.NoPublicProjects"}}</p>{{/each}}</div>
+    </fieldset>
+  </details>
+
+  <div class="sc-buttons sc-config-footer"><button type="button" data-action="removeStation" class="danger"><i class="fa-solid fa-trash"></i> {{localize "DOWNTIME_MANAGER.Station.Remove"}}</button><button type="submit" class="sc-save-button"><i class="fa-solid fa-floppy-disk"></i> {{localize "DOWNTIME_MANAGER.Actions.Save"}}</button></div>
+</div>

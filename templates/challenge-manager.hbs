@@ -1,0 +1,128 @@
+<div class="tovf-challenge-manager-root">
+  <section class="encounter">
+    <span>{{localize "TOVF.ChallengeManager.Encounter.Adversaries"}} <strong>{{adversaryCount}}</strong></span>
+    <button type="button" class="overlay-toggle" data-action="toggleOverlay">
+      <i class="fa-solid {{#if overlayEnabled}}fa-eye-slash{{else}}fa-eye{{/if}}" inert></i>
+      {{#if overlayEnabled}}
+        {{localize "TOVF.ChallengeManager.Overlay.Hide"}}
+      {{else}}
+        {{localize "TOVF.ChallengeManager.Overlay.Show"}}
+      {{/if}}
+    </button>
+    <span>{{localize "TOVF.ChallengeManager.Encounter.MaxCR"}} <strong>{{maxCR}}</strong></span>
+  </section>
+
+  <section class="doom-bank">
+    <h3>{{localize "TOVF.ChallengeManager.Doom.Bank"}}</h3>
+    <div>
+      <button type="button" data-action="adjustDoom" data-amount="-1">−</button>
+      <input type="number" min="0" value="{{doom}}" data-doom-value>
+      <button type="button" data-action="adjustDoom" data-amount="1">+</button>
+    </div>
+    <div class="doom-spends">
+      <button type="button" data-action="adjustDoom" data-amount="-1">{{localize "TOVF.ChallengeManager.Doom.Advantage"}}</button>
+      <button type="button" data-action="adjustDoom" data-amount="-1">{{localize "TOVF.ChallengeManager.Doom.Disadvantage"}}</button>
+      <button type="button" data-action="adjustDoom" data-amount="-2">{{localize "TOVF.ChallengeManager.Doom.ExtraAction"}}</button>
+      <button type="button" data-action="adjustDoom" data-amount="-3">{{localize "TOVF.ChallengeManager.Doom.Recharge"}}</button>
+    </div>
+  </section>
+
+  <section class="participants">
+    <h3>{{localize "TOVF.ChallengeManager.Party.Title"}}</h3>
+    <div class="actor-list selected-actors">
+      {{#each selectedActors}}
+      <div class="actor-entry selected-actor-entry" draggable="true"
+           data-selected-actor data-actor-id="{{id}}" data-actor-uuid="{{uuid}}">
+        <img src="{{img}}" alt="">
+        <span class="actor-details">
+          <strong>{{name}}</strong>
+          <small class="actor-stats">
+            <span title="{{localize "TOVF.ChallengeManager.Party.AC"}}">
+              <i class="fa-solid fa-shield" aria-hidden="true"></i>
+              {{ac}}
+            </span>
+            <span title="{{localize "TOVF.ChallengeManager.Party.PassivePerception"}}">
+              <i class="fa-solid fa-eye" aria-hidden="true"></i>
+              {{passivePerception}}
+            </span>
+          </small>
+        </span>
+        <button type="button" data-action="selectActor" data-operation="remove"
+                data-actor-id="{{id}}" title="{{localize "TOVF.ChallengeManager.Party.Remove" name=name}}"
+                aria-label="{{localize "TOVF.ChallengeManager.Party.Remove" name=name}}">
+          <i class="fa-solid fa-xmark" inert></i>
+        </button>
+      </div>
+      {{else}}
+      <p class="hint">{{localize "TOVF.ChallengeManager.Party.Empty"}}</p>
+      {{/each}}
+    </div>
+  </section>
+
+  <section class="roll-request">
+    <div class="roll-request-heading">
+      <h3>{{localize "TOVF.ChallengeManager.Roll.Title"}}</h3>
+      <label class="request-dc" title="{{localize "TOVF.ChallengeManager.Roll.DC"}}" data-request-dc-field>
+        <span>{{localize "TOVF.ChallengeManager.Roll.DCShort"}}</span>
+        <input type="number" min="0" placeholder="—" data-request-dc
+               aria-label="{{localize "TOVF.ChallengeManager.Roll.DC"}}">
+      </label>
+    </div>
+    <div class="request-fields">
+      <select data-request-type>
+        <option value="skill">{{localize "TOVF.ChallengeManager.Roll.Skill"}}</option>
+        <option value="save">{{localize "TOVF.ChallengeManager.Roll.Save"}}</option>
+        <option value="die">{{localize "TOVF.ChallengeManager.Roll.Die"}}</option>
+      </select>
+      <select data-request-key data-kind="skill">
+        {{selectOptions skills valueAttr="value" labelAttr="label"}}
+      </select>
+      <select data-request-key data-kind="save">
+        {{selectOptions abilities valueAttr="value" labelAttr="label"}}
+      </select>
+      <select data-request-key data-kind="die">
+        {{selectOptions dice valueAttr="value" labelAttr="label"}}
+      </select>
+      <div class="request-options">
+        <label class="request-option">
+          <input type="checkbox" data-request-average>
+          <span>{{localize "TOVF.ChallengeManager.Roll.ShowAverage"}}</span>
+        </label>
+        <label class="request-option" title="{{localize "TOVF.ChallengeManager.Roll.PrivateHint"}}">
+          <input type="checkbox" data-request-private>
+          <span>{{localize "TOVF.ChallengeManager.Roll.Private"}}</span>
+        </label>
+      </div>
+      <button type="button" data-action="requestRoll">
+        <i class="fa-solid fa-message-arrow-up-right" inert></i>
+        {{localize "TOVF.ChallengeManager.Roll.Post"}}
+      </button>
+    </div>
+  </section>
+
+  <details class="all-actors" data-all-actors {{#if allActorsExpanded}}open{{/if}}>
+    <summary>{{localize "TOVF.ChallengeManager.Actors.Title"}}</summary>
+    <button type="button" class="add-connected-actors" data-action="addConnectedActors"
+            title="{{localize "TOVF.ChallengeManager.Actors.AddConnectedTitle"}}">
+      <i class="fa-solid fa-users" inert></i>
+      {{localize "TOVF.ChallengeManager.Actors.AddConnected"}}
+    </button>
+    <div class="actor-picker-scroll">
+      <div class="actor-list">
+        {{#each availableActors}}
+        <div class="actor-entry">
+          <img src="{{img}}" alt="">
+          <span>{{name}}</span>
+          <button type="button" data-action="selectActor" data-operation="add"
+                  data-actor-id="{{id}}" title="{{localize "TOVF.ChallengeManager.Actors.Add" name=name}}"
+                  aria-label="{{localize "TOVF.ChallengeManager.Actors.Add" name=name}}">
+            <i class="fa-solid fa-plus" inert></i>
+          </button>
+        </div>
+        {{else}}
+        <p class="hint">{{localize "TOVF.ChallengeManager.Actors.AllSelected"}}</p>
+        {{/each}}
+      </div>
+    </div>
+  </details>
+</div>

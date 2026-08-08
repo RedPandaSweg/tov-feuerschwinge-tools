@@ -1,0 +1,491 @@
+.downtime-manager .sc-body { padding: 1rem; overflow: auto; height: 100%; background: linear-gradient(145deg, color-mix(in srgb, var(--color-bg-option, transparent) 28%, transparent), transparent 45%); }
+.downtime-manager .form-group { display: grid; grid-template-columns: 180px 1fr; gap: .75rem; align-items: center; margin-bottom: .75rem; }
+.downtime-manager .recipe-drop-zone, .downtime-manager .target-drop-zone { border: 2px dashed var(--color-border-light-2); padding: 1.2rem; text-align: center; margin: .75rem 0; border-radius: 6px; }
+.downtime-manager .sc-list { display: grid; gap: .5rem; }
+.downtime-manager .sc-row, .downtime-manager .sc-recipe, .downtime-manager .sc-project { display: flex; align-items: center; gap: .65rem; padding: .6rem; border: 1px solid var(--color-border-light-2); border-radius: 7px; background: color-mix(in srgb, var(--color-bg-option, transparent) 28%, transparent); transition: border-color .15s ease, background .15s ease, transform .15s ease; }
+.downtime-manager .sc-row:hover, .downtime-manager .sc-recipe:hover, .downtime-manager .sc-project:hover { border-color: var(--color-border-highlight, var(--color-border-light-1)); background: color-mix(in srgb, var(--color-bg-option, transparent) 48%, transparent); }
+.downtime-manager img { width: 42px; height: 42px; object-fit: cover; border: 0; }
+.downtime-manager .grow { flex: 1; }
+.downtime-manager .disabled { opacity: .55; }
+.downtime-manager .sc-summary { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: .75rem; }
+.downtime-manager .sc-formula { padding: .65rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; margin-bottom: 1rem; }
+.downtime-manager .sc-project input { width: 70px; }
+.downtime-manager progress { width: 100%; }
+.downtime-manager .danger { margin-top: .5rem; }
+.downtime-manager .sc-buttons { display: flex; gap: .5rem; margin-top: .75rem; }
+.downtime-manager .tool-drop-zone, .downtime-manager .ingredient-drop-zone { border: 2px dashed var(--color-border-light-2); padding: 1rem; text-align: center; border-radius: 6px; }
+.downtime-manager .tool-drop-zone img, .downtime-manager .result-drop-zone img { vertical-align: middle; margin-right: .5rem; }
+.downtime-manager .sc-title-row { display:flex; justify-content:space-between; gap:1rem; }
+.downtime-manager .sc-recipe label { display:flex; align-items:center; gap:.35rem; }
+.downtime-manager .sc-recipe label input { width:60px; }
+.downtime-manager .sc-row input { width:80px; }
+
+/* Formula Styles for Crafting Station */
+
+.sc-formula {
+  padding: 0.75rem;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 6px;
+}
+
+.sc-formula-title {
+  text-align: center;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.sc-formula-grid {
+  display: grid;
+  grid-template-columns: auto auto auto auto auto auto auto auto auto auto;
+  align-items: center;
+}
+
+.sc-formula-cell {
+  text-align: center;
+}
+
+.sc-formula-cell .label {
+  font-size: 0.75rem;
+  opacity: 0.75;
+  margin-bottom: 0.25rem;
+}
+
+.sc-formula-cell .value {
+  font-size: 1.8rem;
+  font-weight: 1000;
+}
+
+.sc-formula-cell.total .value {
+  font-size: 1.8rem;
+}
+
+.operator {
+  font-size: 1.4rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.downtime-manager .window-content,
+.downtime-manager form { min-height: 0; overflow: hidden; }
+.downtime-manager .sc-config-body { display: grid; gap: .85rem; }
+.downtime-manager fieldset { border: 1px solid var(--color-border-light-2); border-radius: 8px; padding: .85rem; min-width: 0; }
+.downtime-manager legend { font-weight: 700; padding: 0 .35rem; }
+.downtime-manager textarea { min-height: 5rem; resize: vertical; }
+.downtime-manager .form-group.stacked { grid-template-columns: 1fr; }
+.downtime-manager .sc-check-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: .35rem; }
+.downtime-manager .sc-check-group + .sc-check-group { margin-top: .75rem; }
+.downtime-manager .sc-check-group h4 { margin: 0 0 .35rem; font-size: .9rem; border-bottom: 1px solid var(--color-border-light-2); padding-bottom: .2rem; }
+.downtime-manager label.checkbox { display: flex; align-items: center; gap: .4rem; padding: .25rem .4rem; border-radius: 4px; transition: background .15s ease; }
+.downtime-manager label.checkbox:hover { background: color-mix(in srgb, var(--color-bg-option, transparent) 65%, transparent); }
+.downtime-manager label.checkbox input { flex: 0 0 auto; }
+.downtime-manager .sc-grid-row { display: grid; gap: .4rem; align-items: center; }
+.downtime-manager .sc-grid-row input,
+.downtime-manager .sc-grid-row select { text-align: center; }
+.downtime-manager .modifier-row { grid-template-columns: minmax(120px, 1fr) 90px 90px auto; }
+.downtime-manager .roll-row { grid-template-columns: 60px 60px minmax(90px, 1fr) repeat(5, 60px) 44px; min-width: 594px; }
+.downtime-manager .roll-table-list { overflow-x: auto; padding: .35rem; border: 1px solid color-mix(in srgb, var(--color-border-light-2) 70%, transparent); border-radius: 6px; background: color-mix(in srgb, var(--color-bg-option, transparent) 20%, transparent); }
+.downtime-manager .roll-header { font-size: .75rem; font-weight: 700; line-height: 1.1; align-items: end; padding: .2rem 0 .4rem; border-bottom: 1px solid var(--color-border-light-2); }
+.downtime-manager .roll-header > span { overflow-wrap: anywhere; text-align: center; }
+.downtime-manager .roll-table-list .roll-row:not(.roll-header) { padding-block: .3rem; border-bottom: 1px solid color-mix(in srgb, var(--color-border-light-2) 45%, transparent); }
+.downtime-manager .roll-table-list .roll-row:last-child { border-bottom: 0; }
+.downtime-manager .natural-result-label { grid-column: span 2; }
+.downtime-manager .natural-row { background: color-mix(in srgb, var(--color-bg-option, transparent) 55%, transparent); border-radius: 4px; }
+.downtime-manager .natural-result-label { text-align: center; }
+.downtime-manager .disabled-natural-row .natural-result-label { text-decoration: line-through; opacity: .55; }
+.downtime-manager .value-tier-list { overflow-x: auto; }
+.downtime-manager .tier-row { grid-template-columns: repeat(6, 75px) auto; min-width: 590px; }
+.downtime-manager .tier-header { font-size: .75rem; font-weight: 700; line-height: 1.1; align-items: end; padding: .2rem 0 .4rem; }
+.downtime-manager .tier-header > span { overflow-wrap: anywhere; text-align: center; }
+.downtime-manager .value-fields { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+.downtime-manager .value-fields label { display: grid; grid-template-rows: 2.6em 30px; align-items: end; gap: .25rem; }
+.downtime-manager .value-fields label input { height: 30px; align-self: end; }
+.downtime-manager .sc-list-controls { display: flex; justify-content: center; gap: .2rem; }
+.downtime-manager .sc-list-controls button { width: 30px; padding: .25rem; }
+.downtime-manager .sc-action-toggle { width: 30px; height: 30px; display: inline-grid; place-items: center; border: 1px solid var(--color-border-light-2); border-radius: 4px; cursor: pointer; opacity: .55; }
+.downtime-manager .sc-action-toggle.active { opacity: 1; color: var(--color-text-hyperlink); }
+.downtime-manager .project-drop-zone,
+.downtime-manager .item-drop-zone { border: 2px dashed var(--color-border-light-2); padding: 1rem; text-align: center; margin: .5rem 0; border-radius: 7px; background: color-mix(in srgb, var(--color-bg-option, transparent) 24%, transparent); transition: border-color .15s ease, background .15s ease; }
+.downtime-manager .project-drop-zone:hover,
+.downtime-manager .item-drop-zone:hover,
+.downtime-manager .setting-item-drop:hover,
+.downtime-manager .tool-drop-zone:hover { border-color: var(--color-border-highlight, var(--color-border-light-1)); background: color-mix(in srgb, var(--color-bg-option, transparent) 55%, transparent); }
+.downtime-manager .sc-project { display: grid; grid-template-columns: minmax(0, 1fr); gap: .7rem; align-items: stretch; }
+.downtime-manager .sc-project-catalog { display: grid; gap: .65rem; }
+.downtime-manager .sc-project-catalog-heading { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; }
+.downtime-manager .sc-project-catalog-heading h3 { margin: 0; }
+.downtime-manager .sc-project-filters { display: grid; grid-template-columns: minmax(180px, 1.5fr) repeat(3, minmax(125px, 1fr)); gap: .45rem; position: sticky; top: -1rem; z-index: 2; padding: .55rem; border: 1px solid var(--color-border-light-2); border-radius: 7px; background: var(--color-bg, var(--color-cool-5-90, #20252b)); }
+.downtime-manager .sc-project-filters select,
+.downtime-manager .sc-project-filters input { width: 100%; min-width: 0; }
+.downtime-manager .sc-project-search { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .4rem; }
+.downtime-manager details.sc-project > summary { list-style: none; cursor: pointer; }
+.downtime-manager details.sc-project > summary::-webkit-details-marker { display: none; }
+.downtime-manager details.sc-project > summary::after { content: "\f078"; font: var(--fa-font-solid); align-self: center; opacity: .65; transition: transform .15s ease; }
+.downtime-manager details.sc-project[open] > summary::after { transform: rotate(180deg); }
+.downtime-manager .sc-project-details { display: grid; gap: .7rem; }
+.downtime-manager .sc-project-classification { display: block; margin-top: .2rem; font-size: .78rem; opacity: .7; }
+.downtime-manager .sc-project-compact-progress { display: grid; grid-template-columns: minmax(100px, 1fr) auto; align-items: center; gap: .45rem; margin-top: .35rem; }
+.downtime-manager .sc-project-compact-progress progress { height: .55rem; }
+.downtime-manager .sc-project-filter-empty { padding: 1rem; text-align: center; }
+.downtime-manager .sc-project-main { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: .75rem; align-items: start; width: 100%; }
+.downtime-manager details.sc-project > .sc-project-main { grid-template-columns: 54px minmax(0, 1fr) auto; }
+.downtime-manager .sc-project-main > img { width: 54px; height: 54px; border-radius: 6px; }
+.downtime-manager .sc-project-content { min-width: 0; width: 100%; }
+.downtime-manager .sc-project-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem; }
+.downtime-manager .sc-project-heading .sc-project-cost { margin-left: auto; }
+.downtime-manager .sc-project-description > :first-child { margin-top: .25rem; }
+.downtime-manager .sc-project-description > :last-child { margin-bottom: 0; }
+.downtime-manager .sc-project-description { width: 100%; }
+.downtime-manager .sc-project-cost { margin-top: .2rem; font-size: .85rem; }
+.downtime-manager .sc-project-progress-actions { display: flex; align-items: center; gap: .55rem; width: 100%; padding-top: .55rem; border-top: 1px solid color-mix(in srgb, var(--color-border-light-2) 65%, transparent); }
+.downtime-manager .sc-project-progress { flex: 1 1 260px; min-width: 180px; text-align: center; }
+.downtime-manager .sc-project-progress progress { display: block; width: 100%; margin: .2rem 0; }
+.downtime-manager .sc-project-progress small { display: block; text-align: center; }
+.downtime-manager .sc-project-state { flex: 1 1 auto; }
+.downtime-manager .sc-project-progress-actions > button { flex: 0 0 auto; width: auto; min-height: 32px; }
+.downtime-manager .sc-project-progress-actions > select { flex: 0 1 190px; }
+.downtime-manager .sc-project .sc-downtime-input { flex: 0 0 76px; width: 76px; text-align: center; }
+.downtime-manager .sc-last-investment { width: 100%; margin-top: 0; padding: .55rem .65rem; border-left: 3px solid var(--color-border-highlight, #6f9ed6); border-radius: 4px; background: color-mix(in srgb, var(--color-border-highlight, #6f9ed6) 8%, transparent); }
+.downtime-manager .sc-last-investment-summary { display: flex; flex-wrap: wrap; gap: .25rem 1rem; margin-top: .25rem; font-size: .85rem; }
+.downtime-manager .sc-last-investment details { margin-top: .35rem; }
+.downtime-manager .sc-last-investment code { display: block; width: fit-content; margin: .4rem 0; padding: .3rem .45rem; }
+.downtime-manager .sc-calculation-parts { display: grid; gap: .35rem; margin: .35rem 0 0; }
+.downtime-manager .sc-calculation-parts > div { display: grid; grid-template-columns: minmax(130px, auto) 1fr; gap: .5rem; }
+.downtime-manager .sc-calculation-parts dt { font-weight: 700; }
+.downtime-manager .sc-calculation-parts dd { margin: 0; opacity: .8; }
+.downtime-manager .sc-quantity-control { display: grid; justify-items: center; gap: .2rem; font-size: .8rem; font-weight: 600; }
+.downtime-manager .sc-project .sc-quantity-control input { width: 52px; text-align: center; }
+.downtime-manager .sc-deactivate-project { opacity: .7; }
+.downtime-manager .sc-deactivate-project:hover { opacity: 1; }
+.downtime-manager .sc-project.completed { opacity: .7; }
+.downtime-manager .sc-project select { max-width: 190px; }
+@media (max-width: 620px) {
+  .downtime-manager .sc-project-filters { grid-template-columns: 1fr 1fr; }
+  .downtime-manager .sc-project-search { grid-column: 1 / -1; }
+  .downtime-manager .sc-project-progress-actions { flex-wrap: wrap; }
+  .downtime-manager .sc-project-progress { flex-basis: 100%; }
+}
+.downtime-manager .sc-config-section { border: 1px solid var(--color-border-light-2); border-radius: 8px; overflow: clip; box-shadow: 0 1px 3px rgb(0 0 0 / 12%); transition: border-color .15s ease, box-shadow .15s ease; }
+.downtime-manager .sc-config-section:hover { border-color: color-mix(in srgb, var(--color-border-highlight, var(--color-border-light-1)) 65%, var(--color-border-light-2)); }
+.downtime-manager .sc-config-section > summary { cursor: pointer; font-weight: 700; background: linear-gradient(90deg, color-mix(in srgb, var(--color-bg-option, transparent) 78%, transparent), color-mix(in srgb, var(--color-bg-option, transparent) 40%, transparent)); user-select: none; letter-spacing: .015em; }
+.downtime-manager .sc-config-section[open] > summary { border-bottom: 1px solid var(--color-border-light-2); }
+.downtime-manager .sc-config-section > fieldset { border: 0; border-radius: 0; margin: 0; }
+.downtime-manager .sc-section-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .35rem; margin-bottom: .65rem; }
+.downtime-manager .sc-section-actions button { width: auto; min-height: 30px; }
+.downtime-manager .sc-section-actions button img { width: 24px; height: 24px; object-fit: cover; border: 0; }
+.downtime-manager .setting-item-drop { min-height: 64px; border: 2px dashed var(--color-border-light-2); border-radius: 7px; padding: .65rem; display: flex; align-items: center; justify-content: center; gap: .65rem; margin-bottom: .5rem; background: color-mix(in srgb, var(--color-bg-option, transparent) 24%, transparent); transition: border-color .15s ease, background .15s ease; }
+.downtime-manager .setting-item-drop img { width: 42px; height: 42px; object-fit: cover; }
+
+.downtime-manager .tool-drop-zone,
+.downtime-manager .project-drop-zone,
+.downtime-manager .item-drop-zone,
+.downtime-manager .setting-item-drop {
+  border-color: color-mix(in srgb, var(--color-border-highlight, #6f9ed6) 72%, var(--color-border-light-2));
+  background: color-mix(in srgb, var(--color-border-highlight, #6f9ed6) 14%, transparent);
+  box-shadow: inset 0 0 12px color-mix(in srgb, var(--color-border-highlight, #6f9ed6) 8%, transparent);
+}
+.downtime-manager .tool-drop-zone:hover,
+.downtime-manager .project-drop-zone:hover,
+.downtime-manager .item-drop-zone:hover,
+.downtime-manager .setting-item-drop:hover {
+  border-color: var(--color-border-highlight, #6f9ed6);
+  background: color-mix(in srgb, var(--color-border-highlight, #6f9ed6) 24%, transparent);
+  box-shadow: inset 0 0 16px color-mix(in srgb, var(--color-border-highlight, #6f9ed6) 14%, transparent);
+}
+
+.downtime-manager.station-config [data-section="general"] > fieldset {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .55rem 1rem;
+  padding: .7rem .85rem .8rem;
+}
+.downtime-manager.station-config [data-section="general"] .form-group {
+  grid-template-columns: 1fr;
+  align-content: start;
+  gap: .2rem;
+  margin: 0;
+}
+.downtime-manager.station-config [data-section="general"] .form-group.stacked,
+.downtime-manager.station-config [data-section="general"] .sc-general-identity,
+.downtime-manager.station-config [data-section="general"] .sc-general-values {
+  grid-column: 1 / -1;
+}
+.downtime-manager.station-config .sc-general-identity {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 1rem;
+}
+.downtime-manager.station-config .sc-general-identity .form-group { width: min(100%, 300px); }
+.downtime-manager .sc-checkbox-control {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  min-height: 30px;
+  margin: 0;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+.downtime-manager .sc-checkbox-control > input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+.downtime-manager.station-config .sc-general-identity > .tool-drop-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  max-width: 300px;
+  padding: .25rem .65rem;
+}
+.downtime-manager.station-config .sc-general-identity > .tool-drop-zone img {
+  width: 24px;
+  height: 24px;
+  object-fit: cover;
+}
+.downtime-manager.station-config .sc-general-identity > .tool-drop-zone button {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  margin-left: .25rem;
+  padding: 0;
+}
+.downtime-manager.station-config .sc-general-values {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: .75rem;
+}
+.downtime-manager.station-config .sc-general-values > .sc-general-toggle { align-self: end; justify-self: center; height: 30px; }
+.downtime-manager.station-config .sc-general-values .form-group {
+  grid-template-rows: 2.6em 30px;
+  align-items: end;
+  justify-items: center;
+  text-align: center;
+}
+.downtime-manager.station-config .sc-general-values input,
+.downtime-manager.station-config .sc-general-values select { text-align: center; }
+.downtime-manager .sc-progress-sources { display: grid; gap: 0; padding: .7rem .85rem .85rem; }
+.downtime-manager .sc-source-header,
+.downtime-manager .sc-source-row { display: grid; grid-template-columns: minmax(240px, 1fr) 130px 130px; gap: .75rem; align-items: center; }
+.downtime-manager .sc-source-header { padding: 0 .55rem .4rem; border-bottom: 1px solid var(--color-border-light-2); font-size: .78rem; font-weight: 700; text-transform: uppercase; opacity: .72; }
+.downtime-manager .sc-source-header span:not(:first-child) { text-align: center; }
+.downtime-manager .sc-source-row { min-height: 42px; padding: .35rem .55rem; border-bottom: 1px solid color-mix(in srgb, var(--color-border-light-2) 55%, transparent); }
+.downtime-manager .sc-source-row:last-child { border-bottom: 0; }
+.downtime-manager .sc-source-row:nth-child(even) { background: color-mix(in srgb, var(--color-bg-option, transparent) 22%, transparent); }
+.downtime-manager .sc-source-row > input { width: 100%; text-align: center; }
+.downtime-manager .sc-source-row > .sc-checkbox-control { justify-self: center; }
+.downtime-manager .sc-source-row > .notes { text-align: center; }
+.downtime-manager .sc-source-modifiers { margin-top: .75rem; padding-top: .65rem; border-top: 1px solid var(--color-border-light-2); }
+.downtime-manager .sc-source-modifier-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: .45rem; }
+.downtime-manager .sc-source-modifier-title h4 { margin: 0; }
+.downtime-manager .sc-source-modifier-title button { width: 32px; height: 30px; padding: 0; }
+.downtime-manager .sc-formula-preview { margin-top: .75rem; padding: .65rem .75rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; background: color-mix(in srgb, var(--color-bg-option, transparent) 35%, transparent); }
+.downtime-manager .sc-formula-preview code { display: block; margin: .4rem 0 .25rem; padding: .35rem .5rem; overflow-wrap: anywhere; }
+.downtime-manager .sc-formula-breakdown { display: grid; gap: .2rem; margin: .35rem 0 .5rem; padding: .45rem .55rem; border-left: 3px solid var(--color-border-light-2); font-size: .82rem; }
+.downtime-manager.station-config [data-section="general"] input:not([type="checkbox"]),
+.downtime-manager.station-config [data-section="general"] select {
+  min-height: 28px;
+  height: 28px;
+}
+.downtime-manager.station-config [data-section="general"] input[type="number"] { width: 110px; }
+.downtime-manager.station-config [data-section="general"] input[type="text"] { width: min(100%, 260px); }
+.downtime-manager.station-config [data-section="general"] select { width: min(100%, 230px); }
+.downtime-manager.station-config [data-section="general"] textarea { min-height: 52px; height: 52px; }
+.downtime-manager.station-config [data-section="actor-value"] .sc-title-row { margin-top: .9rem; align-items: center; }
+.downtime-manager.station-config [data-section="actor-value"] .sc-title-row + .sc-list { margin-top: .4rem; }
+.downtime-manager.station-config [data-section="checks"] .sc-section-actions,
+.downtime-manager.recipe-sheet [data-section="checks"] .sc-section-actions { justify-content: center; }
+.downtime-manager.station-config [data-section="checks"] .sc-check-group {
+  width: min(100%, 640px);
+  margin-inline: auto;
+}
+.downtime-manager.station-config [data-section="checks"] .sc-check-group h4 { text-align: center; }
+.downtime-manager.station-config [data-section="checks"] .sc-check-grid {
+  grid-template-columns: repeat(auto-fit, 180px);
+  justify-content: center;
+}
+.downtime-manager.station-config [data-section="checks"] .sc-check-grid label.checkbox {
+  width: 180px;
+  justify-content: flex-start;
+}
+.downtime-manager .sc-dashboard-summary { display: flex; flex-wrap: wrap; gap: .6rem 1.25rem; margin: .75rem 0; padding: .65rem .8rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.downtime-manager .sc-dashboard-downtime { margin-bottom: .75rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.downtime-manager .sc-dashboard-projects { margin-bottom: .75rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.downtime-manager .sc-dashboard-projects > summary,
+.downtime-manager .sc-dashboard-downtime > summary { padding: .55rem .7rem; font-weight: 700; cursor: pointer; }
+.downtime-manager .sc-dashboard-projects[open] > summary,
+.downtime-manager .sc-dashboard-downtime[open] > summary { border-bottom: 1px solid var(--color-border-light-2); }
+.downtime-manager .sc-dashboard-projects-body { padding: .6rem; overflow-x: auto; }
+.downtime-manager .sc-dashboard-downtime-body { padding: .6rem; }
+.downtime-manager .sc-dashboard-character-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .4rem; }
+.downtime-manager .sc-dashboard-character-grid label.checkbox { border: 1px solid var(--color-border-light-2); }
+.downtime-manager .sc-dashboard-character-grid img { width: 30px; height: 30px; border: 0; border-radius: 50%; object-fit: cover; }
+.downtime-manager .sc-dashboard-character-grid span,
+.downtime-manager .sc-dashboard-character-grid small { display: block; }
+.downtime-manager .sc-dashboard-grant-actions { display: flex; flex-wrap: wrap; align-items: end; gap: .5rem; margin-top: .6rem; }
+.downtime-manager .sc-dashboard-grant-actions label { display: grid; gap: .25rem; width: 120px; }
+.downtime-manager .sc-dashboard-grant-actions button { width: auto; }
+.downtime-manager .sc-dashboard-last-grant { margin: .6rem 0 0; padding-top: .5rem; border-top: 1px solid var(--color-border-light-2); }
+.downtime-manager .sc-dashboard-stations { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .75rem; }
+.downtime-manager .sc-dashboard-stations button { width: auto; }
+.downtime-manager .sc-dashboard-stations button.disabled { opacity: .55; }
+.downtime-manager .sc-dashboard-table { width: 100%; min-width: 680px; border: 1px solid var(--color-border-light-2); border-radius: 6px; overflow: hidden; }
+.downtime-manager .sc-dashboard-row { display: grid; grid-template-columns: 135px 145px minmax(145px, 1fr) 125px 72px 46px; gap: .45rem; align-items: center; padding: .45rem; border-bottom: 1px solid var(--color-border-light-2); }
+.downtime-manager .sc-dashboard-row:last-child { border-bottom: 0; }
+.downtime-manager .sc-dashboard-row.header { font-size: .78rem; font-weight: 700; text-transform: uppercase; background: color-mix(in srgb, var(--color-bg-option, transparent) 65%, transparent); }
+.downtime-manager .sc-dashboard-row button { width: auto; text-align: left; }
+.downtime-manager .sc-dashboard-row .sc-dashboard-remove { width: 40px; height: 30px; padding: 0; text-align: center; justify-self: center; }
+.downtime-manager .sc-dashboard-row progress { width: 100%; height: 8px; }
+.downtime-manager .sc-dashboard-row small { display: block; text-align: center; }
+.downtime-manager .sc-dashboard-actor { display: flex; align-items: center; gap: .4rem; }
+.downtime-manager .sc-dashboard-actor img { width: 30px; height: 30px; object-fit: cover; border: 0; border-radius: 50%; }
+.downtime-manager .sc-dashboard-row .status { font-weight: 700; }
+.downtime-manager .sc-dashboard-row .status.roll { color: var(--color-text-hyperlink); }
+.downtime-manager .sc-dashboard-row .status.completed { color: #4f9f63; }
+.downtime-manager .sc-dashboard-row .status.paused { opacity: .65; }
+.downtime-manager.recipe-sheet .sc-project-identity { display: grid; grid-template-columns: 72px minmax(180px, 1fr) 150px auto; align-items: end; gap: 1rem; margin-bottom: .6rem; }
+.downtime-manager.recipe-sheet .sc-project-identity .form-group { display: grid; grid-template-columns: 1fr; gap: .25rem; width: 100%; margin: 0; }
+.downtime-manager.recipe-sheet .sc-project-identity .form-group label { text-align: left; }
+.downtime-manager.recipe-sheet .sc-project-identity .sc-project-required-progress input { width: 100%; text-align: center; }
+.downtime-manager.recipe-sheet .sc-project-identity > .sc-checkbox-control { align-self: end; min-height: 30px; }
+.downtime-manager.recipe-sheet .sc-project-completion-check { display: grid; grid-template-columns: 1fr; align-items: end; gap: .6rem; margin: .5rem 0; width: 100%; }
+.downtime-manager.recipe-sheet .sc-project-completion-check > label:not(.checkbox) { display: grid; gap: .25rem; text-align: center; }
+.downtime-manager.recipe-sheet .sc-project-completion-check input[type="number"] { text-align: center; }
+.downtime-manager .sc-completion-check { display: grid; gap: .15rem; min-width: 145px; text-align: center; }
+.downtime-manager.recipe-sheet .sc-project-section-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem; align-items: start; }
+.downtime-manager.recipe-sheet .sc-project-section-column { min-width: 0; }
+.downtime-manager.recipe-sheet .sc-project-section-column > h4 { margin: 0 0 .5rem; }
+.downtime-manager.recipe-sheet .sc-project-section-grid .sc-row { gap: .4rem; padding: .45rem; }
+.downtime-manager.recipe-sheet .sc-project-section-grid .sc-row img { width: 32px; height: 32px; }
+.downtime-manager.recipe-sheet .sc-project-section-grid .sc-row input:not([type="hidden"]) { width: 58px; }
+@media (max-width: 620px) {
+  .downtime-manager.recipe-sheet .sc-project-section-grid { grid-template-columns: 1fr; }
+}
+.downtime-manager.recipe-sheet .sc-project-image-picker { width: 72px; height: 72px; padding: 0; overflow: hidden; border-radius: 8px; }
+.downtime-manager.recipe-sheet .sc-project-image-picker img { width: 100%; height: 100%; object-fit: cover; border: 0; }
+.downtime-manager.station-config .sc-project-create-actions { justify-content: space-between; flex-wrap: wrap; }
+.downtime-manager.station-config .sc-template-picker { display: flex; align-items: stretch; gap: .35rem; }
+.downtime-manager.station-config .sc-template-picker select { min-width: 150px; }
+.downtime-manager.downtime-help .window-content { padding: 0; }
+.downtime-manager .sc-help-body { padding: 1rem 1.2rem 1.4rem; }
+.downtime-manager .sc-help-header { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.downtime-manager .sc-help-header > i { font-size: 2.8rem; color: var(--color-warm-1); }
+.downtime-manager .sc-help-header h1 { margin: 0 0 .3rem; }
+.downtime-manager .sc-help-header p { margin: 0; }
+.downtime-manager .sc-help-nav { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: 1rem; }
+.downtime-manager .sc-help-nav button { width: auto; padding: .3rem .55rem; border: 1px solid var(--color-border-light-2); border-radius: 5px; }
+.downtime-manager .sc-help-sections { display: grid; gap: .55rem; }
+.downtime-manager .sc-help-content { padding: .4rem .75rem .75rem; }
+.downtime-manager .sc-help-content p { margin-top: .25rem; }
+.downtime-manager .sc-help-content ol { margin: .5rem 0 0; padding-left: 1.5rem; }
+.downtime-manager .sc-help-content li { margin-bottom: .4rem; line-height: 1.35; }
+.downtime-manager .sc-project-library-body { padding: 1rem; }
+.downtime-manager .sc-project-library-actions { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; }
+.downtime-manager .sc-project-library-actions > button, .downtime-manager .sc-project-library-actions .sc-template-picker { width: auto; }
+.downtime-manager .sc-project-library-list { display: grid; gap: .55rem; }
+.downtime-manager .sc-library-project > img { width: 48px; height: 48px; object-fit: cover; }
+.downtime-manager .sc-library-meta { display: flex; flex-wrap: wrap; gap: .3rem .8rem; margin: .15rem 0; }
+.downtime-manager .sc-library-meta span { opacity: .85; }
+.downtime-manager .sc-config-footer { align-items: stretch; width: 100%; }
+.downtime-manager .sc-config-footer > button { min-height: 34px; margin-block: 0; }
+.downtime-manager .sc-config-footer .danger { opacity: .62; width: auto; }
+.downtime-manager .sc-config-footer .danger:hover { opacity: .85; }
+.downtime-manager .sc-config-footer .sc-save-button { width: auto; margin-left: auto; }
+
+.downtime-manager .sc-session-fields { display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: .7rem; }
+.downtime-manager .sc-session-fields label,
+.downtime-manager .sc-session-level-values label,
+.downtime-manager .sc-session-footer label { display: grid; gap: .25rem; }
+.downtime-manager .sc-session-fields .wide { grid-column: 1 / -1; }
+.downtime-manager .sc-session-fields textarea { min-height: 70px; }
+.downtime-manager .sc-session-actions,
+.downtime-manager .sc-session-footer { display: flex; flex-wrap: wrap; align-items: end; gap: .5rem; margin-top: .7rem; }
+.downtime-manager .sc-session-distribution { margin-top: .7rem; }
+.downtime-manager .sc-session-column-toggles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: .4rem; }
+.downtime-manager .sc-session-column-toggles label.checkbox { border: 1px solid var(--color-border-light-2); }
+.downtime-manager .sc-session-column-toggles img { width: 26px; height: 26px; border: 0; object-fit: cover; }
+.downtime-manager .sc-session-milestone-toggle { margin: 0; }
+.downtime-manager .sc-session-players { margin-top: .7rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.downtime-manager .sc-session-players > summary { padding: .55rem .7rem; font-weight: 700; cursor: pointer; }
+.downtime-manager .sc-session-players[open] > summary { border-bottom: 1px solid var(--color-border-light-2); }
+.downtime-manager .sc-session-players > .sc-session-actions,
+.downtime-manager .sc-session-players > .sc-session-actors { margin-inline: .6rem; }
+.downtime-manager .sc-session-players > .sc-session-actors { margin-bottom: .6rem; }
+.downtime-manager .sc-session-actions button,
+.downtime-manager .sc-session-footer button { width: auto; }
+.downtime-manager .sc-session-search { display: grid; grid-template-columns: auto minmax(10rem, 1fr); align-items: center; gap: .4rem; flex: 1 1 15rem; }
+.downtime-manager .sc-session-actors { display: grid; gap: .4rem; margin-top: .7rem; }
+.downtime-manager .sc-session-actor { display: grid; grid-template-columns: 24px 42px minmax(150px, 1fr) minmax(220px, 1fr); align-items: center; gap: .55rem; padding: .45rem .55rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.downtime-manager .sc-session-actor-img { width: 40px; height: 40px; border: 0; border-radius: 50%; object-fit: cover; }
+.downtime-manager .sc-session-actor span,
+.downtime-manager .sc-session-actor small { display: block; }
+.downtime-manager .sc-session-reward { text-align: right; }
+.downtime-manager .sc-session-reward-items { display: flex !important; flex-wrap: wrap; justify-content: flex-end; gap: .3rem; }
+.downtime-manager .sc-session-reward-chip { display: inline-flex !important; flex: 0 0 auto; align-items: center; gap: .3rem; width: max-content; max-width: 100%; padding: .2rem .35rem; border: 1px solid var(--color-border-light-2); border-radius: 5px; white-space: nowrap; }
+.downtime-manager .sc-session-reward-chip img { width: 22px; height: 22px; border: 0; border-radius: 3px; object-fit: cover; }
+.downtime-manager .sc-session-reward-chip.disabled { opacity: .35; text-decoration: line-through; }
+.downtime-manager .sc-category-picker { display: flex; flex-direction: column; gap: .4rem; }
+.downtime-manager .sc-category-picker-control { display: flex; gap: .4rem; }
+.downtime-manager .sc-category-picker-control select { flex: 1; }
+.downtime-manager .sc-category-chips { display: flex; flex-wrap: wrap; gap: .35rem; }
+.downtime-manager .sc-category-chip { display: inline-flex; align-items: center; gap: .3rem; padding: .2rem .35rem .2rem .55rem; border: 1px solid var(--color-border-light-2); border-radius: 999px; background: var(--color-bg-option); }
+.downtime-manager .sc-category-chip button { width: auto; min-width: 0; padding: 0 .2rem; border: 0; background: transparent; }
+.downtime-manager .sc-category-setting-row { grid-template-columns: minmax(8rem, 1fr) minmax(10rem, 2fr) auto; }
+.downtime-manager .sc-milestone-setting-row { grid-template-columns: repeat(3, minmax(7rem, 1fr)) auto; align-items: end; }
+.downtime-manager .sc-station-preset-list { gap: .65rem; }
+.downtime-manager .sc-station-preset { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: .75rem; align-items: center; padding: .65rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.downtime-manager .sc-station-preset > img { width: 72px; height: 72px; object-fit: cover; border: 0; border-radius: 5px; }
+.downtime-manager .sc-station-preset h3, .downtime-manager .sc-station-preset p { margin: 0 0 .35rem; }
+.downtime-manager .sc-station-preset-actions { display: flex; flex-direction: column; gap: .45rem; min-width: 12rem; }
+.downtime-manager .sc-character-reward-row { grid-template-columns: minmax(6rem, .8fr) minmax(8rem, 1.2fr) auto; }
+.downtime-manager .sc-character-reward-row > select { width: 100%; min-width: 0; }
+.downtime-manager .sc-character-reward-row .sc-character-reward-rank { grid-column: 1 / 3; }
+.downtime-manager .sc-session-levels { display: grid; gap: .7rem; }
+.downtime-manager .sc-passive-config { display: grid; grid-template-columns: repeat(3, minmax(120px, 1fr)); gap: .55rem .8rem; align-items: end; margin-bottom: .8rem; }
+.downtime-manager .sc-passive-config > label:not(.checkbox) { display: grid; gap: .25rem; }
+.downtime-manager .sc-passive-config > label.checkbox { grid-column: 1 / -1; }
+.downtime-manager .sc-passive-config > p { grid-column: 1 / -1; margin: 0; }
+.downtime-manager .sc-passive-config .sc-input-suffix { display: grid; grid-template-columns: minmax(0, 1fr) 24px; align-items: center; gap: .25rem; }
+.downtime-manager .sc-passive-config .sc-input-suffix > span { text-align: center; }
+.downtime-manager .sc-session-level { padding: .5rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.downtime-manager .sc-session-level h3 { margin: 0 0 .4rem; }
+.downtime-manager .sc-session-level-values { display: grid; grid-template-columns: repeat(2, minmax(100px, 1fr)); gap: .6rem; }
+.downtime-manager .sc-session-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: .4rem; }
+.downtime-manager .sc-session-item { display: grid; grid-template-columns: 28px minmax(70px, 1fr) 28px; align-items: center; gap: .3rem; min-height: 68px; padding: .3rem; border: 1px solid var(--color-border-light-2); border-radius: 5px; }
+.downtime-manager .sc-session-item img { width: 26px; height: 26px; border: 0; object-fit: cover; }
+.downtime-manager .sc-session-item > span { grid-column: 2 / 4; }
+.downtime-manager .sc-session-item input { grid-column: 1 / 3; min-width: 0; text-align: center; }
+.downtime-manager .sc-session-item button { grid-column: 3; width: 28px; height: 28px; padding: 0; }
+.downtime-manager .sc-session-item-drop { display: flex; align-items: center; justify-content: center; gap: .35rem; min-height: 38px; padding: .35rem; text-align: center; border: 1px dashed var(--color-border-light-2); border-radius: 5px; }
+.downtime-manager .sc-downtime-item-heading { display: flex; align-items: center; gap: .75rem; margin-bottom: .8rem; }
+.downtime-manager .sc-downtime-item-heading img { width: 56px; height: 56px; object-fit: cover; border: 0; border-radius: 6px; }
+.downtime-manager .sc-downtime-item-heading h2 { margin: 0; }
+.downtime-manager .sc-downtime-item-fields { display: grid; gap: .55rem; }
+.downtime-manager .sc-downtime-item-fields > label:first-child { display: grid; grid-template-columns: minmax(0, 1fr) 110px; align-items: center; gap: .6rem; }
+.downtime-manager .sc-item-role-choice { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
+.downtime-manager .sc-item-role-choice button { display: grid; justify-items: center; gap: .35rem; min-height: 110px; padding: .75rem; white-space: normal; }
+.downtime-manager .sc-item-role-choice button i { font-size: 1.5rem; }
+.downtime-manager .sc-item-role-choice button small { opacity: .75; }
+
+.downtime-manager input:focus,
+.downtime-manager select:focus,
+.downtime-manager textarea:focus { outline: 1px solid var(--color-border-highlight, var(--color-border-light-1)); outline-offset: 1px; }
+
+@media (max-width: 620px) {
+  .downtime-manager .form-group { grid-template-columns: 1fr; gap: .3rem; }
+  .downtime-manager.station-config [data-section="general"] > fieldset { grid-template-columns: 1fr; }
+  .downtime-manager.station-config [data-section="general"] .form-group.stacked,
+  .downtime-manager.station-config [data-section="general"] .sc-general-identity,
+  .downtime-manager.station-config [data-section="general"] .sc-general-values { grid-column: 1; }
+  .downtime-manager.station-config .sc-general-values { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
+  .downtime-manager.station-config .sc-general-identity { align-items: center; }
+  .downtime-manager .sc-body { padding: .7rem; }
+  .downtime-manager .sc-config-section > summary { padding-inline: .65rem; }
+  .downtime-manager .sc-session-fields { grid-template-columns: 1fr; }
+  .downtime-manager .sc-session-fields .wide { grid-column: 1; }
+  .downtime-manager .sc-session-actor { grid-template-columns: 24px 42px 1fr; }
+  .downtime-manager .sc-session-reward { grid-column: 3; text-align: left; }
+  .downtime-manager .sc-session-reward-items { justify-content: flex-start; }
+  .downtime-manager .sc-passive-config { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,17 @@
+<div class="sc-body sc-help-body">
+  <header class="sc-help-header">
+    <i class="fa-solid fa-hourglass-half"></i>
+    <div><h1>{{localize "DOWNTIME_MANAGER.Help.Heading"}}</h1><p>{{introduction}}</p></div>
+  </header>
+  <nav class="sc-help-nav" aria-label="{{localize 'DOWNTIME_MANAGER.Help.Navigation'}}">
+    {{#each sections}}<button type="button" data-action="scrollToSection" data-section="{{key}}"><i class="{{icon}}"></i> {{title}}</button>{{/each}}
+  </nav>
+  <div class="sc-help-sections">
+    {{#each sections}}
+      <details id="help-{{key}}" class="sc-config-section" {{#if open}}open{{/if}}>
+        <summary><i class="{{icon}}"></i> {{title}}</summary>
+        <div class="sc-help-content"><p>{{text}}</p><ol>{{#each points}}<li>{{this}}</li>{{/each}}</ol></div>
+      </details>
+    {{/each}}
+  </div>
+</div>

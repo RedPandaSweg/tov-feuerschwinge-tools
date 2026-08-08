@@ -1,0 +1,73 @@
+<div class="tovf-creature-builder-root">
+  <p class="hint">
+    <a href="https://chatgpt.com/g/g-6a69aea850c88191aa5e46bfd005e1ec-feuerschwingen-creature-creator"
+       target="_blank" rel="noopener noreferrer">
+      <i class="fa-solid fa-arrow-up-right-from-square"></i>
+      {{localize "TOVF.CreatureBuilder.CreatorLink"}}
+    </a>
+  </p>
+  <div class="tovf-creature-builder-options">
+  <fieldset>
+    <legend>{{localize "TOVF.CreatureBuilder.Source"}}</legend>
+    <div class="form-group">
+      <label>{{localize "TOVF.CreatureBuilder.File"}}</label>
+      <div class="form-fields">
+        <input type="file" name="file" accept=".json,application/json">
+        <button type="button" data-action="loadFile">
+          <i class="fa-solid fa-file-import"></i>
+          {{localize "TOVF.CreatureBuilder.Load"}}
+        </button>
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>{{localize "TOVF.CreatureBuilder.Destination"}}</legend>
+    <div class="form-group">
+      <label>{{localize "TOVF.CreatureBuilder.Folder"}}</label>
+      <div class="form-fields">
+        <select name="folder">
+          <option value="">{{localize "TOVF.CreatureBuilder.RootFolder"}}</option>
+          {{#each folders}}
+          <option value="{{id}}">{{name}}</option>
+          {{/each}}
+        </select>
+      </div>
+    </div>
+  </fieldset>
+  </div>
+
+  <div class="form-group stacked tovf-creature-json">
+    <label>{{localize "TOVF.CreatureBuilder.Json"}}</label>
+    <textarea name="brief" rows="13" spellcheck="false" placeholder='{"format":"tov-feuerschwinge.creature","version":1,...}'>{{briefText}}</textarea>
+  </div>
+
+  {{#if report}}
+  <section class="tovf-monster-report {{#if report.valid}}valid{{else}}invalid{{/if}}">
+    <h3>
+      {{#if report.valid}}
+      <i class="fa-solid fa-circle-check"></i> {{localize "TOVF.CreatureBuilder.Valid"}}
+      {{else}}
+      <i class="fa-solid fa-circle-xmark"></i> {{localize "TOVF.CreatureBuilder.Invalid"}}
+      {{/if}}
+    </h3>
+    {{#if report.errors.length}}
+    <ul>{{#each report.errors}}<li>{{this}}</li>{{/each}}</ul>
+    {{/if}}
+    {{#if report.warnings.length}}
+    <ul>{{#each report.warnings}}<li>{{this}}</li>{{/each}}</ul>
+    {{/if}}
+  </section>
+  {{/if}}
+
+  <footer class="form-footer">
+    <button type="button" data-action="validate">
+      <i class="fa-solid fa-list-check"></i>
+      {{localize "TOVF.CreatureBuilder.Validate"}}
+    </button>
+    <button type="button" data-action="import">
+      <i class="fa-solid fa-dragon"></i>
+      {{localize "TOVF.CreatureBuilder.Import"}}
+    </button>
+  </footer>
+</div>
