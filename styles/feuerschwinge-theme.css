@@ -298,6 +298,18 @@
   color: var(--tovf-color-text);
 }
 
+:is(#chat, #chat-popout, #chat-notifications) .chat-message .message-content img[data-tovf-chat-image="true"] {
+  cursor: zoom-in;
+  outline: 1px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color .15s ease, filter .15s ease;
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message .message-content img[data-tovf-chat-image="true"]:is(:hover, :focus-visible) {
+  outline-color: var(--tovf-color-ember-hot);
+  filter: brightness(1.08);
+}
+
 :is(#chat, #chat-popout, #chat-notifications) .chat-message .message-content :is(h1, h2, h3, h4, h5, h6) {
   color: var(--tovf-color-gold-light);
   border-color: rgba(179, 106, 50, .48);

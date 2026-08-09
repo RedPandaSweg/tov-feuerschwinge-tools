@@ -32,6 +32,8 @@ import { registerSettingsCategories } from "./settings-categories.mjs";
 import { activityChainingApi, installActivityChaining } from "./activity-chaining.mjs";
 import { installToolAbilitySelection } from "./integrations/tool-ability.mjs";
 import { installCompendiumUsability } from "./compendium-usability.mjs";
+import { installChatImagePopouts } from "./chat-image-popout.mjs";
+import { activateTokenPresetSocket, registerTokenPresets } from "./token-presets.mjs";
 import "./downtime/main.mjs";
 import "./contested-activity.mjs";
 
@@ -103,6 +105,8 @@ Hooks.once("init", () => {
   installActivityChaining();
   installToolAbilitySelection();
   installCompendiumUsability();
+  installChatImagePopouts();
+  registerTokenPresets();
   installArgonBlackFlagCompatibility();
   registerPlayerUnpause();
   registerCompendiumLibrary();
@@ -131,6 +135,7 @@ Hooks.once("ready", async () => {
   orderModuleMenus();
   activatePlayerUnpause();
   activateChallengeManager();
+  activateTokenPresetSocket();
   await activateFeaturePoolIntegration();
   exposeTransferApi();
   Object.assign(game.modules.get(MODULE_ID).api, sessionTransferApi());

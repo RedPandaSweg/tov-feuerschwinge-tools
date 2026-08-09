@@ -1,6 +1,27 @@
 @import url("./downtime-manager.css");
 @import url("./feuerschwinge-theme.css");
 
+.tovf-token-presets .window-content { padding: .25rem; }
+.tovf-token-preset-body { display: grid; gap: .5rem; padding: .4rem; }
+.tovf-token-preset-help { display: grid; gap: .4rem; margin: 0; padding: .5rem .6rem; border: 1px solid rgb(255 255 255 / 12%); border-radius: 6px; background: rgb(0 0 0 / 16%); font-weight: 400; }
+.tovf-token-preset-help strong, .tovf-token-preset-help b { font-weight: 400; }
+.tovf-token-preset-explanation { display: flex; align-items: center; gap: .45rem; line-height: 1.25; }
+.tovf-token-preset-explanation > i { color: var(--color-text-accent); }
+.tovf-token-size-recommendations { display: grid; grid-template-columns: repeat(3, 1fr); gap: .25rem; font-size: var(--font-size-11); }
+.tovf-token-size-recommendations > span { display: grid; grid-template-columns: minmax(62px, auto) 1fr; align-items: center; gap: .35rem; padding: .22rem .35rem; border-radius: 3px; background: rgb(255 255 255 / 6%); }
+.tovf-token-size-recommendations em { font-style: normal; color: var(--color-text-primary); }
+.tovf-token-size-recommendations b { white-space: nowrap; color: var(--color-text-emphatic); }
+.tovf-token-preset-list { display: grid; gap: .4rem; }
+.tovf-token-preset { display: grid; grid-template-columns: 76px minmax(95px, 1fr) minmax(115px, 1.1fr) repeat(3, 56px) 94px 34px; align-items: center; gap: .35rem; padding: .4rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.tovf-token-preset-image { position: relative; width: 72px; height: 58px; min-width: 0; min-height: 0; margin: 0; padding: 0; overflow: visible; border: 0 !important; outline: 0; background: transparent !important; box-shadow: none !important; cursor: pointer; }
+.tovf-token-space { position: absolute; left: 50%; top: 50%; width: min(calc(var(--token-width, 1) * 28px), 62px); height: min(calc(var(--token-height, 1) * 28px), 48px); translate: -50% -50%; background: rgb(0 0 0 / 20%); }
+.tovf-token-space::after { content: ""; position: absolute; z-index: 2; inset: 0; border: 1px dashed var(--color-border-highlight); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 20%), 0 0 2px rgb(0 0 0 / 90%); pointer-events: none; }
+.tovf-token-space > img { position: absolute; z-index: 1; left: 50%; top: 50%; width: 100%; height: 100%; object-fit: contain; border: 0; max-width: none; max-height: none; translate: -50% -50%; scale: var(--token-scale, 1); pointer-events: none; }
+.tovf-token-preset > label { display: grid; gap: .15rem; font-size: var(--font-size-11); }
+.tovf-token-preset input { min-width: 0; }
+.tovf-token-preset > button[data-action="apply"], .tovf-token-preset > button[data-action="remove"] { height: 44px; margin: 0; }
+.tovf-token-preset-body footer { display: flex; justify-content: flex-end; gap: .5rem; }
+
 .tov-macro-activity textarea[name="system.command"] {
   min-height: 18rem;
   resize: vertical;

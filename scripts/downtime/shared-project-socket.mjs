@@ -28,6 +28,7 @@ async function authorize(userId, payload, action) {
 
 export function registerSharedProjectSocket() {
   game.socket.on(`module.${MODULE_ID}`, message => {
+    if (message.scope) return;
     if (message.type === "response") {
       const request = pending.get(message.requestId);
       if (!request || message.targetUserId !== game.user.id) return;
