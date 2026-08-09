@@ -1,6 +1,50 @@
 import { MODULE_ID } from "../core/constants.mjs";
 
 let cubeTemplateFixInstalled = false;
+let currencyStackingInstalled = false;
+
+function currencyIdentifier(item) {
+  if (item?.type !== "currency") return "";
+  return String(item.system?.identifier?.value ?? item.system?.identifier ?? "")
+    .trim()
+    .toLowerCase();
+}
+
+async function mergeCurrencyStacks(actor) {
+  if (actor?.documentName !== "Actor" || !actor.isOwner) return;
+  const groups = new Map();
+  for (const item of actor.items) {
+    const identifier = currencyIdentifier(item);
+    if (!identifier) continue;
+    if (!groups.has(identifier)) groups.set(identifier, []);
+    groups.get(identifier).push(item);
+  }
+  for (const stacks of groups.values()) {
+    if (stacks.length < 2) continue;
+    const [keeper, ...duplicates] = stacks;
+    const quantity = stacks.reduce((sum, item) => sum + Number(item.system.quantity ?? 0), 0);
+    await keeper.update({ "system.quantity": quantity });
+    await actor.deleteEmbeddedDocuments("Item", duplicates.map(item => item.id));
+  }
+}
+
+function installCurrencyStacking() {
+  if (currencyStackingInstalled) return;
+  currencyStackingInstalled = true;
+  Hooks.on("createItem", (item, _options, userId) => {
+    if (userId !== game.user.id || !currencyIdentifier(item)) return;
+    void mergeCurrencyStacks(item.parent).catch(error =>
+      console.error(`${MODULE_ID} | Failed to merge currency stacks.`, error)
+    );
+  });
+  Hooks.once("ready", async () => {
+    if (!game.user.isGM) return;
+    for (const actor of game.actors) {
+      await mergeCurrencyStacks(actor).catch(error =>
+        console.error(`${MODULE_ID} | Failed to normalize currency stacks for ${actor.uuid}.`, error));
+    }
+  });
+}
 
 /**
  * Black Flag 3.0.077 creates cube templates with a line shape whose width is
@@ -54,7 +98,9 @@ function installItemStacking() {
     const existing = items?.find(item =>
       item.type !== "weapon"
       && Number.isFinite(Number(item.system?.quantity))
-      && foundry.utils.equals(cleanStackData(item), signature)
+      && ((currencyIdentifier(transformed)
+        && currencyIdentifier(item) === currencyIdentifier(transformed))
+        || foundry.utils.equals(cleanStackData(item), signature))
     );
     if (!existing) return transformed;
 
@@ -78,6 +124,7 @@ function installItemStacking() {
 export function installBlackFlagCompatibility() {
   installCubeTemplateFix();
   installItemStacking();
+  installCurrencyStacking();
   const Activity = BlackFlag?.documents?.activity?.Activity;
   const prototype = Activity?.prototype;
   const original = prototype?._finalizeMessageConfig;

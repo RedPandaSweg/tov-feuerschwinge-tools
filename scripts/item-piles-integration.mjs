@@ -109,7 +109,9 @@ async function buildCurrencies() {
       abbreviation: `{#}${denomination.toUpperCase()}`,
       data: { uuid: item.uuid, item: item.toObject() },
       primary: denomination === "gp",
-      exchangeRate: conversion
+      // Black Flag stores units per gp (cp = 100); Item Piles expects the
+      // value of one unit in its primary currency (cp = 0.01 gp).
+      exchangeRate: 1 / conversion
     });
   }
   return ensurePrimaryCurrency([...currencies.values()]);
@@ -136,16 +138,13 @@ async function normalizeBlackFlagCurrencies() {
       label: item.name,
       abbreviation: denomination,
       conversion: Number(item.system?.conversion?.value),
-      uuid: item.uuid
+      uuid: item.uuid,
+      default: ["pp", "gp", "sp", "cp"].includes(denomination)
     };
 
     if (registeredIdentifier !== denomination &&
         configured[registeredIdentifier]?.uuid === item.uuid) {
       delete configured[registeredIdentifier];
-      console.warn(
-        `${MODULE_ID} | Corrected Black Flag currency registration key ` +
-        `"${registeredIdentifier}" to "${denomination}".`
-      );
     }
   }
 }
@@ -182,10 +181,31 @@ function getItemCost(item, currencies = []) {
 function installChatCompatibility() {
   if (chatCompatibilityInstalled) return;
   chatCompatibilityInstalled = true;
-  Hooks.on("renderChatMessageHTML", (_app, html) => {
-    if (!html || html.find) return;
-    html.find = selector => $(html).find(selector);
-    html.closest = selector => $(html).closest(selector);
+  Hooks.on("renderChatMessageHTML", (message, html) => {
+    if (!html) return;
+    if (!html.find) {
+      html.find = selector => $(html).find(selector);
+      html.closest = selector => $(html).closest(selector);
+    }
+
+    const root = html instanceof HTMLElement ? html : html[0];
+    if (!root?.querySelector(".item-piles-chat-card")) return;
+
+    const recipientIds = message?.whisper ?? [];
+    if (!recipientIds.some(id => game.users.get(id)?.isGM)) return;
+
+    const recipients = recipientIds.reduce((names, id) => {
+      const user = game.users.get(id);
+      if (!user) return names;
+      const name = user.isGM ? "Spielleitung" : user.name;
+      if (!names.includes(name)) names.push(name);
+      return names;
+    }, []);
+    const whisperLabel = root.querySelector(".whisper-to");
+    if (whisperLabel && recipients.length) {
+      const prefix = whisperLabel.textContent.match(/^\s*([^:]+:)/)?.[1] ?? "An:";
+      whisperLabel.textContent = `${prefix} ${recipients.join(", ")}`;
+    }
   });
 }
 

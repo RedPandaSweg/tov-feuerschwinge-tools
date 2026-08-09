@@ -1,4 +1,5 @@
 import { CHECK_DEFINITIONS, COIN_IDENTIFIERS, COIN_VALUE_CP, FLAGS, MODULE_ID } from "./constants.mjs";
+import { downtimeItemData } from "./downtime-item-service.mjs";
 import { preferredToolAbility } from "../integrations/tool-ability.mjs";
 
 function numeric(value, fallback = 0) {
@@ -211,13 +212,24 @@ export class BlackFlagSystemAdapter extends GenericSystemAdapter {
   }
 
   registerHooks({ redeemDowntimeItem } = {}) {
-    Hooks.on("blackFlag.postActivateActivity", async activity => {
+    const pendingDowntimeItems = new WeakMap();
+    Hooks.on("blackFlag.preActivateActivity", (activity, activationConfig) => {
       const item = activity?.item;
       const actor = item?.actor ?? item?.parent;
-      if (!item || actor?.documentName !== "Actor") return;
-      if (item.getFlag?.(MODULE_ID, FLAGS.DOWNTIME_ITEM)?.enabled) {
+      const config = item ? downtimeItemData(item) : null;
+      if (!config || actor?.documentName !== "Actor") return;
+      pendingDowntimeItems.set(activationConfig, { item, actor, config });
+    });
+    Hooks.on("blackFlag.postActivateActivity", async (_activity, activationConfig) => {
+      const pending = pendingDowntimeItems.get(activationConfig);
+      pendingDowntimeItems.delete(activationConfig);
+      if (pending) {
         try {
-          await redeemDowntimeItem?.(item, { consume: false });
+          await redeemDowntimeItem?.(pending.item, {
+            consume: false,
+            actor: pending.actor,
+            config: pending.config
+          });
         } catch (error) {
           console.error(`${MODULE_ID} | Native downtime item redemption failed`, error);
           ui.notifications.error(error.message);

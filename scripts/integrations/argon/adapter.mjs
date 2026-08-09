@@ -213,6 +213,19 @@ export function initConfig() {
         if(item.parent === ui.ARGON._actor && ui.ARGON.rendered) ui.ARGON.components.portrait.refresh()
     })
 
+    // ECH stores weapon sets on the Actor, but its updateActor handler does not
+    // rerender the weapon-set component when another client changes those flags.
+    Hooks.on("updateActor", async (actor, changes, _options, userId) => {
+        if (userId === game.user.id || actor !== ui.ARGON?._actor || !ui.ARGON.rendered) return;
+        const changedKeys = Object.keys(changes ?? {});
+        const weaponSetsChanged = foundry.utils.hasProperty(changes, "flags.enhancedcombathud.weaponSets")
+            || foundry.utils.hasProperty(changes, "flags.enhancedcombathud.activeWeaponSet")
+            || changedKeys.some(key => key.startsWith("flags.enhancedcombathud.weaponSets")
+                || key.startsWith("flags.enhancedcombathud.activeWeaponSet"));
+        if (!weaponSetsChanged) return;
+        await ui.ARGON.components.weaponSets?.render?.();
+    });
+
     Hooks.on("argonInit", (CoreHUD) => {
         console.log("[Argon-BF] argonInit handler started");
         if (game.system.id !== "black-flag") return console.log("[Argon-BF] Wrong system, exiting. System is:", game.system.id);

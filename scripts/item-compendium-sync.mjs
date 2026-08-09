@@ -22,6 +22,7 @@ export function matchingActorItems(source) {
 
 function replacementData(source, target) {
   const data = source.toObject();
+  const targetQuantity = Number(target.system?.quantity?.value ?? target.system?.quantity);
   delete data.folder;
   delete data.ownership;
   delete data.sort;
@@ -32,6 +33,15 @@ function replacementData(source, target) {
     // "standard" effect type to "base"; sending the legacy value back as part
     // of an Item replacement is rejected by Foundry v14 on the server.
     CONFIG.ActiveEffect.documentClass.migrateData(effect);
+  }
+  // Quantity belongs to the Actor's inventory state. Synchronizing the Item
+  // definition must never reset an existing stack to the compendium's usual 1.
+  if (Number.isFinite(targetQuantity)) {
+    if (data.system?.quantity && typeof data.system.quantity === "object") {
+      data.system.quantity.value = targetQuantity;
+    } else {
+      data.system.quantity = targetQuantity;
+    }
   }
   data._id = target.id;
   foundry.utils.setProperty(data, "flags.core.sourceId", source.uuid);

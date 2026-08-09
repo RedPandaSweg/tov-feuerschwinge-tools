@@ -1,4 +1,4 @@
-import { FLAGS, MODULE_ID } from "./constants.mjs";
+import { CONTENT_MODULE_ID, FLAGS, MODULE_ID } from "./constants.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
 import { getQuantity, quantityUpdate, round } from "./utils.mjs";
 
@@ -35,7 +35,17 @@ export async function updateDowntimeItemDescription(item, amount = null) {
 }
 
 export function downtimeItemData(item) {
-  const stored = item?.getFlag?.(MODULE_ID, FLAGS.DOWNTIME_ITEM);
+  const current = item?.flags?.[MODULE_ID]?.[FLAGS.DOWNTIME_ITEM]
+    ?? item?.getFlag?.(MODULE_ID, FLAGS.DOWNTIME_ITEM);
+  const legacy = item?.flags?.[CONTENT_MODULE_ID]?.[FLAGS.DOWNTIME_ITEM];
+  // The old importer initialized every converted Item with the editor's
+  // untouched defaults. When the original content flag still contains a
+  // deliberate value, recover it instead of treating the generated 1 as real.
+  const generatedDefault = current?.enabled === true
+    && Number(current.amount) === 1
+    && current.consume === true
+    && current.chatMessage === true;
+  const stored = generatedDefault && legacy?.enabled ? legacy : current;
   return stored?.enabled ? {
     enabled: true,
     amount: Math.max(0, Number(stored.amount) || 0),
@@ -45,9 +55,9 @@ export function downtimeItemData(item) {
 }
 
 export class DowntimeItemService {
-  static async redeem(item, { consume = null } = {}) {
-    const config = downtimeItemData(item);
-    const actor = item?.actor ?? (item?.parent?.documentName === "Actor" ? item.parent : null);
+  static async redeem(item, { consume = null, actor: capturedActor = null, config: capturedConfig = null } = {}) {
+    const config = capturedConfig ?? downtimeItemData(item);
+    const actor = capturedActor ?? item?.actor ?? (item?.parent?.documentName === "Actor" ? item.parent : null);
     if (!config || !actor) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.DowntimeItem.Errors.EmbeddedRequired"));
     if (!item.isOwner || !actor.isOwner) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.DowntimeItem.Errors.Permission"));
     if (!Number.isFinite(config.amount) || config.amount < 0) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.DowntimeItem.Errors.Amount"));

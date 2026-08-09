@@ -36,10 +36,10 @@ import { isCompendiumItem, synchronizeCompendiumItem } from "../item-compendium-
 
 function documentFromApp(app, documentName) {
   const document =
-    app?.actor ??
     app?.item ??
     app?.document ??
-    app?.object;
+    app?.object ??
+    app?.actor;
 
   return document?.documentName === documentName
     ? document

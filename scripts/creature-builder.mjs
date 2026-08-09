@@ -286,7 +286,7 @@ export function validateCreature(source) {
         errors.push(`${spell.name || "Custom spell"} has an unsupported activityType.`);
       }
       if (!text(spell.description)) errors.push(`${spell.name || "Custom spell"} needs a description.`);
-      if (["attack", "save"].includes(spell.activityType) && !normalizeDamage(spell.damage).length) {
+      if (spell.activityType === "attack" && !normalizeDamage(spell.damage).length) {
         errors.push(`${spell.name || "Custom spell"} needs damage parts.`);
       }
       if (spell.activityType === "save" && !ABILITIES.includes(spell.saveAbility)) {
@@ -302,9 +302,6 @@ export function validateCreature(source) {
   }
   if (!(source.actions?.some(action => ["attack", "save"].includes(action.kind)) || source.spellcasting?.spells?.length)) {
     errors.push("The brief needs at least one attack, save action, or spell.");
-  }
-  if (!(source.actions?.some(action => !["attack", "save"].includes(action.kind)))) {
-    warnings.push("The monster has no signature feature.");
   }
   return { valid: !errors.length, errors, warnings };
 }

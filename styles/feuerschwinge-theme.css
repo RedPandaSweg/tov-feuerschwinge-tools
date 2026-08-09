@@ -298,6 +298,42 @@
   color: var(--tovf-color-text);
 }
 
+:is(#chat, #chat-popout, #chat-notifications) .chat-message .message-content :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--tovf-color-gold-light);
+  border-color: rgba(179, 106, 50, .48);
+  text-shadow: 0 0 5px rgba(239, 88, 24, .28);
+}
+
+/*
+ * Keep every Black Flag chat-card state inside the Feuerschwinge palette.
+ * Black Flag reuses these variables for content that only enters the DOM visually
+ * when cards, dice details, targets, effects, or other trays are expanded.
+ */
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag {
+  --bf-background-color-blue: var(--tovf-color-bronze-dark);
+  --bf-background-color-dark-blue: var(--tovf-color-coal-soft);
+  --bf-background-color-gray: var(--tovf-color-coal-soft);
+  --bf-background-color-white: var(--tovf-color-soot);
+  --bf-background-color-half-white: rgba(41, 25, 17, .88);
+  --bf-background-color-quarter-white: rgba(28, 18, 13, .72);
+  --bf-border-color-black: var(--tovf-color-gold-light);
+  --bf-border-color-blue: var(--tovf-color-bronze-light);
+  --bf-border-color-light-blue: var(--tovf-color-ember-hot);
+  --bf-border-color-gray: var(--tovf-color-bronze);
+  --bf-button-background-color-regular: var(--tovf-color-bronze-dark);
+  --bf-button-background-color-focus: var(--tovf-color-coal-soft);
+  --bf-button-text-color-regular: var(--tovf-color-gold-light);
+  --bf-button-text-color-focus: #fff2d1;
+  --bf-button-shadow-blue: rgba(239, 88, 24, .48);
+  --bf-icon-color-black: var(--tovf-color-text);
+  --bf-icon-color-blue: var(--tovf-color-ember-hot);
+  --bf-text-color-black: var(--tovf-color-text);
+  --bf-text-color-blue: var(--tovf-color-gold-light);
+  --bf-text-color-light-label: var(--tovf-color-text-muted);
+  --bf-text-color-white: #fff2d1;
+  --bf-text-shadow-blue: rgba(239, 88, 24, .48);
+}
+
 :is(#chat, #chat-popout, #chat-notifications) .chat-message a:not(.button) {
   color: var(--tovf-color-ember-hot);
 }
@@ -330,6 +366,28 @@
   color: var(--tovf-color-gold);
 }
 
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .chat-card .card-header .dropdown-block {
+  color: var(--tovf-color-text);
+  border-color: var(--tovf-color-bronze-light);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(239, 88, 24, .1), transparent 46%),
+    linear-gradient(145deg, rgba(45, 25, 17, .97), rgba(13, 9, 7, .98));
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, .32), 0 2px 4px rgba(0, 0, 0, .38);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .chat-card .card-header .dropdown-block::before {
+  box-shadow: 0 3px 3px rgba(0, 0, 0, .42);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .chat-card .card-header .dropdown-block :is(p, li, td, th, blockquote) {
+  color: inherit;
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .chat-card .card-header .dropdown-block :is(table, blockquote, code, pre) {
+  border-color: var(--tovf-color-bronze);
+  background: rgba(8, 6, 5, .58);
+}
+
 :is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .chat-card .menu .light-button {
   --text-color: var(--tovf-color-gold-light);
   color: var(--tovf-color-gold-light);
@@ -348,6 +406,57 @@
   background: var(--tovf-surface-control-hover);
   border-color: var(--tovf-color-ember-hot);
   box-shadow: var(--tovf-shadow-ember), inset 0 0 8px rgba(0, 0, 0, .3);
+}
+
+/* Standalone roll messages place their action menu outside .chat-card. */
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .message-content > .menu .light-button {
+  --text-color: var(--tovf-color-gold-light);
+  color: var(--tovf-color-gold-light);
+  border-color: var(--tovf-color-bronze-light);
+  background: var(--tovf-surface-control);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, .36);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .message-content > .menu .light-button:not([disabled]):is(:hover, :focus-visible) {
+  color: #fff2d1;
+  border-color: var(--tovf-color-ember-hot);
+  background: var(--tovf-surface-control-hover);
+  box-shadow: var(--tovf-shadow-ember);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .dice-roll :is(.dice-formula, .dice-tooltip, .dice-total) {
+  color: var(--tovf-color-text);
+  border-color: var(--tovf-color-bronze-light);
+  background: rgba(8, 6, 5, .78);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .dice-roll.success .dice-total {
+  color: #dff0c5;
+  border-color: #829b58;
+  background: linear-gradient(180deg, rgba(48, 70, 31, .9), rgba(19, 31, 15, .94));
+  text-shadow: 0 0 5px rgba(169, 210, 103, .28);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .dice-roll.failure .dice-total {
+  color: #ffc5b7;
+  border-color: #a84f3c;
+  background: linear-gradient(180deg, rgba(91, 34, 28, .9), rgba(39, 16, 14, .94));
+  text-shadow: 0 0 5px rgba(239, 88, 24, .3);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .card-tray > label {
+  color: var(--tovf-color-gold-light);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .card-tray > label::before,
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .card-tray > label::after {
+  border-color: var(--tovf-color-bronze-light);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .card-tray :is(.effects, .targets) {
+  color: var(--tovf-color-text);
+  border-color: var(--tovf-color-bronze-light);
+  background: rgba(8, 6, 5, .72);
 }
 
 :is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .chat-card .tags .tag {
@@ -786,4 +895,13 @@
   border: var(--tovf-border);
   color: var(--tovf-color-text);
   background: rgba(8, 6, 5, .82);
+}
+
+/* Item Piles uses a very bright background for every odd transfer row. */
+:is(#chat, #chat-popout, #chat-notifications) .item-piles-chat-card li:nth-child(odd) {
+  background: rgba(75, 31, 17, .42);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .item-piles-chat-card li:nth-child(even) {
+  background: rgba(8, 6, 5, .58);
 }
