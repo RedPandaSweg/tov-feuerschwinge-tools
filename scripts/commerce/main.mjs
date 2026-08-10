@@ -6,13 +6,6 @@ import { migrateItemPilesMerchants } from "./migration.mjs";
 
 let settlementTimer;
 
-function installCurrencyDenominationAliases() {
-  const currencies = CONFIG.BlackFlag?.currencies; if (!currencies) return;
-  for (const [alias, id] of Object.entries({ platinum: "pp", gold: "gp", silver: "sp", copper: "cp" })) {
-    if (!currencies[alias] && currencies[id]) currencies[alias] = currencies[id];
-  }
-}
-
 export function registerCommerce() {
   Hooks.once("init", () => {
     game.settings.register(MODULE_ID, COMMERCE_SETTING, {
@@ -24,7 +17,6 @@ export function registerCommerce() {
 }
 
 export function activateCommerce() {
-  installCurrencyDenominationAliases();
   activateCommerceSocket();
   if (game.user.isGM) {
     void settleExpiredAuctions().catch(error => console.error(`${MODULE_ID} | Auction settlement failed`, error));

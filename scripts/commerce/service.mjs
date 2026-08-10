@@ -98,6 +98,9 @@ export function merchantConfig(actor) {
     hideNewItems: source.hideNewItems === true,
     displayQuantity: source.displayQuantity !== false,
     showZeroQuantity: source.showZeroQuantity === true,
+    allowedActorIds: Array.isArray(source.allowedActorIds)
+      ? [...new Set(source.allowedActorIds.map(String))].slice(0, 100)
+      : [],
     description,
     merchantImage: String(source.merchantImage ?? "")
   };
@@ -109,6 +112,18 @@ export function isAuctionHouse(actor) {
 
 export function ownedCharacters(user = game.user) {
   return game.actors.filter(actor => actor.type === "pc" && actor.testUserPermission(user, "OWNER"));
+}
+
+export function merchantAllowsActor(shop, actor, user = game.user) {
+  if (user?.isGM) return true;
+  const allowedActorIds = merchantConfig(shop).allowedActorIds;
+  return allowedActorIds.length === 0 || (!!actor && allowedActorIds.includes(actor.id));
+}
+
+export function merchantAvailableToUser(shop, user = game.user) {
+  if (user?.isGM) return true;
+  const allowedActorIds = merchantConfig(shop).allowedActorIds;
+  return allowedActorIds.length === 0 || ownedCharacters(user).some(actor => allowedActorIds.includes(actor.id));
 }
 
 function actorOwnedBy(actor, userId) {
@@ -132,6 +147,7 @@ async function merchantBuy(payload, userId) {
   const shop = merchant(payload.merchantId);
   const buyer = actor(payload.actorId);
   if (!actorOwnedBy(buyer, userId)) throw new Error("Du besitzt diesen Charakter nicht.");
+  if (!merchantAllowsActor(shop, buyer, game.users.get(userId))) throw new Error("Dieser Charakter darf bei diesem Händler nicht handeln.");
   const item = shop.items.get(payload.itemId);
   if (!isTradeableItem(item)) throw new Error("Dieser Gegenstand kann nicht gehandelt werden.");
   const priceUnits = Math.max(1, Math.floor(Number(payload.quantity) || 1));
@@ -161,6 +177,7 @@ async function merchantSell(payload, userId) {
   const shop = merchant(payload.merchantId);
   const seller = actor(payload.actorId);
   if (!actorOwnedBy(seller, userId)) throw new Error("Du besitzt diesen Charakter nicht.");
+  if (!merchantAllowsActor(shop, seller, game.users.get(userId))) throw new Error("Dieser Charakter darf bei diesem Händler nicht handeln.");
   const item = seller.items.get(payload.itemId);
   if (!isTradeableItem(item)) throw new Error("Dieser Gegenstand kann nicht gehandelt werden.");
   const priceUnits = Math.max(1, Math.floor(Number(payload.quantity) || 1));

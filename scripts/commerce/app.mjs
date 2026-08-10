@@ -1,7 +1,8 @@
 import { MODULE_ID } from "../core/constants.mjs";
+import { selectCharacters } from "../character-picker.mjs";
 import { formatCopper, itemQuantity, priceInCopper, purse, quantityForPrice } from "./currency.mjs";
 import { broadcastPeerTrade, commerceRequest } from "./socket.mjs";
-import { AUCTION_HOUSE_FLAG, commerceState, isAuctionHouse, merchantConfig, ownedCharacters } from "./service.mjs";
+import { AUCTION_HOUSE_FLAG, commerceState, isAuctionHouse, merchantAllowsActor, merchantAvailableToUser, merchantConfig, ownedCharacters } from "./service.mjs";
 import { addItem, cleanTransferredItem } from "./transactions.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -119,7 +120,13 @@ function categoryData(item) {
     id: [rarity ? `rarity=${rarity}` : "", ...parts].filter(Boolean).join(":"),
     label: [rarityLabel, ...labels].filter(Boolean).join(" – ")
   });
-  if (item.type === "tool") return categoryResult([item.type], [typeLabel]);
+  if (item.type === "tool") {
+    const toolValue = String(item.system?.type?.value ?? "").trim();
+    const toolClassification = `${category} ${toolValue}`.replace(/[^a-z]/gi, "").toLocaleLowerCase();
+    if (toolClassification.includes("gamingset")) return categoryResult([item.type, "gamingSet"], [typeLabel, "Gaming Sets"]);
+    if (toolClassification.includes("musicalinstrument")) return categoryResult([item.type, "musicalInstrument"], [typeLabel, "Musical Instruments"]);
+    return categoryResult([item.type], [typeLabel]);
+  }
   if (item.type === "weapon") {
     const weaponType = String(item.system?.type?.value ?? "").trim();
     const labels = [category ? subtypeName(item, category) : ""];
@@ -271,6 +278,7 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
       createAuction: this.#createAuction, bid: this.#bid, buyout: this.#buyout, createTrade: this.#createTrade,
       acceptTrade: this.#acceptTrade, cancelTrade: this.#cancelTrade, configureMerchant: this.#configureMerchant,
       saveMerchantSettings: this.#saveMerchantSettings,
+      selectMerchantCharacters: this.#selectMerchantCharacters,
       deleteMerchantItem: this.#deleteMerchantItem, clearMerchantItems: this.#clearMerchantItems,
       toggleMerchantItem: this.#toggleMerchantItem, populateFromTable: this.#populateFromTable,
       chooseMerchantImage: this.#chooseMerchantImage, openMerchantItem: this.#openMerchantItem,
@@ -408,12 +416,22 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
   _owned() { return ownedCharacters(); }
   _actor() { return game.actors.get(this.actorId) ?? this._owned()[0] ?? null; }
-  _merchant() { return game.actors.get(this.merchantId) ?? game.actors.find(actor => merchantConfig(actor).enabled) ?? null; }
+  _merchant() {
+    const selected = game.actors.get(this.merchantId);
+    if (selected && merchantConfig(selected).enabled && merchantAvailableToUser(selected)) return selected;
+    return game.actors.find(actor => merchantConfig(actor).enabled && merchantAvailableToUser(actor)) ?? null;
+  }
   _auctionHouse() { return game.actors.get(this.auctionHouseId) ?? game.actors.find(actor => isAuctionHouse(actor)) ?? null; }
   async _prepareContext() {
-    const characters = this._owned(); const selectedActor = this._actor(); this.actorId = selectedActor?.id ?? null;
-    const merchants = game.actors.filter(actor => merchantConfig(actor).enabled); const shop = this._merchant(); this.merchantId = shop?.id ?? null;
-    const config = merchantConfig(shop); const management = this.shopPage === "management" && game.user.isGM;
+    const allCharacters = this._owned();
+    const merchants = game.actors.filter(actor => merchantConfig(actor).enabled && merchantAvailableToUser(actor));
+    const shop = this._merchant(); this.merchantId = shop?.id ?? null;
+    const config = merchantConfig(shop);
+    const characters = shop && !game.user.isGM ? allCharacters.filter(actor => merchantAllowsActor(shop, actor)) : allCharacters;
+    let selectedActor = game.actors.get(this.actorId);
+    if (!characters.some(actor => actor.id === selectedActor?.id)) selectedActor = characters[0] ?? null;
+    this.actorId = selectedActor?.id ?? null;
+    const management = this.shopPage === "management" && game.user.isGM;
     const shopAll = inventoryEntries(shop, config.buyModifier, config, { management, discounts: true });
     const actorAll = inventoryEntries(selectedActor, config.sellModifier, config);
     const sourceEntries = this.shopPage === "sell" ? actorAll : shopAll;
@@ -502,6 +520,18 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
       keepSoldItems: form.elements.keepSoldItems.checked, hideNewItems: form.elements.hideNewItems.checked,
       displayQuantity: form.elements.displayQuantity.checked, showZeroQuantity: form.elements.showZeroQuantity.checked });
     ui.notifications.info("Händlereinstellungen gespeichert."); await this.render({ force: true });
+  }
+  static async #selectMerchantCharacters() {
+    const actor = this._merchant(); if (!actor || !game.user.isGM) return;
+    const current = merchantConfig(actor);
+    const allowedActorIds = await selectCharacters({
+      selectedIds: current.allowedActorIds,
+      title: `Händlerzugriff: ${actor.name}`,
+      hint: "Ohne Auswahl ist der Händler für alle Charaktere verfügbar."
+    });
+    if (!allowedActorIds) return;
+    await actor.setFlag(MODULE_ID, "merchant", { ...current, enabled: true, allowedActorIds });
+    await this.render({ force: true });
   }
   static #chooseMerchantImage() {
     if (!game.user.isGM) return;
@@ -677,6 +707,13 @@ function actorOwned(id) { return game.actors.get(id)?.testUserPermission(game.us
 let app;
 const promptedTrades = new Set();
 export function openCommerce(options = {}) {
+  if (options.merchantId) {
+    const merchant = game.actors.get(options.merchantId);
+    if (merchant && !merchantAvailableToUser(merchant)) {
+      ui.notifications.warn("Keiner deiner Charaktere darf bei diesem Händler handeln.");
+      return null;
+    }
+  }
   app ??= new CommerceApp(options);
   Object.assign(app, Object.fromEntries(Object.entries(options).filter(([,v])=>v!=null)));
   if (options.mode === "merchant" || options.merchantId) app.merchantSessionId = foundry.utils.randomID();

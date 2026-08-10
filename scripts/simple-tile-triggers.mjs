@@ -2,7 +2,7 @@ import { MODULE_ID } from "./core/constants.mjs";
 
 const FLAG = "simpleTileTrigger";
 const SPAWN_FLAG = "playerSpawn";
-const ACTION_TYPES = new Set(["spawnCharacter", "removeSpawned", "viewScene"]);
+const ACTION_TYPES = new Set(["spawnCharacter", "removeSpawned", "viewScene", "executeMacro"]);
 const running = new Set();
 const LAYER_PATCH = Symbol.for(`${MODULE_ID}.simpleTileTriggerLayerPatch`);
 
@@ -16,6 +16,11 @@ function cleanAction(source = {}) {
   if (type === "viewScene") {
     action.sceneUuid = String(source.sceneUuid ?? "");
     action.sceneName = String(source.sceneName ?? "");
+  }
+  if (type === "executeMacro") {
+    action.macroUuid = String(source.macroUuid ?? "");
+    action.macroName = String(source.macroName ?? "");
+    action.arguments = typeof source.arguments === "string" ? source.arguments : JSON.stringify(source.arguments ?? {});
   }
   return action;
 }
@@ -127,6 +132,33 @@ async function viewScene(action) {
   await scene.view();
 }
 
+async function executeMacro(action, tile) {
+  if (!action.macroUuid) throw new Error("Für diese Aktion wurde kein Makro festgelegt.");
+  const macro = await fromUuid(action.macroUuid);
+  if (macro?.documentName !== "Macro") throw new Error("Das hinterlegte Makro wurde nicht gefunden.");
+  let args;
+  try {
+    args = JSON.parse(action.arguments?.trim() || "{}");
+  } catch (error) {
+    throw new Error(`Die Makro-Arguments sind kein gültiges JSON: ${error.message}`);
+  }
+  const token = canvas.tokens?.controlled?.[0] ?? null;
+  const actor = token?.actor ?? game.user.character ?? null;
+  const named = foundry.utils.isPlainObject(args)
+    ? Object.fromEntries(Object.entries(args).filter(([key]) => /^[A-Za-z_$][\w$]*$/.test(key)))
+    : {};
+  return macro.execute({
+    ...named,
+    args,
+    tile,
+    scene: canvas.scene,
+    triggeringUser: game.user,
+    triggeringUserId: game.user.id,
+    actor,
+    token
+  });
+}
+
 async function trigger(tile) {
   if (running.has(tile.uuid)) return;
   running.add(tile.uuid);
@@ -137,6 +169,7 @@ async function trigger(tile) {
       if (action.type === "spawnCharacter") await spawnCharacter(action, config);
       else if (action.type === "removeSpawned") await removeSpawnedTokens();
       else if (action.type === "viewScene") await viewScene(action);
+      else if (action.type === "executeMacro") await executeMacro(action, tile);
     }
   } catch (error) {
     console.error(`${MODULE_ID} | Simple tile trigger failed`, error);
@@ -163,7 +196,7 @@ function synchronizeEditor(app) {
     const action = config.actions.find(entry => entry.id === row.dataset.actionId);
     if (!action) continue;
     for (const input of row.querySelectorAll("[data-action-field]")) {
-      action[input.dataset.actionField] = Number(input.value) || 0;
+      action[input.dataset.actionField] = input.dataset.actionFieldType === "text" ? input.value : Number(input.value) || 0;
     }
   }
   const field = root?.querySelector(`[name="flags.${MODULE_ID}.${FLAG}"]`);
@@ -277,6 +310,23 @@ function activateEditor(app, html) {
       if (!action) return;
       action.sceneUuid = scene.uuid;
       action.sceneName = scene.name;
+      await renderEditor(app, { ...config, actions: config.actions.map(cleanAction) });
+    });
+  }
+  for (const target of root.querySelectorAll("[data-macro-drop]")) {
+    target.addEventListener("dragover", event => { event.preventDefault(); target.classList.add("dragover"); });
+    target.addEventListener("dragleave", () => target.classList.remove("dragover"));
+    target.addEventListener("drop", async event => {
+      event.preventDefault();
+      target.classList.remove("dragover");
+      const data = TextEditor.getDragEventData(event);
+      const macro = data.uuid ? await fromUuid(data.uuid) : null;
+      if (macro?.documentName !== "Macro") return ui.notifications.warn("Bitte ein Makro aus dem Makroverzeichnis hierher ziehen.");
+      const config = synchronizeEditor(app);
+      const action = config.actions?.find(entry => entry.id === target.closest("[data-action-id]")?.dataset.actionId);
+      if (!action) return;
+      action.macroUuid = macro.uuid;
+      action.macroName = macro.name;
       await renderEditor(app, { ...config, actions: config.actions.map(cleanAction) });
     });
   }

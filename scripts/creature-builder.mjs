@@ -70,9 +70,25 @@ function normalizeAbility(value) {
   return ABILITY_ALIASES[text(value).toLowerCase()] ?? text(value).toLowerCase();
 }
 
-function normalizeAbilities(value = {}) {
+function abilityValueAnalysis(value = {}, format = "auto") {
+  const entries = Object.entries(value ?? {}).map(([key, raw]) => [key, number(raw)]);
+  const obviousScores = entries.filter(([, numeric]) => numeric !== null && numeric >= 6 && numeric <= 30).length;
+  const allScores = format === "scores" || (format !== "modifiers" && obviousScores >= 4);
+  const converted = [];
+  const values = Object.fromEntries(entries.map(([key, numeric]) => {
+    const isScore = numeric !== null && numeric >= 1 && numeric <= 30
+      && (allScores || (format !== "modifiers" && numeric >= 6));
+    if (!isScore) return [key, numeric];
+    converted.push(key);
+    return [key, Math.floor((numeric - 10) / 2)];
+  }));
+  return { values, converted, allScores };
+}
+
+function normalizeAbilities(value = {}, format = "auto") {
+  const analyzed = abilityValueAnalysis(value, format);
   const result = {};
-  for (const [key, modifier] of Object.entries(value ?? {})) {
+  for (const [key, modifier] of Object.entries(analyzed.values)) {
     const ability = normalizeAbility(key);
     if (ABILITIES.includes(ability)) result[ability] = modifier;
   }
@@ -181,7 +197,8 @@ export function canonicalizeCreature(source) {
     creatureType: text(source.creatureType).toLowerCase(),
     description: text(source.description),
     stats: foundry.utils.deepClone(source.stats ?? {}),
-    abilities: normalizeAbilities(source.abilities),
+    abilities: normalizeAbilities(source.abilities, text(source.abilityFormat).toLowerCase() || "auto"),
+    abilityFormat: "modifiers",
     movement: foundry.utils.deepClone(source.movement ?? {}),
     senses: foundry.utils.deepClone(traits.senses ?? {}),
     languages: foundry.utils.deepClone(traits.languages ?? []),
@@ -240,6 +257,15 @@ export function validateCreature(source) {
   const expectedAbilityKeys = ["cha", "con", "dex", "int", "str", "wis"];
   if (abilityKeys.join(",") !== expectedAbilityKeys.join(",")) {
     errors.push("abilities must contain exactly str, dex, con, int, wis, and cha.");
+  }
+  const abilityFormat = text(rawSource.abilityFormat).toLowerCase() || "auto";
+  if (!["auto", "scores", "modifiers"].includes(abilityFormat)) {
+    errors.push('abilityFormat must be "scores" or "modifiers" when provided.');
+  } else {
+    const analysis = abilityValueAnalysis(rawSource.abilities, abilityFormat);
+    if (analysis.converted.length) {
+      warnings.push(`Ability Scores were converted to modifiers for: ${analysis.converted.join(", ")}. Use abilityFormat "modifiers" to disable automatic conversion.`);
+    }
   }
   for (const [key, minimum] of [["ac", 1], ["hp", 1], ["attackBonus", -20], ["saveDC", 1]]) {
     const value = number(source.stats?.[key]);

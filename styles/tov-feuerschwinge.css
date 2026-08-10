@@ -1445,7 +1445,8 @@
   flex: 1 1 auto;
 }
 
-.tovf-scene-drop {
+.tovf-scene-drop,
+.tovf-macro-drop {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1455,10 +1456,13 @@
   border-radius: 4px;
 }
 
-.tovf-scene-drop.dragover {
+.tovf-scene-drop.dragover,
+.tovf-macro-drop.dragover {
   border-color: var(--color-border-highlight);
   box-shadow: 0 0 6px var(--color-shadow-highlight);
 }
+
+.tovf-tile-action textarea[data-action-field="arguments"] { min-height: 4.5rem; resize: vertical; font-family: var(--font-monospace, monospace); }
 .tovf-commerce .window-content { padding: .55rem; overflow: hidden; }
 .tovf-commerce-body { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: .55rem; height: 100%; min-height: 0; }
 .tovf-commerce-body:has(> .tovf-commerce-character[hidden]) { grid-template-rows: minmax(0, 1fr); gap: 0; }
@@ -1487,10 +1491,10 @@
 .tovf-merchant-portrait-button .tovf-merchant-portrait { pointer-events: none; }
 .tovf-merchant-portrait-button > span { position: absolute; right: 0; bottom: 0; left: 0; padding: .3rem; background: rgba(0,0,0,.72); opacity: 0; transition: opacity .15s ease; }
 .tovf-merchant-portrait-button:hover > span, .tovf-merchant-portrait-button:focus-visible > span { opacity: 1; }
-.tovf-merchant-sidebar h2 { margin: 0; text-align: center; }
-.tovf-merchant-description { max-height: 10rem; overflow-y: auto; font-size: .92rem; opacity: .9; }
+.tovf-merchant-sidebar h2 { margin: 0; text-align: center; font-size: 1.4rem; line-height: 1.15; }
+.tovf-merchant-description { flex: 1 1 auto; min-height: 0; overflow-y: auto; font-size: .92rem; opacity: .9; }
 .tovf-merchant-description:empty::before { content: "Keine Beschreibung hinterlegt."; opacity: .6; font-style: italic; }
-.tovf-merchant-sidebar nav { display: grid; gap: .35rem; margin-top: auto; }
+.tovf-merchant-sidebar nav { display: grid; flex: 0 0 auto; gap: .35rem; }
 .tovf-merchant-sidebar nav button { justify-content: flex-start; }
 .tovf-merchant-sidebar nav button.active { border-color: var(--color-border-highlight); box-shadow: inset 3px 0 var(--color-border-highlight); }
 .tovf-merchant-content { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: .6rem; min-height: 0; padding: .7rem; overflow: hidden; }
@@ -1552,6 +1556,10 @@
 .tovf-merchant-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .35rem .7rem; }
 .tovf-merchant-option-number { display: grid; grid-template-columns: minmax(0, 1fr) 82px; align-items: center; gap: .4rem; }
 .tovf-merchant-option-number input { min-width: 0; text-align: right; }
+.tovf-merchant-access { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .45rem .55rem; border: 1px solid var(--color-border-light-2); border-radius: 4px; background: rgba(0,0,0,.12); }
+.tovf-merchant-access > span { display: grid; gap: .1rem; }
+.tovf-merchant-access small { opacity: .72; }
+.tovf-merchant-access button { width: auto; margin: 0; }
 .tovf-merchant-stock-tools { display: grid; gap: .4rem; }
 .tovf-merchant-stock-tools > header > span { display: flex; gap: .35rem; }
 .tovf-merchant-stock-tools > div { display: grid; grid-template-columns: minmax(200px, 1fr) 70px auto; gap: .4rem; }
