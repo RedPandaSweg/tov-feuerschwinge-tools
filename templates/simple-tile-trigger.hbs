@@ -1,0 +1,56 @@
+<section class="tab {{tab.cssClass}} tovf-tile-actions-tab" data-tab="tovfActions" data-group="sheet" data-tovf-tile-actions>
+  <textarea hidden name="flags.tov-feuerschwinge-tools.simpleTileTrigger">{{configJson}}</textarea>
+  <div class="tovf-tile-actions-heading">
+    <label class="checkbox"><input type="checkbox" data-tovf-enabled {{checked config.enabled}}> Aktiv</label>
+    <div class="form-group">
+      <label for="tovf-tile-trigger-type">Auslöser</label>
+      <select id="tovf-tile-trigger-type" data-tovf-trigger>
+        <option value="dblclick" {{#if (eq config.trigger "dblclick")}}selected{{/if}}>Doppelklick</option>
+        <option value="click" {{#if (eq config.trigger "click")}}selected{{/if}}>Klick</option>
+      </select>
+    </div>
+    <p>Die Aktionen werden von oben nach unten auf dem Client des Spielers ausgeführt.</p>
+  </div>
+
+  <div class="tovf-tile-access-summary">
+    <span><strong>Benutzung</strong><small>{{#if config.allowedActorIds.length}}{{config.allowedActorIds.length}} Charaktere ausgewählt{{else}}Alle Spieler{{/if}}</small></span>
+    <button type="button" data-tovf-action="permissions"><i class="fa-solid fa-users-gear"></i> Charaktere auswählen</button>
+  </div>
+
+  <ol class="tovf-tile-action-list">
+    {{#each config.actions as |action index|}}
+      <li class="tovf-tile-action" data-action-id="{{action.id}}">
+        <header>
+          <strong>{{#if (eq action.type "spawnCharacter")}}Charakter spawnen{{else if (eq action.type "removeSpawned")}}Eigene Token entfernen{{else}}Szene anzeigen{{/if}}</strong>
+          <span class="tovf-tile-action-order">
+            <button type="button" class="icon fa-solid fa-chevron-up" data-tovf-action="up" aria-label="Nach oben"></button>
+            <button type="button" class="icon fa-solid fa-chevron-down" data-tovf-action="down" aria-label="Nach unten"></button>
+            <button type="button" class="icon fa-solid fa-trash" data-tovf-action="remove" aria-label="Entfernen"></button>
+          </span>
+        </header>
+        {{#if (eq action.type "spawnCharacter")}}
+          <div class="form-group"><label>Position X</label><input type="number" data-action-field="x" value="{{action.x}}"></div>
+          <div class="form-group"><label>Position Y</label><input type="number" data-action-field="y" value="{{action.y}}"></div>
+        {{else if (eq action.type "removeSpawned")}}
+          <p>Entfernt nur Token, die der auslösende Spieler über diese Funktion erzeugt hat.</p>
+        {{else}}
+          <div class="tovf-scene-drop" data-scene-drop>
+            <i class="fa-solid fa-map"></i>
+            {{#if action.sceneUuid}}<span>{{action.sceneName}}</span>{{else}}<span>Szene hierher ziehen</span>{{/if}}
+          </div>
+        {{/if}}
+      </li>
+    {{else}}
+      <li class="tovf-tile-actions-empty">Noch keine Aktionen hinterlegt.</li>
+    {{/each}}
+  </ol>
+
+  <div class="tovf-tile-action-add">
+    <select data-tovf-new-action aria-label="Neue Aktion">
+      <option value="spawnCharacter">Charakter spawnen</option>
+      <option value="removeSpawned">Eigene Token entfernen</option>
+      <option value="viewScene">Szene anzeigen</option>
+    </select>
+    <button type="button" data-tovf-action="add"><i class="fa-solid fa-plus"></i> Hinzufügen</button>
+  </div>
+</section>

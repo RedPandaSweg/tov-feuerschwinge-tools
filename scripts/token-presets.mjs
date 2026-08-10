@@ -80,7 +80,15 @@ async function request(action, payload) {
       reject: error => { clearTimeout(timeout); reject(error); }
     });
   });
-  game.socket.emit(`module.${MODULE_ID}`, { scope: SOCKET_SCOPE, type: "request", requestId, userId: game.user.id, action, payload });
+  game.socket.emit(`module.${MODULE_ID}`, {
+    scope: SOCKET_SCOPE,
+    type: "request",
+    requestId,
+    userId: game.user.id,
+    targetGMId: gm.id,
+    action,
+    payload
+  });
   return promise;
 }
 
@@ -107,6 +115,8 @@ class TokenPresetApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
   _onRender(context, options) {
     super._onRender(context, options);
+    const list = this.element.querySelector(".tovf-token-preset-list");
+    let dragged = null;
     for (const row of this.element.querySelectorAll("[data-preset]")) {
       const updatePreview = () => {
         const scale = Math.clamp(Number(row.querySelector('[name="scale"]')?.value) || 1, 0.1, 3);
@@ -121,7 +131,33 @@ class TokenPresetApp extends HandlebarsApplicationMixin(ApplicationV2) {
         input.addEventListener("input", updatePreview);
       }
       updatePreview();
+      const handle = row.querySelector(".tovf-token-preset-drag");
+      handle?.addEventListener("pointerdown", () => row.draggable = true);
+      handle?.addEventListener("pointerup", () => row.draggable = false);
+      row.addEventListener("dragstart", event => {
+        if (!row.draggable) return event.preventDefault();
+        dragged = row;
+        row.classList.add("dragging");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", row.dataset.preset);
+      });
+      row.addEventListener("dragend", () => {
+        row.draggable = false;
+        row.classList.remove("dragging");
+        dragged = null;
+        this.presets = this._presetsFromForm();
+      });
     }
+    list?.addEventListener("dragover", event => {
+      if (!dragged) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "move";
+      const target = event.target.closest("[data-preset]");
+      if (!target || target === dragged) return;
+      const before = event.clientY < target.getBoundingClientRect().top + (target.offsetHeight / 2);
+      list.insertBefore(dragged, before ? target : target.nextSibling);
+    });
+    list?.addEventListener("drop", event => event.preventDefault());
   }
   _presetsFromForm() {
     return [...this.element.querySelectorAll("[data-preset]")].map(row => cleanPreset({
@@ -180,8 +216,15 @@ class TokenPresetApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #apply(event, target) {
     event.preventDefault();
     await this._handle(async () => {
-      await this._savePresets();
-      await request("apply", { actorUuid: this.actor.uuid, tokenUuid: this.token.uuid, presetId: target.closest("[data-preset]").dataset.preset });
+      const presets = await this._savePresets();
+      const presetId = target.closest("[data-preset]").dataset.preset;
+      const preset = presets.find(entry => entry.id === presetId);
+      await request("apply", {
+        actorUuid: this.actor.uuid,
+        tokenUuid: this.token.uuid,
+        presetId,
+        preset
+      });
       ui.notifications.info("Token-Preset aktiviert.");
     });
   }
@@ -223,7 +266,7 @@ export function activateTokenPresetSocket() {
       message.error ? entry.reject(new Error(message.error)) : entry.resolve(message.result);
       return;
     }
-    if (message.type !== "request" || activeGM()?.id !== game.user.id) return;
+    if (message.type !== "request" || message.targetGMId !== game.user.id || activeGM()?.id !== game.user.id) return;
     execute(message.action, message.payload, message.userId)
       .then(result => game.socket.emit(`module.${MODULE_ID}`, { scope: SOCKET_SCOPE, type: "response", requestId: message.requestId, targetUserId: message.userId, result }))
       .catch(error => game.socket.emit(`module.${MODULE_ID}`, { scope: SOCKET_SCOPE, type: "response", requestId: message.requestId, targetUserId: message.userId, error: error.message }));

@@ -120,7 +120,9 @@ function registerTokenDoubleClick() {
   // Actors normally are not owned by players, so their double-click handler
   // would otherwise never run even though the station UI is player-facing.
   prototype._canView = function (user, event) {
-    if (isStation(this.actor)) {
+    const isCommerce = this.actor?.getFlag?.(MODULE_ID, "merchant")?.enabled === true
+      || this.actor?.getFlag?.(MODULE_ID, "auctionHouse")?.enabled === true;
+    if (isStation(this.actor) || isCommerce) {
       if (!this.layer?.active) return false;
       if (canvas.regions?._placementContext) return false;
       if (this.layer._draggedToken) return false;
@@ -133,6 +135,17 @@ function registerTokenDoubleClick() {
   };
 
   prototype._onClickLeft2 = function (event) {
+    const merchant = this.actor?.getFlag?.(MODULE_ID, "merchant")?.enabled === true;
+    const auctionHouse = this.actor?.getFlag?.(MODULE_ID, "auctionHouse")?.enabled === true;
+    if (merchant || auctionHouse) {
+      event?.stopPropagation?.();
+      void import("../commerce/app.mjs").then(({ openCommerce }) => openCommerce({
+        mode: merchant ? "merchant" : "auction",
+        merchantId: merchant ? this.actor.id : null,
+        auctionHouseId: auctionHouse ? this.actor.id : null
+      }));
+      return;
+    }
     if (isStation(this.actor)) {
       event?.stopPropagation?.();
       openStation(this.actor);
@@ -328,24 +341,32 @@ function actorHeaderControls(app, controls) {
   if (!actor) return;
 
   addHeaderControl(controls, {
-    action: "downtime-manager-configure-station",
-    icon: "fa-solid fa-hammer",
-    label: game.i18n.localize(isStation(actor)
-      ? "DOWNTIME_MANAGER.Headers.ConfigureStation"
-      : "DOWNTIME_MANAGER.Headers.MakeStation"),
+    action: "tov-feuerschwinge-actor-actions",
+    icon: "fa-solid fa-fire-flame-curved",
+    label: game.i18n.localize("DOWNTIME_MANAGER.Headers.Feuerschwinge"),
     visible: true,
-    onClick: () => configureStation(actor, app)
+    onClick: async () => {
+      const merchant = actor.getFlag(MODULE_ID, "merchant")?.enabled === true;
+      const auctionHouse = actor.getFlag(MODULE_ID, "auctionHouse")?.enabled === true;
+      const action = await foundry.applications.api.DialogV2.wait({
+        window: { title: game.i18n.localize("DOWNTIME_MANAGER.Headers.Feuerschwinge") },
+        buttons: [
+          { action: "merchant", icon: "fa-solid fa-shop", label: merchant ? "Händler öffnen und verwalten" : "Als Händler einrichten", callback: () => "merchant" },
+          { action: "auction", icon: "fa-solid fa-gavel", label: auctionHouse ? "Auktionshaus öffnen" : "Als Auktionshaus einrichten", callback: () => "auction" },
+          { action: "station", icon: "fa-solid fa-hammer", label: isStation(actor)
+            ? game.i18n.localize("DOWNTIME_MANAGER.Headers.ConfigureStation")
+            : game.i18n.localize("DOWNTIME_MANAGER.Headers.MakeStation"), callback: () => "station" },
+          ...(isStation(actor) ? [{ action: "openStation", icon: "fa-solid fa-screwdriver-wrench", label: game.i18n.localize("DOWNTIME_MANAGER.Headers.OpenStation"), callback: () => "openStation" }] : [])
+        ],
+        rejectClose: false
+      });
+      if (action === "station") return configureStation(actor, app);
+      if (action === "openStation") return openStation(actor);
+      const commerce = await import("../commerce/app.mjs");
+      if (action === "merchant") return merchant ? commerce.openCommerce({ mode: "merchant", merchantId: actor.id, shopPage: "management" }) : commerce.configureMerchantActor(actor, app);
+      if (action === "auction") return auctionHouse ? commerce.openCommerce({ mode: "auction", auctionHouseId: actor.id }) : commerce.configureAuctionHouseActor(actor, app);
+    }
   });
-
-  if (isStation(actor)) {
-    addHeaderControl(controls, {
-      action: "downtime-manager-open-station",
-      icon: "fa-solid fa-screwdriver-wrench",
-      label: game.i18n.localize("DOWNTIME_MANAGER.Headers.OpenStation"),
-      visible: true,
-      onClick: () => openStation(actor)
-    });
-  }
 }
 
 function itemHeaderControls(app, controls) {

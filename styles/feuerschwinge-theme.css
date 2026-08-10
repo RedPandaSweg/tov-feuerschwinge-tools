@@ -471,6 +471,28 @@
   background: rgba(8, 6, 5, .72);
 }
 
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .card-tray :is(.effect, .target) {
+  color: var(--tovf-color-text);
+  background: linear-gradient(180deg, rgba(48, 27, 18, .92), rgba(20, 13, 10, .96));
+  border-color: var(--tovf-color-bronze);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag :is(blackFlag-damageApplication, blackFlag-effectApplication) :is(.effect, .target) > button {
+  --text-color: var(--tovf-color-gold-light);
+  color: var(--tovf-color-gold-light);
+  background: var(--tovf-surface-control);
+  border-color: var(--tovf-color-bronze-light);
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, .38);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag :is(blackFlag-damageApplication, blackFlag-effectApplication) :is(.effect, .target) > button:is(:hover, :focus-visible) {
+  --text-color: #fff2d1;
+  color: #fff2d1;
+  background: var(--tovf-surface-control-hover);
+  border-color: var(--tovf-color-ember-hot);
+  box-shadow: var(--tovf-shadow-ember);
+}
+
 :is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .chat-card .tags .tag {
   color: var(--tovf-color-gold-light);
   background: linear-gradient(180deg, rgba(98, 52, 28, .96), rgba(43, 24, 16, .98));
@@ -680,6 +702,29 @@
   background: radial-gradient(circle, rgba(83, 38, 21, .96), rgba(20, 12, 9, .99));
   border-color: var(--tovf-color-bronze-light);
   box-shadow: inset 0 0 10px rgba(0, 0, 0, .38), 0 0 6px rgba(239, 88, 24, .18);
+}
+
+.black-flag.pc.sheet .abilities .ability .ability-save button.value {
+  color: #fff2d1;
+  background: radial-gradient(circle at 42% 38%, #713318 0%, #35170f 56%, #130908 100%);
+  border-color: var(--tovf-color-ember-hot);
+  box-shadow: inset 0 0 11px rgba(0, 0, 0, .52), 0 0 7px rgba(239, 88, 24, .34);
+}
+
+.black-flag.pc.sheet .abilities .ability .ability-save button.value .label text {
+  fill: var(--tovf-color-gold-light);
+  filter: drop-shadow(0 1px 1px #000);
+}
+
+.black-flag.pc.sheet .abilities .ability .ability-save button.value .mod {
+  color: #fff2d1;
+  text-shadow: 0 1px 2px #000, 0 0 5px rgba(239, 88, 24, .38);
+}
+
+.black-flag.pc.sheet .abilities .ability .ability-save button.value:is(:hover, :focus-visible) {
+  border-color: #ff8a32;
+  background: radial-gradient(circle at 42% 38%, #8f411d 0%, #472012 58%, #180b08 100%);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, .42), 0 0 9px rgba(239, 88, 24, .55);
 }
 
 .black-flag.stat-block.sheet .sheet-header {

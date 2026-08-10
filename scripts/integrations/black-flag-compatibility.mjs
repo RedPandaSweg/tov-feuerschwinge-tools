@@ -3,6 +3,24 @@ import { MODULE_ID } from "../core/constants.mjs";
 let cubeTemplateFixInstalled = false;
 let currencyStackingInstalled = false;
 
+/**
+ * Black Flag 3.0.077 calls an unbound `formatNumber` identifier while preparing
+ * the numbered exhaustion effect. The formatter itself is publicly exposed by
+ * the system; provide the missing global binding until the system fixes the
+ * bundled reference.
+ */
+function installExhaustionFormatNumberFix() {
+  if (game.system.version !== "3.0.077" || typeof globalThis.formatNumber === "function") return;
+  const formatter = BlackFlag?.utils?.formatNumber;
+  if (typeof formatter !== "function") return;
+  Object.defineProperty(globalThis, "formatNumber", {
+    value: (...args) => formatter(...args),
+    configurable: true,
+    writable: true
+  });
+  console.warn(`${MODULE_ID} | Applied Black Flag 3.0.077 exhaustion formatNumber compatibility fix.`);
+}
+
 function currencyIdentifier(item) {
   if (item?.type !== "currency") return "";
   return String(item.system?.identifier?.value ?? item.system?.identifier ?? "")
@@ -122,6 +140,7 @@ function installItemStacking() {
  * self-disabling so a corrected system implementation is never replaced.
  */
 export function installBlackFlagCompatibility() {
+  installExhaustionFormatNumberFix();
   installCubeTemplateFix();
   installItemStacking();
   installCurrencyStacking();

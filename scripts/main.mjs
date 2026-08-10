@@ -5,7 +5,7 @@ import {
   migrateToolNamespace,
   registerNamespaceMigration
 } from "./core/namespace-migration.mjs";
-import { exposeTransferApi } from "./transfer/compendium-transfer.mjs";
+import { exposeTransferApi } from "./transfer/compendium-transfer.mjs?v=3.1.2";
 import { registerSessionTransfer, sessionTransferApi } from "./transfer/session-transfer.mjs";
 import { installBlackFlagCompatibility } from "./integrations/black-flag-compatibility.mjs";
 import {
@@ -34,8 +34,17 @@ import { installToolAbilitySelection } from "./integrations/tool-ability.mjs";
 import { installCompendiumUsability } from "./compendium-usability.mjs";
 import { installChatImagePopouts } from "./chat-image-popout.mjs";
 import { activateTokenPresetSocket, registerTokenPresets } from "./token-presets.mjs";
+import { activateSimpleTileTriggers, registerSimpleTileTriggers } from "./simple-tile-triggers.mjs?v=3.1.4";
+import { activateCommerce, registerCommerce } from "./commerce/main.mjs";
 import "./downtime/main.mjs";
 import "./contested-activity.mjs";
+
+// Keep tile triggers independent from the shared initialization chain so an
+// unrelated tool cannot prevent their hooks and diagnostics from registering.
+registerSimpleTileTriggers();
+Hooks.once("ready", activateSimpleTileTriggers);
+registerCommerce();
+Hooks.once("ready", activateCommerce);
 
 const MODULE_MENU_ORDER = new Map([
   ["help", 0],

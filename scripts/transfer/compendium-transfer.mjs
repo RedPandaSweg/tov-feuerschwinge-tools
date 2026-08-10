@@ -374,10 +374,12 @@ export async function importCompendiumFolder(file, destinationId = null) {
 
 export function exposeTransferApi() {
   const module = game.modules.get(MODULE_ID);
-  if (module) module.api = {
+  if (!module) return;
+  module.api ??= {};
+  Object.assign(module.api, {
     createCompendiumBundle,
     exportCompendiumFolder,
     importCompendiumBundle,
     importCompendiumFolder
-  };
+  });
 }

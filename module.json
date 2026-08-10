@@ -2,7 +2,7 @@
   "id": "tov-feuerschwinge-tools",
   "title": "Feuerschwinge – Tools",
   "description": "Kampagnenspezifische Werkzeuge, Downtime- und Sessionverwaltung und Integrationen für Tales of the Valiant: Feuerschwinge.",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "socket": true,
   "compatibility": {
     "minimum": "13.348",
@@ -18,13 +18,6 @@
   "download": "https://raw.githubusercontent.com/RedPandaSweg/tov-feuerschwinge-tools/main/module.zip",
   "relationships": {
     "recommends": [
-      {
-        "id": "item-piles",
-        "type": "module",
-        "compatibility": {
-          "minimum": "3.2.7"
-        }
-      },
       {
         "id": "enhancedcombathud",
         "type": "module",
@@ -71,9 +64,8 @@
     ]
   },
   "esmodules": [
-    "scripts/main.mjs",
+    "scripts/main-3.2.0.mjs",
     "scripts/macro-activity.mjs",
-    "scripts/item-piles-integration.mjs",
     "scripts/weapon-customization.mjs",
     "scripts/weapon-enchantment.mjs"
   ],

@@ -16,6 +16,9 @@
   <div class="tovf-token-preset-list">
     {{#each presets}}
     <div class="tovf-token-preset" data-preset="{{id}}">
+      <button type="button" class="tovf-token-preset-drag" title="Preset verschieben" aria-label="Preset verschieben">
+        <i class="fa-solid fa-grip-vertical" inert></i>
+      </button>
       <button type="button" class="tovf-token-preset-image" data-action="chooseImage" title="Tokenbild auswählen" aria-label="Tokenbild auswählen">
         <span class="tovf-token-space"><img src="{{image}}" alt="Tokenbild für {{name}}"></span>
       </button>

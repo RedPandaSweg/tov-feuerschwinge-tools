@@ -166,8 +166,23 @@ export function getTooltipToHitLabel(item) {
     return "-";
 }
 
-const normalizeDamageParts = (parts) => parts.map((part) => ({
-    formula: part.formula,
+function resolveDamageFormula(formula, candidate) {
+    const text = String(formula ?? "");
+    if (!text.includes("@")) return text;
+    const sourceItem = candidate?.item ?? candidate;
+    const actor = candidate?.actor ?? sourceItem?.actor
+        ?? (sourceItem?.parent?.documentName === "Actor" ? sourceItem.parent : null);
+    if (!actor?.getRollData) return text;
+    try {
+        return Roll.replaceFormulaData(text, actor.getRollData(), { missing: "0", warn: false });
+    } catch (error) {
+        console.warn(`[Argon-BF] Could not resolve tooltip damage formula "${text}".`, error);
+        return text;
+    }
+}
+
+const normalizeDamageParts = (parts, candidate) => parts.map((part) => ({
+    formula: resolveDamageFormula(part.formula, candidate),
     damageType: part.damageType ?? part.type ?? part.types?.[0]
 }));
 
@@ -192,7 +207,7 @@ export function getTooltipDamageParts(item) {
         const parts = damagePartsFor(candidate);
         if (parts.length) {
             const unique = new Map();
-            for (const part of normalizeDamageParts(parts)) {
+            for (const part of normalizeDamageParts(parts, candidate)) {
                 unique.set(`${part.formula}\u0000${part.damageType ?? ""}`, part);
             }
             return [...unique.values()];

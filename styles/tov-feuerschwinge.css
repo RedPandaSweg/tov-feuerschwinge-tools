@@ -12,7 +12,10 @@
 .tovf-token-size-recommendations em { font-style: normal; color: var(--color-text-primary); }
 .tovf-token-size-recommendations b { white-space: nowrap; color: var(--color-text-emphatic); }
 .tovf-token-preset-list { display: grid; gap: .4rem; }
-.tovf-token-preset { display: grid; grid-template-columns: 76px minmax(95px, 1fr) minmax(115px, 1.1fr) repeat(3, 56px) 94px 34px; align-items: center; gap: .35rem; padding: .4rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.tovf-token-preset { display: grid; grid-template-columns: 24px 76px minmax(95px, 1fr) minmax(115px, 1.1fr) repeat(3, 56px) 94px 34px; align-items: center; gap: .35rem; padding: .4rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.tovf-token-preset-drag { width: 24px; min-width: 24px; height: 44px; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; cursor: grab; }
+.tovf-token-preset-drag:active { cursor: grabbing; }
+.tovf-token-preset.dragging { opacity: .55; }
 .tovf-token-preset-image { position: relative; width: 72px; height: 58px; min-width: 0; min-height: 0; margin: 0; padding: 0; overflow: visible; border: 0 !important; outline: 0; background: transparent !important; box-shadow: none !important; cursor: pointer; }
 .tovf-token-space { position: absolute; left: 50%; top: 50%; width: min(calc(var(--token-width, 1) * 28px), 62px); height: min(calc(var(--token-height, 1) * 28px), 48px); translate: -50% -50%; background: rgb(0 0 0 / 20%); }
 .tovf-token-space::after { content: ""; position: absolute; z-index: 2; inset: 0; border: 1px dashed var(--color-border-highlight); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 20%), 0 0 2px rgb(0 0 0 / 90%); pointer-events: none; }
@@ -1375,4 +1378,337 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+}
+.tovf-tile-actions-tab {
+  gap: 0.75rem;
+}
+
+.tovf-tile-actions-tab.active {
+  display: grid;
+}
+
+.tovf-tile-actions-heading p,
+.tovf-tile-action p {
+  margin: 0;
+  font-weight: normal;
+}
+
+.tovf-tile-access-summary { display: flex; align-items: center; justify-content: space-between; gap: .6rem; padding: .5rem .6rem; border: 1px solid var(--color-border-light-primary); border-radius: 4px; }
+.tovf-tile-access-summary > span { display: grid; min-width: 0; }
+.tovf-tile-access-summary small { opacity: .72; }
+.tovf-tile-access-summary button { flex: 0 0 auto; width: auto; }
+.tovf-trigger-character-dialog .dialog-content { min-height: 0; overflow: hidden; }
+.tovf-trigger-character-picker { display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); gap: .55rem; height: 100%; min-height: 0; }
+.tovf-trigger-character-filters { display: grid; grid-template-columns: minmax(190px, 1fr) minmax(140px, .65fr) minmax(140px, .65fr); gap: .4rem; }
+.tovf-trigger-character-filters > label { display: flex; align-items: center; gap: .4rem; }
+.tovf-trigger-character-filters input { flex: 1; min-width: 0; }
+.tovf-trigger-character-picker > .hint { margin: 0; }
+.tovf-trigger-character-picker > .tovf-actor-list { align-content: start; max-height: none; min-height: 0; padding-right: .2rem; }
+
+.tovf-tile-action-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tovf-tile-action {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  border: 1px solid var(--color-border-light-primary);
+  border-radius: 4px;
+}
+
+.tovf-tile-action > header,
+.tovf-tile-action-order,
+.tovf-tile-action-add {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tovf-tile-action > header {
+  justify-content: space-between;
+}
+
+.tovf-tile-action-add {
+  flex-wrap: wrap;
+}
+
+.tovf-tile-action-add button {
+  flex: 0 0 auto;
+}
+
+.tovf-tile-action-add select {
+  flex: 1 1 auto;
+}
+
+.tovf-scene-drop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 54px;
+  border: 2px dashed var(--color-border-light-primary);
+  border-radius: 4px;
+}
+
+.tovf-scene-drop.dragover {
+  border-color: var(--color-border-highlight);
+  box-shadow: 0 0 6px var(--color-shadow-highlight);
+}
+.tovf-commerce .window-content { padding: .55rem; overflow: hidden; }
+.tovf-commerce-body { display: grid; grid-template-rows: auto minmax(0, 1fr); gap: .55rem; height: 100%; min-height: 0; }
+.tovf-commerce-body:has(> .tovf-commerce-character[hidden]) { grid-template-rows: minmax(0, 1fr); gap: 0; }
+.tovf-commerce-tabs, .tovf-commerce-character, .tovf-commerce-panel > header { display: flex; align-items: center; gap: .5rem; }
+.tovf-commerce-tabs button { flex: 1; }
+.tovf-commerce-tabs button.active { border-color: var(--color-border-highlight); box-shadow: 0 0 6px var(--color-shadow-highlight); }
+.tovf-commerce-character select { flex: 1; }
+.tovf-commerce-wallet { display: flex; align-items: center; gap: .25rem; }
+.tovf-commerce-wallet > span { display: grid; grid-template-columns: 20px auto auto; align-items: center; gap: .2rem; min-width: 62px; padding: .2rem .35rem; border: 1px solid var(--color-border-light-2); border-radius: 4px; background: var(--input-background-color, rgba(7, 4, 3, .88)); }
+.tovf-commerce-wallet img { width: 20px; height: 20px; object-fit: contain; border: 0; }
+.tovf-commerce-wallet small { opacity: .7; text-transform: lowercase; }
+.tovf-commerce-panel { display: grid; gap: .5rem; min-height: 0; overflow: auto; }
+.tovf-commerce-panel > header { justify-content: space-between; }
+.tovf-commerce-panel h3, .tovf-commerce-panel h4 { margin: 0; }
+.tovf-commerce-columns { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.tovf-commerce-columns > div, .tovf-commerce-list { display: grid; align-content: start; gap: .35rem; }
+.tovf-commerce-panel article { display: flex; align-items: center; gap: .5rem; padding: .4rem; border: 1px solid var(--color-border-light-2); border-radius: 4px; }
+.tovf-commerce-panel article img { width: 38px; height: 38px; object-fit: cover; border: 0; }
+.tovf-commerce-panel article span { display: grid; flex: 1; min-width: 0; }
+.tovf-commerce-panel article small { opacity: .8; }
+.tovf-commerce-panel article button { flex: 0 0 auto; }
+.tovf-merchant-shell { display: grid; grid-template-columns: 250px minmax(0, 1fr); min-height: 0; overflow: hidden; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.tovf-merchant-sidebar { display: flex; flex-direction: column; gap: .55rem; min-height: 0; padding: .7rem; border-right: 1px solid var(--color-border-light-2); background: rgba(0,0,0,.14); overflow-y: auto; }
+.tovf-merchant-portrait { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border: 1px solid var(--color-border-light-2); border-radius: 5px; }
+.tovf-merchant-portrait-button { position: relative; display: block; width: 100%; height: auto; margin: 0; padding: 0; overflow: hidden; border: 0; background: transparent; }
+.tovf-merchant-portrait-button .tovf-merchant-portrait { pointer-events: none; }
+.tovf-merchant-portrait-button > span { position: absolute; right: 0; bottom: 0; left: 0; padding: .3rem; background: rgba(0,0,0,.72); opacity: 0; transition: opacity .15s ease; }
+.tovf-merchant-portrait-button:hover > span, .tovf-merchant-portrait-button:focus-visible > span { opacity: 1; }
+.tovf-merchant-sidebar h2 { margin: 0; text-align: center; }
+.tovf-merchant-description { max-height: 10rem; overflow-y: auto; font-size: .92rem; opacity: .9; }
+.tovf-merchant-description:empty::before { content: "Keine Beschreibung hinterlegt."; opacity: .6; font-style: italic; }
+.tovf-merchant-sidebar nav { display: grid; gap: .35rem; margin-top: auto; }
+.tovf-merchant-sidebar nav button { justify-content: flex-start; }
+.tovf-merchant-sidebar nav button.active { border-color: var(--color-border-highlight); box-shadow: inset 3px 0 var(--color-border-highlight); }
+.tovf-merchant-content { display: grid; grid-template-rows: auto auto minmax(0, 1fr); gap: .6rem; min-height: 0; padding: .7rem; overflow: hidden; }
+.tovf-merchant-content.management { display: block; overflow-y: auto; }
+.tovf-merchant-content.management > * + * { margin-top: .65rem; }
+.tovf-merchant-content.management .tovf-shop-list { min-height: 280px; overflow: visible; }
+.tovf-merchant-content.management .tovf-shop-filters { position: sticky; top: 0; z-index: 2; padding: .35rem 0; background: var(--color-bg-primary, rgba(20, 14, 10, .96)); }
+.tovf-shop-heading, .tovf-merchant-settings > header, .tovf-merchant-stock-tools > header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
+.tovf-shop-heading h2, .tovf-merchant-settings h3, .tovf-merchant-stock-tools h3 { margin: 0; }
+.tovf-shop-filters { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(140px, .55fr) minmax(140px, .5fr); gap: .4rem; }
+.tovf-shop-list { min-height: 0; padding-right: .2rem; overflow-y: auto; }
+.tovf-shop-group + .tovf-shop-group { margin-top: .55rem; }
+.tovf-shop-group > header { display: grid; grid-template-columns: minmax(0, 1fr) 190px 130px; align-items: end; gap: .45rem; padding: .2rem .35rem; border-bottom: 1px solid var(--color-border-light-2); }
+.tovf-shop-group > header h3 { margin: 0; font-size: 1.05rem; }
+.tovf-shop-group > header > span { grid-column: 2; text-align: right; font-size: .8rem; opacity: .75; }
+.tovf-shop-group article { display: grid; grid-template-columns: minmax(0, 1fr) 190px 130px; align-items: center; gap: .45rem; min-height: 38px; padding: .18rem .3rem; }
+.tovf-shop-group article:nth-child(odd) { background: rgba(0,0,0,.11); }
+.tovf-shop-group article:nth-child(even) { background: rgba(255,255,255,.035); }
+.tovf-shop-group article:hover { background: rgba(193,119,50,.14); }
+.tovf-shop-group article.special-offer { position: relative; z-index: 0; border-left: 2px solid #ffb347; background: linear-gradient(90deg, rgba(151, 68, 15, .24), rgba(255, 178, 71, .055) 72%); box-shadow: inset 0 0 12px rgba(255, 145, 35, .12); }
+.tovf-shop-group article.special-offer::after { content: ""; position: absolute; inset: 1px; z-index: -1; border-radius: 3px; box-shadow: 0 0 7px rgba(255, 151, 47, .28); pointer-events: none; }
+.tovf-shop-item-open { display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: center; gap: .4rem; width: 100%; min-width: 0; height: auto; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; text-align: left; }
+.tovf-shop-item-open:hover, .tovf-shop-item-open:focus-visible { border: 0; background: transparent; box-shadow: none; }
+.tovf-shop-item-open img { width: 30px; height: 30px; object-fit: cover; border: 0; border-radius: 3px; }
+.tovf-shop-item-open > span { display: flex; align-items: baseline; gap: .35rem; min-width: 0; }
+.tovf-shop-item-open b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tovf-shop-item-open small { flex: 0 0 auto; opacity: .65; }
+.tovf-offer-label { flex: 0 0 auto; padding: .08rem .28rem; border: 1px solid rgba(255, 180, 75, .78); border-radius: 3px; background: rgba(111, 40, 8, .72); color: #ffd28a; font-size: .7rem; font-style: normal; font-weight: 700; text-transform: uppercase; box-shadow: 0 0 6px rgba(255, 139, 31, .25); }
+.tovf-shop-price-stack { display: flex; align-items: center; justify-content: flex-end; gap: .35rem; }
+.tovf-shop-price { display: flex; align-items: center; justify-content: flex-end; gap: .25rem; text-align: right; white-space: nowrap; }
+.tovf-shop-price > span { display: inline-flex; align-items: center; gap: .22rem; padding: .18rem .32rem; border: 1px solid rgba(117, 64, 31, .72); border-radius: 4px; background: var(--input-background-color, rgba(7, 4, 3, .88)); box-shadow: inset 0 0 5px rgba(0, 0, 0, .55); }
+.tovf-shop-price img { width: 18px; height: 18px; object-fit: contain; border: 0; }
+.tovf-shop-original-price { display: flex; align-items: center; justify-content: flex-end; gap: .18rem; color: rgba(210, 185, 154, .68); font-size: .72rem; text-decoration-thickness: 2px; }
+.tovf-shop-original-price > span { display: inline-flex; align-items: center; gap: .12rem; }
+.tovf-shop-original-price img { width: 13px; height: 13px; object-fit: contain; border: 0; opacity: .7; }
+.tovf-shop-group article.special-offer .tovf-shop-price > span { border-color: rgba(255, 170, 67, .78); box-shadow: inset 0 0 6px rgba(0, 0, 0, .5), 0 0 7px rgba(255, 132, 25, .24); }
+.tovf-merchant-chat-card { display: grid; gap: .4rem; color: inherit; }
+.tovf-merchant-chat-card > header { display: flex; align-items: center; gap: .5rem; padding-bottom: .35rem; border-bottom: 1px solid rgba(117, 64, 31, .72); }
+.tovf-merchant-chat-card > header img { width: 42px; height: 42px; object-fit: cover; border: 1px solid rgba(117, 64, 31, .72); border-radius: 4px; }
+.tovf-merchant-chat-card > header span, .tovf-merchant-chat-card li span { display: grid; flex: 1; min-width: 0; }
+.tovf-merchant-chat-card ul { display: grid; gap: .2rem; margin: 0; padding: 0; list-style: none; }
+.tovf-merchant-chat-card li { display: flex; align-items: center; gap: .4rem; padding: .25rem; border-radius: 3px; background: var(--input-background-color, rgba(7, 4, 3, .72)); }
+.tovf-merchant-chat-card li img { width: 30px; height: 30px; object-fit: cover; border: 0; border-radius: 3px; }
+.tovf-merchant-chat-card small { opacity: .72; }
+.tovf-merchant-chat-card > footer { display: flex; align-items: center; justify-content: space-between; padding-top: .35rem; border-top: 1px solid rgba(117, 64, 31, .72); }
+.tovf-shop-actions { display: flex; justify-content: flex-end; gap: .2rem; }
+.tovf-shop-actions button { width: auto; min-width: 0; margin: 0; padding: .25rem .4rem; white-space: nowrap; }
+.tovf-shop-group article.hidden-item { opacity: .5; }
+.tovf-shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(235px, 1fr)); align-content: start; gap: .45rem; min-height: 0; padding-right: .2rem; overflow-y: auto; }
+.tovf-shop-grid article { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; align-items: center; gap: .5rem; min-height: 66px; padding: .4rem; border: 1px solid var(--color-border-light-2); border-radius: 5px; background: rgba(0,0,0,.1); }
+.tovf-shop-grid article img { width: 52px; height: 52px; object-fit: cover; border: 0; }
+.tovf-shop-grid article > div { display: grid; min-width: 0; }
+.tovf-shop-grid article b, .tovf-shop-grid article small, .tovf-shop-grid article span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tovf-shop-grid article small { opacity: .7; }
+.tovf-shop-grid article.hidden-item { opacity: .55; border-style: dashed; }
+.tovf-shop-grid article button { width: auto; flex: 0 0 auto; }
+.tovf-shop-empty { grid-column: 1 / -1; text-align: center; opacity: .7; }
+.tovf-merchant-settings { display: grid; gap: .5rem; padding-bottom: .6rem; border-bottom: 1px solid var(--color-border-light-2); }
+.tovf-merchant-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .35rem .7rem; }
+.tovf-merchant-option-number { display: grid; grid-template-columns: minmax(0, 1fr) 82px; align-items: center; gap: .4rem; }
+.tovf-merchant-option-number input { min-width: 0; text-align: right; }
+.tovf-merchant-stock-tools { display: grid; gap: .4rem; }
+.tovf-merchant-stock-tools > header > span { display: flex; gap: .35rem; }
+.tovf-merchant-stock-tools > div { display: grid; grid-template-columns: minmax(200px, 1fr) 70px auto; gap: .4rem; }
+.tovf-merchant-inventory-drop { display: flex; align-items: center; justify-content: center; gap: .45rem; min-height: 48px; padding: .45rem; border: 2px dashed rgba(181,102,48,.72); border-radius: 5px; background: rgba(7,3,2,.35); color: rgba(237,204,162,.82); transition: border-color .15s, background .15s, box-shadow .15s; }
+.tovf-merchant-inventory-drop.dragover { border-color: #ef7b28; background: rgba(125,48,13,.28); box-shadow: inset 0 0 12px rgba(239,91,24,.17), 0 0 6px rgba(239,91,24,.3); }
+.tovf-commerce-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; min-height: 220px; }
+.tovf-auction-shell { display: grid; grid-template-columns: 250px minmax(0, 1fr); min-height: 0; overflow: hidden; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.tovf-auction-shell:not(:has(> .tovf-merchant-sidebar)) { grid-template-columns: minmax(0, 1fr); }
+.tovf-auction-shell > .tovf-merchant-sidebar > button[data-action="createAuction"] { display: none; }
+.tovf-auction-content { display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); gap: .6rem; min-width: 0; min-height: 0; padding: .7rem; overflow: hidden; }
+.tovf-auction-content > header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding-bottom: .45rem; border-bottom: 1px solid var(--color-border-light-2); }
+.tovf-auction-content > header h2 { margin: 0; }
+.tovf-auction-content > header small { opacity: .68; }
+.tovf-auction-content > header button { flex: 0 0 auto; }
+.tovf-auction-list { min-height: 0; padding-right: .2rem; overflow-y: auto; }
+.tovf-auction-list > header,
+.tovf-auction-list > article { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(85px, .48fr) 155px 72px 175px; align-items: center; gap: .5rem; }
+.tovf-auction-list > header { position: sticky; top: 0; z-index: 2; padding: .28rem .4rem; border-bottom: 1px solid var(--color-border-light-2); background: var(--color-bg-primary, rgba(20, 14, 10, .97)); font-size: .76rem; font-weight: 700; opacity: .82; }
+.tovf-auction-list > article { position: relative; min-height: 46px; padding: .3rem .4rem; border-left: 2px solid transparent; }
+.tovf-auction-list > article:nth-of-type(odd) { background: rgba(0,0,0,.12); }
+.tovf-auction-list > article:nth-of-type(even) { background: rgba(255,255,255,.035); }
+.tovf-auction-list > article:hover { background: rgba(193,119,50,.14); }
+.tovf-auction-list > article.has-buyout { border-left-color: rgba(220,132,48,.72); }
+.tovf-auction-list .tovf-shop-item-open { grid-template-columns: 36px minmax(0, 1fr); }
+.tovf-auction-list .tovf-shop-item-open img { width: 36px; height: 36px; }
+.tovf-auction-list .tovf-shop-item-open > span { display: grid; gap: 0; }
+.tovf-auction-list .tovf-shop-item-open small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tovf-auction-seller { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: .82; }
+.tovf-auction-prices { display: grid; justify-items: end; gap: .15rem; min-width: 0; }
+.tovf-auction-prices > small { display: flex; align-items: center; justify-content: flex-end; gap: .18rem; color: rgba(228,193,151,.76); white-space: nowrap; }
+.tovf-auction-prices > small img { width: 14px; height: 14px; object-fit: contain; border: 0; }
+.tovf-auction-prices .tovf-shop-price > span { padding: .14rem .28rem; }
+.tovf-auction-time { text-align: center; white-space: nowrap; }
+.tovf-auction-list .tovf-shop-actions { display: flex; justify-content: flex-end; }
+.tovf-auction-list > .tovf-shop-empty { padding: 2rem .5rem; }
+.tovf-auction-page-tabs { display: flex; gap: .35rem; }
+.tovf-auction-page-tabs button { flex: 1; }
+.tovf-auction-page-tabs button.active,
+.tovf-auction-sidebar-nav button.active { border-color: var(--color-border-highlight); box-shadow: inset 0 -2px var(--color-border-highlight); }
+.tovf-auction-sidebar-nav { display: grid; gap: .35rem; margin-top: auto; }
+.tovf-auction-sidebar-nav button { justify-content: flex-start; }
+.tovf-auction-shell .tovf-merchant-description { flex: 1 1 auto; max-height: none; }
+.tovf-auction-house-heading { display: flex; align-items: center; justify-content: center; gap: .35rem; }
+.tovf-auction-house-heading h2 { margin: 0; }
+.tovf-auction-house-heading button { width: 30px; min-width: 30px; height: 30px; margin: 0; padding: 0; }
+.tovf-auction-description-dialog { height: 100%; min-height: 410px; }
+.tovf-auction-description-dialog prose-mirror { height: 100%; min-height: 410px; }
+.tovf-auction-description-dialog prose-mirror .editor-content { min-height: 365px; }
+.application.tovf-commerce-dialog { border-color: rgba(151, 69, 24, .92); background: linear-gradient(180deg, rgba(43, 17, 7, .98), rgba(17, 8, 5, .99)); box-shadow: 0 0 18px rgba(0,0,0,.8), inset 0 0 20px rgba(112,45,13,.13); }
+.application.tovf-commerce-dialog .window-header { border-bottom: 1px solid rgba(213, 91, 24, .82); background: linear-gradient(180deg, rgba(126, 50, 16, .96), rgba(72, 28, 10, .96)); color: #f2d2a5; }
+.application.tovf-commerce-dialog .window-content { padding: .7rem; background: radial-gradient(circle at 50% 0, rgba(92,39,15,.18), transparent 55%), rgba(17,8,5,.98); color: #e7c9a1; }
+.application.tovf-commerce-dialog .dialog-form { height: 100%; min-height: 0; }
+.application.tovf-commerce-dialog .dialog-content { min-height: 0; overflow-y: auto; }
+.application.tovf-commerce-dialog .form-footer { padding-top: .55rem; border-top: 1px solid rgba(117,64,31,.72); }
+.application.tovf-commerce-dialog input,
+.application.tovf-commerce-dialog select,
+.application.tovf-commerce-dialog textarea { border-color: rgba(132,70,35,.86); background: rgba(8,4,3,.9); color: #f0d7b4; }
+.application.tovf-commerce-dialog button { border-color: rgba(151,69,24,.9); background: linear-gradient(180deg, rgba(119,49,17,.96), rgba(65,25,10,.98)); color: #f1d2a8; }
+.application.tovf-commerce-dialog button:hover,
+.application.tovf-commerce-dialog button:focus-visible { border-color: #ef7b28; box-shadow: 0 0 7px rgba(239,91,24,.45); }
+.tovf-request-composer { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: .55rem; min-height: 0; }
+.tovf-request-composer > section { display: grid; align-content: start; gap: .35rem; min-width: 0; padding: .45rem; border: 1px solid rgba(117,64,31,.72); border-radius: 6px; background: rgba(0,0,0,.14); }
+.tovf-request-composer h3 { margin: 0; padding-bottom: .35rem; border-bottom: 1px solid rgba(117,64,31,.58); }
+.tovf-request-composer > .hint { grid-column: 1 / -1; margin: 0; padding: .45rem .6rem; border: 1px solid rgba(117,64,31,.55); border-radius: 4px; background: rgba(0,0,0,.18); }
+.tovf-request-drop { display: grid; place-items: center; align-content: center; gap: .2rem; min-height: 76px; padding: .5rem; border: 2px dashed rgba(181,102,48,.72); border-radius: 6px; background: rgba(7,3,2,.42); color: rgba(237,204,162,.78); text-align: center; transition: border-color .15s, background .15s, box-shadow .15s; }
+.tovf-request-drop > i { font-size: 1.25rem; }
+.tovf-request-drop > small { opacity: .68; }
+.tovf-request-drop.dragover { border-color: #ef7b28; background: rgba(125,48,13,.28); box-shadow: inset 0 0 14px rgba(239,91,24,.18), 0 0 7px rgba(239,91,24,.32); }
+.tovf-request-wanted,
+.tovf-request-offered-items { display: grid; align-content: start; gap: .35rem; min-height: 0; }
+.tovf-request-offered-items { max-height: 190px; padding-right: .15rem; overflow-y: auto; }
+.tovf-request-wanted article,
+.tovf-request-offered-items article { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto 28px; align-items: center; gap: .35rem; padding: .25rem; border: 1px solid rgba(117,64,31,.68); border-radius: 5px; background: rgba(0,0,0,.22); }
+.tovf-request-wanted article img,
+.tovf-request-offered-items article img { width: 34px; height: 34px; object-fit: cover; border: 0; border-radius: 4px; }
+.tovf-request-wanted article > span,
+.tovf-request-offered-items article > span { display: grid; min-width: 0; }
+.tovf-request-wanted article b,
+.tovf-request-offered-items article b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tovf-request-wanted article small,
+.tovf-request-offered-items article small { opacity: .68; }
+.tovf-request-wanted article label,
+.tovf-request-offered-items article label { display: grid; grid-template-columns: auto 58px; align-items: center; gap: .3rem; }
+.tovf-request-wanted article button,
+.tovf-request-offered-items article button { width: 30px; min-width: 30px; height: 30px; margin: 0; padding: 0; }
+.tovf-request-gold { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-top: .2rem; padding-top: .5rem; border-top: 1px solid rgba(117,64,31,.58); }
+.tovf-request-gold > span { display: flex; align-items: center; gap: .3rem; }
+.tovf-request-gold input { width: 100px; }
+@media (max-width: 680px) {
+  .tovf-request-composer { grid-template-columns: 1fr; }
+  .tovf-request-composer > .hint { grid-column: 1; }
+}
+.tovf-auction-shell:has(.tovf-auction-sidebar-nav) .tovf-auction-page-tabs { display: none; }
+.tovf-auction-shell:has(.tovf-auction-sidebar-nav) .tovf-auction-content { grid-template-rows: auto auto minmax(0, 1fr); }
+.tovf-request-list { min-height: 0; padding-right: .2rem; overflow-y: auto; }
+.tovf-request-list > header,
+.tovf-request-list > article { display: grid; grid-template-columns: minmax(280px, 1.6fr) minmax(100px, .48fr) minmax(145px, .72fr) max-content; align-items: center; gap: .55rem; }
+.tovf-request-list > header { position: sticky; top: 0; z-index: 2; padding: .28rem .4rem; border-bottom: 1px solid var(--color-border-light-2); background: var(--color-bg-primary, rgba(20, 14, 10, .97)); font-size: .76rem; font-weight: 700; opacity: .82; }
+.tovf-request-list > article { min-height: 48px; padding: .3rem .4rem; border-left: 2px solid rgba(220,132,48,.56); }
+.tovf-request-list > article:nth-of-type(odd) { background: rgba(0,0,0,.12); }
+.tovf-request-list > article:nth-of-type(even) { background: rgba(255,255,255,.035); }
+.tovf-request-list > article:hover { background: rgba(193,119,50,.14); }
+.tovf-request-list .tovf-shop-item-open { grid-template-columns: 36px minmax(0, 1fr); }
+.tovf-request-list .tovf-shop-item-open img { width: 36px; height: 36px; }
+.tovf-request-list .tovf-shop-item-open > span { display: grid; align-items: initial; gap: 0; min-width: 0; }
+.tovf-request-list .tovf-shop-item-open b,
+.tovf-request-list .tovf-shop-item-open small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tovf-request-list .tovf-shop-item-open small { font-size: .75rem; }
+.tovf-request-list .tovf-shop-actions { min-width: 34px; }
+.tovf-request-list .tovf-shop-actions button { min-height: 30px; }
+.tovf-request-offer { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .3rem; min-width: 0; }
+.tovf-request-offer > small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: .82; }
+.tovf-request-list > .tovf-shop-empty { padding: 2rem .5rem; }
+.tovf-trade-invitation { display: grid; justify-items: center; gap: 1rem; padding: 1rem; text-align: center; }
+.tovf-live-trade-heading { display: flex; align-items: center; justify-content: space-between; gap: .6rem; }
+.tovf-live-trade-heading h2 { margin: 0; }
+.tovf-commerce-panel:has(.tovf-live-trade) { grid-template-rows: minmax(0, 1fr) auto; gap: .4rem; overflow: hidden; }
+.tovf-live-trade { display: grid; grid-template-columns: minmax(0, 1fr) 42px minmax(0, 1fr); align-items: stretch; gap: .55rem; min-height: 0; }
+.tovf-live-trade-side { display: grid; grid-template-rows: auto auto minmax(62px, 1fr); gap: .45rem; min-width: 0; min-height: 0; padding: .5rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; background: rgba(0,0,0,.12); transition: border-color .15s, box-shadow .15s; }
+.tovf-live-trade-side.confirmed { border-color: rgba(86, 187, 91, .82); box-shadow: inset 0 0 12px rgba(55, 158, 69, .14), 0 0 7px rgba(55, 158, 69, .18); }
+.tovf-live-trade-name { display: flex; align-items: center; gap: .5rem; padding-bottom: .3rem; border-bottom: 1px solid var(--color-border-light-2); }
+.tovf-live-trade-name h2 { min-width: 0; margin: 0; font-size: 1.4rem; line-height: 1.05; overflow-wrap: anywhere; }
+.tovf-live-trade-name > i { flex: 0 0 auto; color: #86d68b; font-size: 1.25rem; filter: drop-shadow(0 0 4px rgba(55,158,69,.55)); }
+.tovf-live-trade-profile { display: grid; grid-template-columns: 200px minmax(0, 1fr); align-items: stretch; gap: .65rem; }
+.tovf-live-trade-profile > img { width: 200px; height: 200px; object-fit: cover; object-position: top center; border: 1px solid var(--color-border-light-2); border-radius: 4px; }
+.tovf-live-trade-controls { display: grid; grid-template-rows: auto auto minmax(0, 1fr); align-content: stretch; gap: .35rem; min-width: 0; }
+.tovf-live-trade-controls > label { font-size: .78rem; }
+.tovf-live-trade-items { min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto; }
+.tovf-live-trade-items article { display: flex; align-items: center; gap: .35rem; min-height: 40px; padding: .25rem; border-radius: 4px; }
+.tovf-live-trade-items article:nth-child(odd) { background: rgba(0,0,0,.13); }
+.tovf-live-trade-items article .tovf-shop-item-open { flex: 1 1 auto; width: auto; min-width: 0; }
+.tovf-live-trade-gold .tovf-shop-item-open { display: flex; align-items: center; gap: .45rem; padding: .2rem; }
+.tovf-live-trade-gold .tovf-shop-item-open img { width: 32px; height: 32px; object-fit: contain; border: 0; }
+.tovf-live-trade-items article > button:last-child { flex: 0 0 auto; width: 30px; min-width: 30px; padding: .25rem; }
+.tovf-live-trade-drop { display: flex; align-items: center; justify-content: center; gap: .4rem; min-height: 0; padding: .4rem; border: 2px dashed rgba(181,102,48,.72); border-radius: 5px; background: rgba(7,3,2,.35); color: rgba(237,204,162,.78); transition: border-color .15s, background .15s, box-shadow .15s; }
+.tovf-live-trade-drop.dragover { border-color: #ef7b28; background: rgba(125,48,13,.28); box-shadow: inset 0 0 12px rgba(239,91,24,.17), 0 0 6px rgba(239,91,24,.3); }
+.tovf-live-trade-quantity { flex: 0 0 52px; width: 52px; min-width: 52px; text-align: center; }
+.tovf-live-trade-money { display: grid; grid-template-columns: minmax(44px, 1fr) auto 30px; align-items: center; gap: .2rem; }
+.tovf-live-trade-money input { min-width: 0; }
+.tovf-live-trade-money button { min-width: 34px; padding: .25rem; }
+.tovf-live-trade-exchange { display: flex; align-items: center; justify-content: center; font-size: 1.25rem; opacity: .7; }
+.tovf-live-trade-confirm { display: flex; justify-content: center; gap: .4rem; }
+.tovf-live-trade-confirm button:first-child { min-width: 260px; }
+@media (max-width: 760px) {
+  .tovf-merchant-shell, .tovf-auction-shell { grid-template-columns: 190px minmax(0, 1fr); }
+  .tovf-merchant-setting-grid, .tovf-merchant-options { grid-template-columns: 1fr; }
+  .tovf-shop-filters { grid-template-columns: 1fr; }
+  .tovf-auction-list > header,
+  .tovf-auction-list > article { grid-template-columns: minmax(150px, 1fr) 135px 155px; }
+  .tovf-auction-list > header > :nth-child(2),
+  .tovf-auction-list > article > .tovf-auction-seller,
+  .tovf-auction-list > header > :nth-child(4),
+  .tovf-auction-list > article > .tovf-auction-time { display: none; }
+  .tovf-request-list > header,
+  .tovf-request-list > article { grid-template-columns: minmax(210px, 1fr) minmax(135px, .75fr) max-content; }
+  .tovf-request-list > header > :nth-child(2),
+  .tovf-request-list > article > .tovf-auction-seller { display: none; }
+  .tovf-live-trade { grid-template-columns: 1fr; overflow-y: auto; }
+  .tovf-live-trade-exchange { rotate: 90deg; min-height: 28px; }
 }
