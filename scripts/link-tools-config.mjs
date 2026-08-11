@@ -10,7 +10,7 @@ class LinkToolsConfig extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
     id: "tovf-link-tools",
     classes: ["tovf-link-tools"],
-    position: { width: 560, height: "auto" },
+    position: { width: 560, height: 640 },
     window: { title: "TOVF.LinkTools.Title" },
     actions: {
       audit: this.#audit,

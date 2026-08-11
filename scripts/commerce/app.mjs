@@ -419,11 +419,7 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
           if (!item) return ui.notifications.warn("Nur handelbare Equipment-Items können einem Händler hinzugefügt werden.");
           const merchant = this._merchant(); if (!merchant) return;
           const quantity = Math.max(1, itemQuantity(item));
-          const added = await addItem(merchant, cleanTransferredItem(item, quantity), quantity);
-          if (merchantConfig(merchant).hideNewItems && added) {
-            const current = added.getFlag(MODULE_ID, "merchantItem") ?? {};
-            await added.setFlag(MODULE_ID, "merchantItem", { ...current, hidden: true });
-          }
+          await addItem(merchant, cleanTransferredItem(item, quantity), quantity);
           ui.notifications.info(`${quantity}× ${item.name} wurde dem Händler hinzugefügt.`);
           await this.render({ force: true });
         });

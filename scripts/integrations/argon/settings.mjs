@@ -10,7 +10,7 @@ export function registerArgonSettings() {
     condenseClassActions: { type: Boolean, default: true },
     explodeItemActivities: {
       type: String,
-      default: "only-weapons",
+      default: "always",
       choices: {
         "only-weapons": "TOVF.Argon.Settings.Explode.OnlyWeapons",
         always: "TOVF.Argon.Settings.Explode.Always",

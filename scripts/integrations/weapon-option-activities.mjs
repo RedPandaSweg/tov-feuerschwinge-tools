@@ -78,7 +78,7 @@ function optionEffectData(option) {
       img: OPTION_ACTIVITIES.pinningShot.icon,
       changes: [{
         key: "system.traits.movement.multiplier",
-        mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+        mode: "override",
         value: "0",
         priority: 20
       }],
@@ -189,7 +189,7 @@ function buildActivity(item, option, definition, attack, sort) {
       targets: "successful"
     }]);
   } else {
-    foundry.utils.unsetProperty(source, `flags.${MODULE_ID}.${CHAIN_FLAG}`);
+    foundry.utils.deleteProperty(source, `flags.${MODULE_ID}.${CHAIN_FLAG}`);
   }
 
   const ActivityClass = CONFIG.Activity.types.attack.documentClass;

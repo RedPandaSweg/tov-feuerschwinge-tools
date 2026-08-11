@@ -120,7 +120,7 @@ Hooks.once("init", () => {
         flags: { [MODULE_ID]: { [FLAG]: config } },
         changes: this.system.magical ? [{
           key: "system.properties",
-          mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+          mode: "add",
           value: "magical",
           priority: 20
         }] : []

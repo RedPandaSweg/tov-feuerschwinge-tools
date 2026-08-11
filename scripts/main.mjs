@@ -16,7 +16,7 @@ import {
   installWeaponOptionActivities,
   weaponOptionActivitiesApi
 } from "./integrations/weapon-option-activities.mjs";
-import { installArgonBlackFlagCompatibility } from "./integrations/argon-black-flag-compatibility.mjs";
+import { installArgonBlackFlagCompatibility } from "./integrations/argon-black-flag-compatibility.mjs?v=3.2.3-auto-weapon-sets";
 import { activatePlayerUnpause, registerPlayerUnpause } from "./player-unpause.mjs";
 import { registerCompendiumLibrary } from "./compendium-library.mjs";
 import { activateChallengeManager, registerChallengeManager } from "./challenge-manager.mjs";

@@ -126,6 +126,140 @@ const activityList = (item) => {
     return Array.from(typeof activities.values === "function" ? activities.values() : activities);
 };
 
+const isSvgImage = path => /\.svg(?:$|[?#])/i.test(String(path ?? ""));
+
+function renderPortraitCover(container, source, label) {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.alt = label;
+    Object.assign(image.style, {
+        position: "absolute",
+        inset: "0",
+        display: "block",
+        width: "100%",
+        height: "100%",
+        maxWidth: "none",
+        maxHeight: "none",
+        margin: "0",
+        padding: "0",
+        border: "0",
+        objectFit: "cover",
+        objectPosition: "top center",
+        visibility: "hidden"
+    });
+    const applyCalculatedCover = (bounds = null, attempt = 0) => {
+        if (!image.naturalWidth || !image.naturalHeight) return;
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        if (!containerWidth || !containerHeight) {
+            if (attempt < 60) requestAnimationFrame(() => applyCalculatedCover(bounds, attempt + 1));
+            return;
+        }
+
+        const content = bounds ?? { x: 0, y: 0, width: image.naturalWidth, height: image.naturalHeight };
+        const scale = Math.max(containerWidth / content.width, containerHeight / content.height);
+        const drawnWidth = image.naturalWidth * scale;
+        const drawnHeight = image.naturalHeight * scale;
+        const left = (containerWidth / 2) - ((content.x + content.width / 2) * scale);
+        const top = -(content.y * scale);
+        Object.assign(image.style, {
+            inset: "auto",
+            left: `${left}px`,
+            top: `${top}px`,
+            width: `${drawnWidth}px`,
+            height: `${drawnHeight}px`,
+            objectFit: "fill",
+            transform: "none",
+            visibility: "visible"
+        });
+        const containedScale = Math.min(
+            containerWidth / image.naturalWidth,
+            containerHeight / image.naturalHeight
+        );
+        image.dataset.tovfPortraitZoom = String(scale / containedScale);
+    };
+    let analyzed = false;
+    const analyzeAndApply = () => {
+        if (analyzed || !image.naturalWidth || !image.naturalHeight) return;
+        analyzed = true;
+        try {
+            const factor = Math.min(1, 1024 / Math.max(image.naturalWidth, image.naturalHeight));
+            const width = Math.max(1, Math.round(image.naturalWidth * factor));
+            const height = Math.max(1, Math.round(image.naturalHeight * factor));
+            const canvas = document.createElement("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            const context = canvas.getContext("2d", { willReadFrequently: true });
+            context.drawImage(image, 0, 0, width, height);
+            const pixels = context.getImageData(0, 0, width, height).data;
+            let left = width;
+            let right = -1;
+            let top = height;
+            let bottom = -1;
+            for (let y = 0; y < height; y += 1) {
+                for (let x = 0; x < width; x += 1) {
+                    const index = (y * width + x) * 4;
+                    if (pixels[index + 3] <= 8) continue;
+                    left = Math.min(left, x);
+                    right = Math.max(right, x);
+                    top = Math.min(top, y);
+                    bottom = Math.max(bottom, y);
+                }
+            }
+            const croppedWidth = right - left + 1;
+            const croppedHeight = bottom - top + 1;
+            if (croppedWidth >= width * 0.5 && croppedHeight >= height * 0.5) {
+                applyCalculatedCover({
+                    x: left / factor,
+                    y: top / factor,
+                    width: croppedWidth / factor,
+                    height: croppedHeight / factor
+                });
+                return;
+            }
+        } catch (_error) {
+            // Fall back to the complete image if remote pixels cannot be inspected.
+        }
+        applyCalculatedCover();
+    };
+    image.onload = analyzeAndApply;
+    image.onerror = () => {
+        const fallback = new Image();
+        fallback.alt = label;
+        Object.assign(fallback.style, {
+            position: "absolute", inset: "0", display: "block",
+            width: "100%", height: "100%", maxWidth: "none", maxHeight: "none",
+            border: "0", objectFit: "cover", objectPosition: "top center"
+        });
+        fallback.src = source;
+        container.replaceChildren(fallback);
+    };
+    container.replaceChildren(image);
+    image.src = source;
+    if (image.complete) analyzeAndApply();
+}
+
+const visibleChainActivities = (item) => {
+    const activities = activityList(item);
+    const chainedTargets = new Set();
+    for (const activity of activities) {
+        let rules = foundry.utils.getProperty(activity, `flags.${MODULE_ID}.activityChain`);
+        if (typeof rules === "string" && rules.trim()) {
+            try {
+                rules = JSON.parse(rules);
+            } catch (_error) {
+                rules = [];
+            }
+        }
+        if (!Array.isArray(rules)) continue;
+        for (const rule of rules) {
+            const targetId = String(rule?.activityId ?? "");
+            if (targetId && targetId !== activity.id) chainedTargets.add(targetId);
+        }
+    }
+    return activities.filter(activity => !chainedTargets.has(activity.id));
+};
+
 const combatActivityCandidates = (item) => {
     const sourceItem = item?.item ?? item;
     const candidates = [];
@@ -221,11 +355,84 @@ export function setExplodeItemActivities() {
     explodeItemActivities = getSetting("explodeItemActivities");
 }
 
+const weaponSetAssignmentQueues = new WeakMap();
+
+function weaponUsesTwoHands(item) {
+    if (!item) return false;
+    const modes = Array.from(item.system?.attackModes ?? [], mode => String(mode?.value ?? mode));
+    if (modes.includes("twoHanded") && !modes.includes("oneHanded")) return true;
+
+    const definitions = game.settings.get(MODULE_ID, "weaponDefinitions") ?? {};
+    const selected = new Set([
+        ...Array.from(item.system?.properties ?? []),
+        ...Array.from(item.system?.options ?? [])
+    ]);
+    return [...Object.values(definitions.properties ?? {}), ...Object.values(definitions.options ?? {})]
+        .some(definition => definition?.mechanic === "twoHanded" && selected.has(definition.id));
+}
+
+function actorWeaponFromSetReference(actor, reference) {
+    if (!reference) return null;
+    return actor.items.find(item => item.uuid === reference || String(reference).endsWith(`.Item.${item.id}`)) ?? null;
+}
+
+async function assignEquippedWeaponToSet(item) {
+    const actor = item.parent;
+    if (!actor || item.type !== "weapon" || !item.system?.equipped) return;
+
+    const sets = foundry.utils.deepClone(actor.getFlag("enhancedcombathud", "weaponSets") ?? {});
+    const setNumbers = [1, 2, 3];
+    if (setNumbers.some(number => Object.values(sets[number] ?? {})
+        .some(reference => actorWeaponFromSetReference(actor, reference) === item))) return;
+
+    const requiresBothHands = weaponUsesTwoHands(item);
+    let target = null;
+    for (const number of setNumbers) {
+        const slots = sets[number] ?? { primary: null, secondary: null };
+        const primary = actorWeaponFromSetReference(actor, slots.primary);
+        const secondary = actorWeaponFromSetReference(actor, slots.secondary);
+
+        if (!slots.primary && !slots.secondary) {
+            target = { number, slot: "primary" };
+            break;
+        }
+        if (requiresBothHands) continue;
+        if (!slots.primary && !weaponUsesTwoHands(secondary)) {
+            target = { number, slot: "primary" };
+            break;
+        }
+        if (!slots.secondary && !weaponUsesTwoHands(primary)) {
+            target = { number, slot: "secondary" };
+            break;
+        }
+    }
+    if (!target) return;
+
+    sets[target.number] ??= { primary: null, secondary: null };
+    sets[target.number][target.slot] = item.uuid;
+    await actor.setFlag("enhancedcombathud", "weaponSets", sets);
+}
+
+function queueWeaponSetAssignment(item) {
+    const actor = item.parent;
+    if (!actor) return;
+    const previous = weaponSetAssignmentQueues.get(actor) ?? Promise.resolve();
+    const pending = previous.catch(() => {}).then(() => assignEquippedWeaponToSet(item));
+    weaponSetAssignmentQueues.set(actor, pending);
+    pending.catch(error => console.warn(`${MODULE_ID} | Automatic weapon-set assignment failed.`, error)).finally(() => {
+        if (weaponSetAssignmentQueues.get(actor) === pending) weaponSetAssignmentQueues.delete(actor);
+    });
+}
+
 export function initConfig() {
     console.log("[Argon-BF] initConfig started");
 
-    Hooks.on("updateItem", (item) => {
+    Hooks.on("updateItem", (item, changes, _options, userId) => {
         if(item.parent === ui.ARGON._actor && ui.ARGON.rendered) ui.ARGON.components.portrait.refresh()
+        const equipped = foundry.utils.getProperty(changes, "system.equipped") ?? changes?.["system.equipped"];
+        if (userId === game.user.id && equipped === true) {
+            queueWeaponSetAssignment(item);
+        }
     })
 
     // ECH stores weapon sets on the Actor, but its updateActor handler does not
@@ -292,7 +499,7 @@ export function initConfig() {
             const activities = []
             for(const item of itemList) {
                 if(expandItemIntoActivities(item)) {
-                    activities.push(Array.from(item.system.activities).filter(activity => checkActivationType(activity, activationType) && activity.type !== "cast"));
+                    activities.push(visibleChainActivities(item).filter(activity => checkActivationType(activity, activationType) && activity.type !== "cast"));
                 } else {
                     items.push(item);
                 }
@@ -573,6 +780,19 @@ export function initConfig() {
 
             async render(...args) {
                 const rendered = await super.render(...args);
+                const portraitImage = this.element.querySelector(".portrait-hud-image");
+                if (portraitImage) {
+                    Object.assign(portraitImage.style, {
+                        inset: "0",
+                        width: "auto",
+                        height: "auto",
+                        margin: "0",
+                        padding: "0",
+                        overflow: "hidden",
+                        backgroundImage: "none"
+                    });
+                    renderPortraitCover(portraitImage, this.image, this.name);
+                }
                 const dcLabel = this.element.querySelector("#tovf-spell-dc-label");
                 if (dcLabel) {
                     dcLabel.dataset.tooltip = "Spell DC";
@@ -1181,8 +1401,17 @@ export function initConfig() {
 
             get label() {
                 if(!this.isActivity) return super.label;
-                if (this.item.type === "weapon") return this.activity.name;
-                return `${this.activity.name} (${this.item.name})`;
+                if (this.item.type === "weapon") return `${this.activity.name} (${this.item.name})`;
+                return this.activity.name;
+            }
+
+            get icon() {
+                if (!this.isActivity) return super.icon;
+                const activityImage = this.activity?.img;
+                const itemImage = this.item?.img;
+                if (activityImage && !isSvgImage(activityImage)) return activityImage;
+                if (itemImage && !isSvgImage(itemImage)) return itemImage;
+                return activityImage || itemImage;
             }
 
             get targets() {
@@ -1463,7 +1692,9 @@ export function initConfig() {
         class DND5eSpecialActionButton extends ARGON.MAIN.BUTTONS.ActionButton {
             constructor(specialItem) {
                 super();
-                const actorItem = this.actor.items.getName(specialItem.name);
+                const actorItem = this.actor.items.find(item => (
+                    item.type === "feature" && item.name === specialItem.name
+                ));
                 this.specialItem = specialItem;
                 this.actorItem = actorItem;
                 this.statusId = specialItem.flags?.statusId?.id;

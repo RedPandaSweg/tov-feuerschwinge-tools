@@ -949,8 +949,9 @@
 .extended-combat-hud .portrait-hud::after {
   content: "";
   position: absolute;
-  inset: 5px;
-  border: 1px solid rgba(213, 161, 93, .38);
+  inset: 5px 0;
+  border-top: 1px solid rgba(213, 161, 93, .38);
+  border-bottom: 1px solid rgba(213, 161, 93, .38);
   pointer-events: none;
   z-index: 2;
 }
@@ -1737,4 +1738,8 @@
   .tovf-request-list > article > .tovf-auction-seller { display: none; }
   .tovf-live-trade { grid-template-columns: 1fr; overflow-y: auto; }
   .tovf-live-trade-exchange { rotate: 90deg; min-height: 28px; }
+}
+.tovf-link-tools .window-content {
+  min-height: 0;
+  overflow-y: auto;
 }
