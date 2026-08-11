@@ -5,6 +5,9 @@ const SPAWN_FLAG = "playerSpawn";
 const ACTION_TYPES = new Set(["spawnCharacter", "removeSpawned", "viewScene", "executeMacro"]);
 const running = new Set();
 const LAYER_PATCH = Symbol.for(`${MODULE_ID}.simpleTileTriggerLayerPatch`);
+const SOCKET_SCOPE = "simple-tile-triggers";
+const pendingGMExecutions = new Map();
+let socketInstalled = false;
 
 function cleanAction(source = {}) {
   const type = ACTION_TYPES.has(source.type) ? source.type : "spawnCharacter";
@@ -21,6 +24,7 @@ function cleanAction(source = {}) {
     action.macroUuid = String(source.macroUuid ?? "");
     action.macroName = String(source.macroName ?? "");
     action.arguments = typeof source.arguments === "string" ? source.arguments : JSON.stringify(source.arguments ?? {});
+    action.runAsGM = source.runAsGM === true;
   }
   return action;
 }
@@ -80,9 +84,13 @@ function clickedTile(point, triggerType) {
     .sort((left, right) => (right.sort ?? right.z ?? 0) - (left.sort ?? left.z ?? 0))[0];
 }
 
-function canUseTrigger(config) {
-  if (game.user.isGM || !config.allowedActorIds.length) return true;
-  return config.allowedActorIds.some(id => game.actors.get(id)?.testUserPermission(game.user, "OWNER") === true);
+function activeGM() {
+  return game.users.activeGM ?? game.users.find(user => user.active && user.isGM);
+}
+
+function canUseTrigger(config, user = game.user) {
+  if (user?.isGM || !config.allowedActorIds.length) return true;
+  return config.allowedActorIds.some(id => game.actors.get(id)?.testUserPermission(user, "OWNER") === true);
 }
 
 async function selectOwnedActor(config) {
@@ -132,7 +140,7 @@ async function viewScene(action) {
   await scene.view();
 }
 
-async function executeMacro(action, tile) {
+async function executeMacroLocal(action, tile, { user = game.user, actor = null, token = null, scene = null } = {}) {
   if (!action.macroUuid) throw new Error("Für diese Aktion wurde kein Makro festgelegt.");
   const macro = await fromUuid(action.macroUuid);
   if (macro?.documentName !== "Macro") throw new Error("Das hinterlegte Makro wurde nicht gefunden.");
@@ -142,8 +150,9 @@ async function executeMacro(action, tile) {
   } catch (error) {
     throw new Error(`Die Makro-Arguments sind kein gültiges JSON: ${error.message}`);
   }
-  const token = canvas.tokens?.controlled?.[0] ?? null;
-  const actor = token?.actor ?? game.user.character ?? null;
+  token ??= canvas.tokens?.controlled?.[0] ?? null;
+  actor ??= token?.actor ?? user?.character ?? null;
+  scene ??= tile?.parent ?? canvas.scene;
   const named = foundry.utils.isPlainObject(args)
     ? Object.fromEntries(Object.entries(args).filter(([key]) => /^[A-Za-z_$][\w$]*$/.test(key)))
     : {};
@@ -151,12 +160,47 @@ async function executeMacro(action, tile) {
     ...named,
     args,
     tile,
-    scene: canvas.scene,
-    triggeringUser: game.user,
-    triggeringUserId: game.user.id,
+    scene,
+    triggeringUser: user,
+    triggeringUserId: user.id,
     actor,
     token
   });
+}
+
+async function executeMacroAsGM(action, tile) {
+  if (game.user.isGM) return executeMacroLocal(action, tile);
+  const gm = activeGM();
+  if (!gm) throw new Error("Für diese Makro-Aktion muss eine Spielleitung verbunden sein.");
+  const requestId = foundry.utils.randomID();
+  const controlled = canvas.tokens?.controlled?.[0] ?? null;
+  const promise = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      pendingGMExecutions.delete(requestId);
+      reject(new Error("Die Spielleitung hat nicht auf die Makro-Anfrage geantwortet."));
+    }, 10000);
+    pendingGMExecutions.set(requestId, {
+      resolve: () => { clearTimeout(timeout); resolve(true); },
+      reject: error => { clearTimeout(timeout); reject(error); }
+    });
+  });
+  game.socket.emit(`module.${MODULE_ID}`, {
+    scope: SOCKET_SCOPE,
+    type: "request",
+    requestId,
+    targetGMId: gm.id,
+    userId: game.user.id,
+    tileUuid: tile.uuid,
+    actionId: action.id,
+    sceneId: canvas.scene?.id ?? null,
+    tokenUuid: controlled?.document?.uuid ?? null,
+    actorUuid: controlled?.actor?.uuid ?? game.user.character?.uuid ?? null
+  });
+  return promise;
+}
+
+async function executeMacro(action, tile) {
+  return action.runAsGM ? executeMacroAsGM(action, tile) : executeMacroLocal(action, tile);
 }
 
 async function trigger(tile) {
@@ -196,7 +240,9 @@ function synchronizeEditor(app) {
     const action = config.actions.find(entry => entry.id === row.dataset.actionId);
     if (!action) continue;
     for (const input of row.querySelectorAll("[data-action-field]")) {
-      action[input.dataset.actionField] = input.dataset.actionFieldType === "text" ? input.value : Number(input.value) || 0;
+      action[input.dataset.actionField] = input.dataset.actionFieldType === "checkbox"
+        ? input.checked
+        : input.dataset.actionFieldType === "text" ? input.value : Number(input.value) || 0;
     }
   }
   const field = root?.querySelector(`[name="flags.${MODULE_ID}.${FLAG}"]`);
@@ -449,10 +495,62 @@ function exposeApi() {
   };
 }
 
+async function handleGMExecutionRequest(message) {
+  const user = game.users.get(message.userId);
+  if (!user?.active) throw new Error("Der auslösende Benutzer ist nicht mehr verbunden.");
+  const tile = await fromUuid(message.tileUuid);
+  if (tile?.documentName !== "Tile" || tile.parent?.id !== message.sceneId) throw new Error("Das auslösende Tile wurde nicht gefunden.");
+  if (tile.hidden && !user.isGM) throw new Error("Dieses Tile darf nicht ausgelöst werden.");
+  const config = tileConfiguration(tile);
+  if (!config.enabled || !canUseTrigger(config, user)) throw new Error("Du darfst diesen Auslöser nicht verwenden.");
+  const action = config.actions.find(entry => entry.id === message.actionId && entry.type === "executeMacro" && entry.runAsGM);
+  if (!action) throw new Error("Die GM-Makro-Aktion ist nicht mehr hinterlegt.");
+
+  const tokenDocument = message.tokenUuid ? await fromUuid(message.tokenUuid) : null;
+  if (tokenDocument && (tokenDocument.documentName !== "Token" || tokenDocument.parent?.id !== tile.parent.id
+    || !tokenDocument.actor?.testUserPermission(user, "OWNER"))) {
+    throw new Error("Der übergebene Token gehört nicht zum auslösenden Benutzer.");
+  }
+  let actor = tokenDocument?.actor ?? (message.actorUuid ? await fromUuid(message.actorUuid) : user.character);
+  if (actor && !actor.testUserPermission(user, "OWNER") && user.character?.id !== actor.id) {
+    throw new Error("Der übergebene Charakter gehört nicht zum auslösenden Benutzer.");
+  }
+  const token = tokenDocument?.object ?? tokenDocument;
+  await executeMacroLocal(action, tile, { user, actor, token, scene: tile.parent });
+  return true;
+}
+
+function installSocket() {
+  if (socketInstalled) return;
+  socketInstalled = true;
+  game.socket.on(`module.${MODULE_ID}`, message => {
+    if (message.scope !== SOCKET_SCOPE) return;
+    if (message.type === "response") {
+      const pending = pendingGMExecutions.get(message.requestId);
+      if (!pending || message.targetUserId !== game.user.id) return;
+      pendingGMExecutions.delete(message.requestId);
+      if (message.error) pending.reject(new Error(message.error));
+      else pending.resolve(message.result);
+      return;
+    }
+    if (message.type !== "request" || !game.user.isGM || message.targetGMId !== game.user.id || activeGM()?.id !== game.user.id) return;
+    handleGMExecutionRequest(message)
+      .then(result => game.socket.emit(`module.${MODULE_ID}`, {
+        scope: SOCKET_SCOPE, type: "response", requestId: message.requestId,
+        targetUserId: message.userId, result
+      }))
+      .catch(error => game.socket.emit(`module.${MODULE_ID}`, {
+        scope: SOCKET_SCOPE, type: "response", requestId: message.requestId,
+        targetUserId: message.userId, error: error.message
+      }));
+  });
+}
+
 export function activateSimpleTileTriggers() {
   // Monk's Active Tile Triggers may replace TileConfig during its ready hook.
   // Re-apply our mixin after all synchronous ready listeners have completed.
   queueMicrotask(installTileConfigTab);
+  installSocket();
   exposeApi();
   try {
     installLayerTriggerPatch();

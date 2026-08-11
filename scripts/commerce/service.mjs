@@ -116,6 +116,8 @@ export function merchantConfig(actor) {
     hideNewItems: source.hideNewItems !== false,
     displayQuantity: source.displayQuantity !== false,
     showZeroQuantity: source.showZeroQuantity === true,
+    requireInteractionRange: source.requireInteractionRange === true,
+    interactionRange: Math.max(1, Math.floor(Number(source.interactionRange) || 1)),
     allowedActorIds: cleanStrings(source.allowedActorIds),
     requiredLanguages: cleanStrings(source.requiredLanguages),
     requiredProficiencies: cleanStrings(source.requiredProficiencies),
@@ -164,7 +166,30 @@ function hasRequiredItem(actor, required) {
   });
 }
 
-export function merchantAccess(shop, actor, user = game.user) {
+function tokenAxisDistance(leftStart, leftSize, rightStart, rightSize, gridSize) {
+  const leftEnd = leftStart + leftSize * gridSize;
+  const rightEnd = rightStart + rightSize * gridSize;
+  if (leftEnd <= rightStart) return (rightStart - leftEnd) / gridSize + 1;
+  if (rightEnd <= leftStart) return (leftStart - rightEnd) / gridSize + 1;
+  return 0;
+}
+
+function tokenDistanceInFields(left, right, scene) {
+  const gridSize = Number(scene.grid?.size) || 100;
+  const horizontal = tokenAxisDistance(Number(left.x), Number(left.width || 1), Number(right.x), Number(right.width || 1), gridSize);
+  const vertical = tokenAxisDistance(Number(left.y), Number(left.height || 1), Number(right.y), Number(right.height || 1), gridSize);
+  return Math.max(horizontal, vertical);
+}
+
+function actorInMerchantRange(shop, actor, sceneId, range) {
+  const scene = game.scenes.get(sceneId);
+  if (!scene) return false;
+  const shopTokens = [...scene.tokens].filter(token => token.actorId === shop?.id);
+  const actorTokens = [...scene.tokens].filter(token => token.actorId === actor?.id);
+  return shopTokens.some(shopToken => actorTokens.some(actorToken => tokenDistanceInFields(shopToken, actorToken, scene) <= range));
+}
+
+export function merchantAccess(shop, actor, user = game.user, { sceneId = null } = {}) {
   if (user?.isGM) return { allowed: true, reasons: [] };
   const config = merchantConfig(shop);
   const reasons = [];
@@ -175,17 +200,18 @@ export function merchantAccess(shop, actor, user = game.user) {
     if (config.requiredLanguages.some(language => !languages.has(language))) reasons.push("language");
     if (config.requiredProficiencies.some(proficiency => !hasProficiency(actor, proficiency))) reasons.push("proficiency");
     if (!hasRequiredItem(actor, config.requiredItem)) reasons.push("item");
+    if (config.requireInteractionRange && !actorInMerchantRange(shop, actor, sceneId, config.interactionRange)) reasons.push("distance");
   }
   return { allowed: reasons.length === 0, reasons };
 }
 
-export function merchantAllowsActor(shop, actor, user = game.user) {
-  return merchantAccess(shop, actor, user).allowed;
+export function merchantAllowsActor(shop, actor, user = game.user, options = {}) {
+  return merchantAccess(shop, actor, user, options).allowed;
 }
 
-export function merchantAvailableToUser(shop, user = game.user) {
+export function merchantAvailableToUser(shop, user = game.user, options = {}) {
   if (user?.isGM) return true;
-  return ownedCharacters(user).some(actor => merchantAllowsActor(shop, actor, user));
+  return ownedCharacters(user).some(actor => merchantAllowsActor(shop, actor, user, options));
 }
 
 function actorOwnedBy(actor, userId) {
@@ -209,7 +235,7 @@ async function merchantBuy(payload, userId) {
   const shop = merchant(payload.merchantId);
   const buyer = actor(payload.actorId);
   if (!actorOwnedBy(buyer, userId)) throw new Error("Du besitzt diesen Charakter nicht.");
-  if (!merchantAllowsActor(shop, buyer, game.users.get(userId))) throw new Error("Dieser Charakter darf bei diesem Händler nicht handeln.");
+  if (!merchantAllowsActor(shop, buyer, game.users.get(userId), { sceneId: payload.sceneId })) throw new Error("Dieser Charakter darf bei diesem Händler nicht handeln.");
   const item = shop.items.get(payload.itemId);
   if (!isTradeableItem(item)) throw new Error("Dieser Gegenstand kann nicht gehandelt werden.");
   const priceUnits = Math.max(1, Math.floor(Number(payload.quantity) || 1));
@@ -239,7 +265,7 @@ async function merchantSell(payload, userId) {
   const shop = merchant(payload.merchantId);
   const seller = actor(payload.actorId);
   if (!actorOwnedBy(seller, userId)) throw new Error("Du besitzt diesen Charakter nicht.");
-  if (!merchantAllowsActor(shop, seller, game.users.get(userId))) throw new Error("Dieser Charakter darf bei diesem Händler nicht handeln.");
+  if (!merchantAllowsActor(shop, seller, game.users.get(userId), { sceneId: payload.sceneId })) throw new Error("Dieser Charakter darf bei diesem Händler nicht handeln.");
   const item = seller.items.get(payload.itemId);
   if (!isTradeableItem(item)) throw new Error("Dieser Gegenstand kann nicht gehandelt werden.");
   const priceUnits = Math.max(1, Math.floor(Number(payload.quantity) || 1));

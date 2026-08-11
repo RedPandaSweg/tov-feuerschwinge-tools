@@ -16,6 +16,10 @@ const COIN_FALLBACKS = Object.freeze({
 });
 const liveTrades = new Map();
 
+function merchantAccessOptions() {
+  return { sceneId: globalThis.canvas?.scene?.id ?? null };
+}
+
 function tradeOwnedSide(trade) {
   if (actorOwned(trade?.fromActorId)) return "from";
   if (actorOwned(trade?.toActorId)) return "to";
@@ -508,16 +512,18 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
   _actor() { return game.actors.get(this.actorId) ?? this._owned()[0] ?? null; }
   _merchant() {
     const selected = game.actors.get(this.merchantId);
-    if (selected && merchantConfig(selected).enabled && merchantAvailableToUser(selected)) return selected;
-    return game.actors.find(actor => merchantConfig(actor).enabled && merchantAvailableToUser(actor)) ?? null;
+    if (selected && merchantConfig(selected).enabled && merchantAvailableToUser(selected, game.user, merchantAccessOptions())) return selected;
+    return game.actors.find(actor => merchantConfig(actor).enabled && merchantAvailableToUser(actor, game.user, merchantAccessOptions())) ?? null;
   }
   _auctionHouse() { return game.actors.get(this.auctionHouseId) ?? game.actors.find(actor => isAuctionHouse(actor)) ?? null; }
   async _prepareContext() {
     const allCharacters = this._owned();
-    const merchants = game.actors.filter(actor => merchantConfig(actor).enabled && merchantAvailableToUser(actor));
+    const merchants = game.actors.filter(actor => merchantConfig(actor).enabled && merchantAvailableToUser(actor, game.user, merchantAccessOptions()));
     const shop = this._merchant(); this.merchantId = shop?.id ?? null;
     const config = merchantConfig(shop);
-    const characters = shop && !game.user.isGM ? allCharacters.filter(actor => merchantAllowsActor(shop, actor)) : allCharacters;
+    const characters = shop && !game.user.isGM
+      ? allCharacters.filter(actor => merchantAllowsActor(shop, actor, game.user, merchantAccessOptions()))
+      : allCharacters;
     let selectedActor = game.actors.get(this.actorId);
     if (!characters.some(actor => actor.id === selectedActor?.id)) selectedActor = characters[0] ?? null;
     this.actorId = selectedActor?.id ?? null;
@@ -597,10 +603,11 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #buy(_event, target) { const item = this._merchant()?.items.get(target.dataset.itemId); const bundle = quantityForPrice(item);
     const quantity = await numberPrompt({ title: "Kaufen", label: bundle > 1 ? `Menge (${bundle} Stück je Preiseinheit)` : "Menge" }); if (!quantity) return;
     await this._run(() => commerceRequest("merchantBuy", { merchantId: this.merchantId, actorId: this.actorId,
-      itemId: target.dataset.itemId, quantity, sessionId: this.merchantSessionId })); }
+      itemId: target.dataset.itemId, quantity, sessionId: this.merchantSessionId, sceneId: merchantAccessOptions().sceneId })); }
   static async #sell(_event, target) { const item = this._actor()?.items.get(target.dataset.itemId); const bundle = quantityForPrice(item);
     const quantity = await numberPrompt({ title: "Verkaufen", label: bundle > 1 ? `Menge (${bundle} Stück je Preiseinheit)` : "Menge" }); if (!quantity) return;
-    await this._run(() => commerceRequest("merchantSell", { merchantId: this.merchantId, actorId: this.actorId, itemId: target.dataset.itemId, quantity })); }
+    await this._run(() => commerceRequest("merchantSell", { merchantId: this.merchantId, actorId: this.actorId, itemId: target.dataset.itemId,
+      quantity, sceneId: merchantAccessOptions().sceneId })); }
   static async #saveMerchantSettings() {
     const actor = this._merchant(); const form = this.element.querySelector(".tovf-merchant-settings"); if (!actor || !form) return;
     const data = Object.fromEntries(new FormData(form)); const current = merchantConfig(actor);
@@ -608,7 +615,9 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
       buyModifier: Number(data.buyModifier), sellModifier: Number(data.sellModifier), infiniteStock: form.elements.infiniteStock.checked,
       infiniteCurrency: form.elements.infiniteCurrency.checked, purchaseOnly: form.elements.purchaseOnly.checked,
       keepSoldItems: form.elements.keepSoldItems.checked, hideNewItems: form.elements.hideNewItems.checked,
-      displayQuantity: form.elements.displayQuantity.checked, showZeroQuantity: form.elements.showZeroQuantity.checked });
+      displayQuantity: form.elements.displayQuantity.checked, showZeroQuantity: form.elements.showZeroQuantity.checked,
+      requireInteractionRange: form.elements.requireInteractionRange.checked,
+      interactionRange: Math.max(1, Math.floor(Number(data.interactionRange) || 1)) });
     ui.notifications.info("Händlereinstellungen gespeichert."); await this.render({ force: true });
   }
   static async #selectMerchantCharacters() {
@@ -807,7 +816,7 @@ const promptedTrades = new Set();
 export function openCommerce(options = {}) {
   if (options.merchantId) {
     const merchant = game.actors.get(options.merchantId);
-    if (merchant && !merchantAvailableToUser(merchant)) {
+    if (merchant && !merchantAvailableToUser(merchant, game.user, merchantAccessOptions())) {
       void showMerchantAccessDenied(merchant);
       return null;
     }

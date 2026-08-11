@@ -37,6 +37,8 @@
             {{#if action.macroUuid}}<span>{{action.macroName}}</span>{{else}}<span>Makro hierher ziehen</span>{{/if}}
           </div>
           <div class="form-group stacked"><label>Arguments (JSON)</label><textarea data-action-field="arguments" data-action-field-type="text" rows="3" placeholder='{"ziel":"Taverne","wert":5}'>{{action.arguments}}</textarea><p class="hint">JSON-Objekte stehen als benannte Variablen und als <code>args</code> bereit; Arrays und Einzelwerte nur als <code>args</code>.</p></div>
+          <label class="checkbox"><input type="checkbox" data-action-field="runAsGM" data-action-field-type="checkbox" {{checked action.runAsGM}}> Als GM ausführen</label>
+          <p class="hint">Das Makro wird durch die aktive Spielleitung ausgeführt. Tile, Aktion und Benutzerberechtigung werden vor der Ausführung erneut geprüft.</p>
         {{else}}
           <div class="tovf-scene-drop" data-scene-drop>
             <i class="fa-solid fa-map"></i>

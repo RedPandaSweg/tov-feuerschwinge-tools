@@ -34,7 +34,7 @@ import { installToolAbilitySelection } from "./integrations/tool-ability.mjs";
 import { installCompendiumUsability } from "./compendium-usability.mjs";
 import { installChatImagePopouts } from "./chat-image-popout.mjs";
 import { activateTokenPresetSocket, registerTokenPresets } from "./token-presets.mjs";
-import { activateSimpleTileTriggers, registerSimpleTileTriggers } from "./simple-tile-triggers.mjs?v=3.1.4";
+import { activateSimpleTileTriggers, registerSimpleTileTriggers } from "./simple-tile-triggers.mjs?v=3.2.2";
 import { activateCommerce, registerCommerce } from "./commerce/main.mjs";
 import "./downtime/main.mjs";
 import "./contested-activity.mjs";
