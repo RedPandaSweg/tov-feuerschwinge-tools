@@ -1,4 +1,5 @@
 import { MODULE_ID } from "../../core/constants.mjs";
+import { activityChainRules, isFollowUpActivity } from "../../activity-chaining.mjs?v=3.2.4-follow-up-flags";
 import { getSetting } from "./settings.mjs";
 
 const ECHItems = {};
@@ -241,23 +242,10 @@ function renderPortraitCover(container, source, label) {
 
 const visibleChainActivities = (item) => {
     const activities = activityList(item);
-    const chainedTargets = new Set();
-    for (const activity of activities) {
-        let rules = foundry.utils.getProperty(activity, `flags.${MODULE_ID}.activityChain`);
-        if (typeof rules === "string" && rules.trim()) {
-            try {
-                rules = JSON.parse(rules);
-            } catch (_error) {
-                rules = [];
-            }
-        }
-        if (!Array.isArray(rules)) continue;
-        for (const rule of rules) {
-            const targetId = String(rule?.activityId ?? "");
-            if (targetId && targetId !== activity.id) chainedTargets.add(targetId);
-        }
-    }
-    return activities.filter(activity => !chainedTargets.has(activity.id));
+    const followUpIds = new Set(
+        activities.flatMap(activity => activityChainRules(activity).map(rule => rule.activityId))
+    );
+    return activities.filter(activity => !isFollowUpActivity(activity) && !followUpIds.has(activity.id));
 };
 
 const combatActivityCandidates = (item) => {
@@ -337,6 +325,14 @@ const damagePartsFor = (candidate) => {
 };
 
 export function getTooltipDamageParts(item) {
+    if (item?.item) {
+        const parts = damagePartsFor(item);
+        const unique = new Map();
+        for (const part of normalizeDamageParts(parts, item)) {
+            unique.set(`${part.formula}\u0000${part.damageType ?? ""}`, part);
+        }
+        return [...unique.values()];
+    }
     for (const candidate of combatActivityCandidates(item)) {
         const parts = damagePartsFor(candidate);
         if (parts.length) {
@@ -382,6 +378,13 @@ async function assignEquippedWeaponToSet(item) {
 
     const sets = foundry.utils.deepClone(actor.getFlag("enhancedcombathud", "weaponSets") ?? {});
     const setNumbers = [1, 2, 3];
+    for (const number of setNumbers) {
+        sets[number] ??= { primary: null, secondary: null };
+        for (const slot of ["primary", "secondary"]) {
+            const assigned = actorWeaponFromSetReference(actor, sets[number][slot]);
+            if (!assigned || !assigned.system?.equipped) sets[number][slot] = null;
+        }
+    }
     if (setNumbers.some(number => Object.values(sets[number] ?? {})
         .some(reference => actorWeaponFromSetReference(actor, reference) === item))) return;
 
@@ -429,7 +432,10 @@ export function initConfig() {
 
     Hooks.on("updateItem", (item, changes, _options, userId) => {
         if(item.parent === ui.ARGON._actor && ui.ARGON.rendered) ui.ARGON.components.portrait.refresh()
-        const equipped = foundry.utils.getProperty(changes, "system.equipped") ?? changes?.["system.equipped"];
+        const equipped = foundry.utils.getProperty(changes, "flags.black-flag.relationship.equipped")
+            ?? changes?.["flags.black-flag.relationship.equipped"]
+            ?? foundry.utils.getProperty(changes, "system.equipped")
+            ?? changes?.["system.equipped"];
         if (userId === game.user.id && equipped === true) {
             queueWeaponSetAssignment(item);
         }
@@ -1500,7 +1506,8 @@ export function initConfig() {
                 await super.render(...args);
                 if (this._isWeaponSet) {
                     this.activityPanel?.element?.remove();
-                    const buttons = activityList(this.item).map(activity => new DND5eItemButton({ item: activity }));
+                    const buttons = visibleChainActivities(this.item)
+                        .map(activity => new DND5eItemButton({ item: activity }));
                     this.activityPanel = new ARGON.MAIN.BUTTON_PANELS.ButtonPanel({
                         id: `weapon-activities-${this._isPrimary ? "primary" : "secondary"}`,
                         buttons

@@ -39,13 +39,24 @@
 
 .tov-activity-chain .tov-chain-rule .form-fields {
   display: grid;
-  grid-template-columns: minmax(125px, 1fr) minmax(150px, 1.25fr) minmax(105px, .8fr) minmax(120px, 1fr) 32px;
+  grid-template-columns: minmax(150px, 1.3fr) minmax(105px, .8fr) minmax(120px, 1fr) auto;
   gap: 6px;
   width: 100%;
 }
 
 .tov-activity-chain .tov-chain-rule select {
   min-width: 0;
+}
+
+.tov-activity-chain .tov-chain-actions {
+  display: flex;
+  gap: 3px;
+}
+
+.tov-activity-chain .tov-chain-actions button {
+  width: 30px;
+  min-width: 30px;
+  margin: 0;
 }
 
 .bfi-weapon-config .window-content { overflow: hidden; }

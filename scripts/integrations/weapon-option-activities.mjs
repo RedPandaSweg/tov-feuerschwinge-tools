@@ -4,6 +4,7 @@ const ITEM_PACK = `${CONTENT_MODULE_ID}.items`;
 const MANAGED_FLAG = "weaponOptionActivity";
 const MANAGED_EFFECT_FLAG = "weaponOptionEffect";
 const CHAIN_FLAG = "activityChain";
+const CHAIN_CHILD_FLAG = "activityChainChild";
 const UPDATE_OPTION = "weaponOptionActivitySync";
 
 const OPTION_ACTIVITIES = Object.freeze({
@@ -156,9 +157,27 @@ function baseAttack(item) {
   ));
 }
 
+function linkedWeaponDescription(item, attack) {
+  if (!attack) return null;
+  const current = String(item.system?.description?.value ?? "");
+  const linked = current
+    .replace(/\[\[\/attack\s+extended\s*\]\]/gi, `[[/attack activity=${attack.id} extended]]`)
+    .replace(/\[\[\/damage\s+average\s*\]\]/gi, `[[/damage activity=${attack.id} average]]`)
+    .replace(/\[\[\/damage\s*\]\]/gi, `[[/damage activity=${attack.id}]]`);
+  return linked === current ? null : linked;
+}
+
 function optionLabel(option) {
   const configured = CONFIG.BlackFlag.weaponOptions?.[option]?.label;
   return configured ? game.i18n.localize(configured) : option.replace(/([a-z])([A-Z])/g, "$1 $2").titleCase();
+}
+
+function directFollowUp(activityId) {
+  return [{
+    activityId,
+    execution: "automatic",
+    targets: "inherit"
+  }];
 }
 
 function buildActivity(item, option, definition, attack, sort) {
@@ -171,6 +190,7 @@ function buildActivity(item, option, definition, attack, sort) {
   source.activation ??= {};
   source.activation.primary = false;
   foundry.utils.setProperty(source, `flags.${MODULE_ID}.${MANAGED_FLAG}`, option);
+  foundry.utils.deleteProperty(source, `flags.${MODULE_ID}.${CHAIN_CHILD_FLAG}`);
 
   source.system ??= {};
   source.system.damage ??= {};
@@ -182,12 +202,7 @@ function buildActivity(item, option, definition, attack, sort) {
   }
   source.system.effects = [];
   if (definition.saveId) {
-    foundry.utils.setProperty(source, `flags.${MODULE_ID}.${CHAIN_FLAG}`, [{
-      trigger: "attackHit",
-      activityId: definition.saveId,
-      execution: "automatic",
-      targets: "successful"
-    }]);
+    foundry.utils.setProperty(source, `flags.${MODULE_ID}.${CHAIN_FLAG}`, directFollowUp(definition.saveId));
   } else {
     foundry.utils.deleteProperty(source, `flags.${MODULE_ID}.${CHAIN_FLAG}`);
   }
@@ -198,14 +213,9 @@ function buildActivity(item, option, definition, attack, sort) {
 
 function buildSaveActivity(item, option, definition, attack, sort) {
   const ActivityClass = CONFIG.Activity.types.save.documentClass;
-  const flags = { [MODULE_ID]: { [MANAGED_FLAG]: option } };
+  const flags = { [MODULE_ID]: { [MANAGED_FLAG]: option, [CHAIN_CHILD_FLAG]: true } };
   if (definition.effectActivityId) {
-    flags[MODULE_ID][CHAIN_FLAG] = [{
-      trigger: "saveFailure",
-      activityId: definition.effectActivityId,
-      execution: "automatic",
-      targets: "failed"
-    }];
+    flags[MODULE_ID][CHAIN_FLAG] = directFollowUp(definition.effectActivityId);
   }
   return new ActivityClass({
     _id: definition.saveId,
@@ -244,7 +254,7 @@ function buildEffectActivity(item, option, definition, sort) {
       roll: { formula: "", name: "", prompt: false, visible: false }
     },
     flags: {
-      [MODULE_ID]: { [MANAGED_FLAG]: option }
+      [MODULE_ID]: { [MANAGED_FLAG]: option, [CHAIN_CHILD_FLAG]: true }
     }
   }, { parent: item }).toObject();
 }
@@ -294,26 +304,36 @@ function synchronizedActivities(item) {
 async function synchronizeWeapon(item, { persist = true } = {}) {
   if (persist) await synchronizeOptionEffectDocuments(item);
   else synchronizeOptionEffectSource(item);
+  const attack = baseAttack(item);
+  const description = linkedWeaponDescription(item, attack);
   const activities = synchronizedActivities(item);
-  if (!activities) return false;
+  if (!activities && description === null) return false;
   if (persist) {
     const current = activitiesObject(item);
     const activityUpdates = {};
-    for (const id of Object.keys(current)) {
-      if (!Object.hasOwn(activities, id)) {
-        activityUpdates[id] = new foundry.data.operators.ForcedDeletion();
+    if (activities) {
+      for (const id of Object.keys(current)) {
+        if (!Object.hasOwn(activities, id)) {
+          activityUpdates[id] = new foundry.data.operators.ForcedDeletion();
+        }
+      }
+      for (const [id, activity] of Object.entries(activities)) {
+        if (!foundry.utils.equals(current[id], activity)) {
+          activityUpdates[id] = activity;
+        }
       }
     }
-    for (const [id, activity] of Object.entries(activities)) {
-      if (!foundry.utils.equals(current[id], activity)) {
-        activityUpdates[id] = activity;
-      }
-    }
-    if (!foundry.utils.isEmpty(activityUpdates)) {
-      await item.update({ "system.activities": activityUpdates }, { [UPDATE_OPTION]: true });
+    const changes = {};
+    if (!foundry.utils.isEmpty(activityUpdates)) changes["system.activities"] = activityUpdates;
+    if (description !== null) changes["system.description.value"] = description;
+    if (!foundry.utils.isEmpty(changes)) {
+      await item.update(changes, { [UPDATE_OPTION]: true });
     }
   } else {
-    item.updateSource({ "system.activities": activities });
+    const changes = {};
+    if (activities) changes["system.activities"] = activities;
+    if (description !== null) changes["system.description.value"] = description;
+    item.updateSource(changes);
   }
   return true;
 }

@@ -469,7 +469,7 @@
     "ActivityChain": {
       "Title": "Folge-Activities",
       "Hint": "Löst eine weitere Activity desselben Items aus, sobald diese Activity das konfigurierte Ergebnis erreicht.",
-      "Add": "Folge hinzufügen", "Delete": "Folge löschen", "Activity": "Folge-Activity", "ActivityNone": "Activity auswählen",
+      "Add": "Folge hinzufügen", "Delete": "Folge löschen", "Activity": "Folge-Activity", "ActivityNone": "Activity auswählen", "Edit": "Folge-Activity bearbeiten", "Create": "Neue Folge-Activity erstellen", "Unlink": "Verknüpfung entfernen", "DeleteActivity": "Folge-Activity vollständig löschen", "DeleteActivityConfirm": "Die Activity {activity} vollständig vom Item löschen?",
       "ConsumptionHint": "Folgen verbrauchen keine weitere Aktion, behalten aber ihren eigenen Ressourcen- und Zauberplatzverbrauch.",
       "PromptTitle": "Folge-Activity", "Prompt": "{target} nach {source} ausführen?",
       "Missing": "Die Folge-Activity {activity} existiert nicht mehr.", "Cycle": "Eine Schleife in der Activity-Kette wurde verhindert.", "MaxDepth": "Die Activity-Kette hat ihre maximale Tiefe erreicht.", "SaveThenAdd": "Speichere diese Activity einmal, bevor du eine weitere leere Folgezeile hinzufügst.",

@@ -468,7 +468,7 @@
     "ActivityChain": {
       "Title": "Follow-up Activities",
       "Hint": "Trigger another Activity on the same Item after this Activity reaches a configured result.",
-      "Add": "Add follow-up", "Delete": "Delete follow-up", "Activity": "Follow-up Activity", "ActivityNone": "Select an Activity",
+      "Add": "Add follow-up", "Delete": "Delete follow-up", "Activity": "Follow-up Activity", "ActivityNone": "Select an Activity", "Edit": "Edit follow-up Activity", "Create": "Create a new follow-up Activity", "Unlink": "Remove link", "DeleteActivity": "Delete follow-up Activity", "DeleteActivityConfirm": "Permanently delete the Activity {activity} from the Item?",
       "ConsumptionHint": "Follow-ups do not consume another action, but retain their own resource and spell-slot consumption.",
       "PromptTitle": "Follow-up Activity", "Prompt": "Run {target} after {source}?",
       "Missing": "The follow-up Activity {activity} no longer exists.", "Cycle": "An Activity chain cycle was prevented.", "MaxDepth": "The Activity chain reached its maximum depth.", "SaveThenAdd": "Save this Activity once before adding another empty follow-up row.",

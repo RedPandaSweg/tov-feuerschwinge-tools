@@ -15,8 +15,8 @@ import {
 import {
   installWeaponOptionActivities,
   weaponOptionActivitiesApi
-} from "./integrations/weapon-option-activities.mjs";
-import { installArgonBlackFlagCompatibility } from "./integrations/argon-black-flag-compatibility.mjs?v=3.2.3-auto-weapon-sets";
+} from "./integrations/weapon-option-activities.mjs?v=3.2.4-tooltip-links-2";
+import { installArgonBlackFlagCompatibility } from "./integrations/argon-black-flag-compatibility.mjs?v=3.2.4-hud-damage-weapon-slots";
 import { activatePlayerUnpause, registerPlayerUnpause } from "./player-unpause.mjs";
 import { registerCompendiumLibrary } from "./compendium-library.mjs";
 import { activateChallengeManager, registerChallengeManager } from "./challenge-manager.mjs";
@@ -29,7 +29,7 @@ import {
 import { registerTokenSizeSync } from "./token-size-sync.mjs";
 import { creatureBuilderApi, registerCreatureBuilder } from "./creature-builder.mjs";
 import { registerSettingsCategories } from "./settings-categories.mjs";
-import { activityChainingApi, installActivityChaining } from "./activity-chaining.mjs";
+import { activityChainingApi, installActivityChaining } from "./activity-chaining.mjs?v=3.2.4-follow-up-flags";
 import { installToolAbilitySelection } from "./integrations/tool-ability.mjs";
 import { installCompendiumUsability } from "./compendium-usability.mjs";
 import { installChatImagePopouts } from "./chat-image-popout.mjs";

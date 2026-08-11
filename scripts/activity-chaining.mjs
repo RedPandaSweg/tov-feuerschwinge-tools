@@ -1,6 +1,7 @@
-import { MODULE_ID, modulePath } from "./core/constants.mjs";
+import { LEGACY_MODULE_ID, LEGACY_MODULE_SCOPE, MODULE_ID, modulePath } from "./core/constants.mjs";
 
 const FLAG = "activityChain";
+const CHILD_FLAG = "activityChainChild";
 const WORKFLOW_FLAG = "activityWorkflow";
 const MAX_DEPTH = 20;
 const activeTransitions = new Set();
@@ -14,7 +15,9 @@ const EXECUTIONS = Object.freeze(["automatic", "prompt"]);
 const TARGET_MODES = Object.freeze(["inherit", "successful", "failed", "self", "current"]);
 
 function parseRules(activity) {
-  const stored = foundry.utils.getProperty(activity, `flags.${MODULE_ID}.${FLAG}`);
+  const stored = [MODULE_ID, LEGACY_MODULE_SCOPE, LEGACY_MODULE_ID]
+    .map(scope => foundry.utils.getProperty(activity, `flags.${scope}.${FLAG}`))
+    .find(value => Array.isArray(value) || (typeof value === "string" && value.trim()));
   if (Array.isArray(stored)) return stored;
   if (typeof stored !== "string" || !stored.trim()) return [];
   try {
@@ -25,13 +28,23 @@ function parseRules(activity) {
   }
 }
 
-function normalizedRules(activity) {
+export function activityChainRules(activity) {
   return parseRules(activity).map(rule => ({
-    trigger: TRIGGERS.includes(rule?.trigger) ? rule.trigger : "activation",
+    trigger: "activation",
     activityId: String(rule?.activityId ?? ""),
     execution: EXECUTIONS.includes(rule?.execution) ? rule.execution : "automatic",
     targets: TARGET_MODES.includes(rule?.targets) ? rule.targets : "inherit"
   })).filter(rule => rule.activityId && rule.activityId !== activity.id);
+}
+
+export function isFollowUpActivity(activity) {
+  return [MODULE_ID, LEGACY_MODULE_SCOPE, LEGACY_MODULE_ID]
+    .some(scope => foundry.utils.getProperty(activity, `flags.${scope}.${CHILD_FLAG}`) === true);
+}
+
+function liveActivity(activity) {
+  const liveItem = activity?.actor?.items?.get(activity.item?.id) ?? activity?.item;
+  return liveItem?.system?.activities?.get(activity.id) ?? activity;
 }
 
 function option(value, key) {
@@ -46,6 +59,27 @@ function activityOptions(activity) {
       .sort((left, right) => left.name.localeCompare(right.name, game.i18n.lang))
       .map(candidate => ({ value: candidate.id, label: `${candidate.name} (${candidate.type})` }))
   ];
+}
+
+async function chooseActivityType(item) {
+  const options = Object.entries(CONFIG.Activity.types)
+    .filter(([type, configuration]) => type !== CONST.BASE_DOCUMENT_TYPE && configuration?.documentClass)
+    .map(([type, configuration]) => {
+      const label = game.i18n.localize(configuration.documentClass.metadata.title);
+      return { type, label };
+    })
+    .sort((left, right) => left.label.localeCompare(right.label, game.i18n.lang));
+  return foundry.applications.api.DialogV2.prompt({
+    window: { title: game.i18n.localize("TOV.ActivityChain.Create") },
+    content: `<div class="standard-form"><label>${game.i18n.localize("TOV.ActivityChain.Activity")}<select name="type">${options
+      .map(option => `<option value="${foundry.utils.escapeHTML(option.type)}">${foundry.utils.escapeHTML(option.label)}</option>`)
+      .join("")}</select></label></div>`,
+    ok: {
+      label: game.i18n.localize("TOV.ActivityChain.Create"),
+      callback: (_event, button) => new FormData(button.form).get("type")
+    },
+    rejectClose: false
+  });
 }
 
 function workflowFromMessage(message) {
@@ -137,7 +171,8 @@ async function confirmTransition(source, target) {
 }
 
 async function runTransitions(activity, trigger, { message = null, workflow = null } = {}) {
-  const rules = normalizedRules(activity).filter(rule => rule.trigger === trigger);
+  activity = liveActivity(activity);
+  const rules = activityChainRules(activity).filter(rule => rule.trigger === trigger);
   if (!rules.length) return;
   workflow = workflowFor(activity, message, workflow);
   if (workflow.depth >= MAX_DEPTH) {
@@ -225,11 +260,10 @@ function installSheetPart() {
         context = await super._preparePartContext(partId, context, options);
         if (partId !== "chain") return context;
         context.tab = context.tabs.chain;
-        context.chainRules = normalizedRules(this.activity);
+        context.chainRules = activityChainRules(this.activity);
         context.chainJson = JSON.stringify(context.chainRules);
         context.chainEditorRules = context.chainRules.length ? context.chainRules : [{}];
         context.chainActivityOptions = activityOptions(this.activity);
-        context.chainTriggerOptions = TRIGGERS.map(value => option(value, "Trigger"));
         context.chainExecutionOptions = EXECUTIONS.map(value => option(value, "Execution"));
         context.chainTargetOptions = TARGET_MODES.map(value => option(value, "Targets"));
         return context;
@@ -239,29 +273,91 @@ function installSheetPart() {
         super._onRender(context, options);
         const editor = this.element.querySelector("[data-tov-chain-editor]");
         if (!editor) return;
-        const sync = () => {
+        let pendingSave = Promise.resolve();
+        const appendEmptyRow = () => {
+          const list = editor.querySelector("[data-tov-chain-rules]");
+          const row = list.querySelector("[data-chain-index]")?.cloneNode(true);
+          if (!row) return null;
+          row.querySelectorAll("select").forEach(select => { select.selectedIndex = 0; });
+          list.append(row);
+          return row;
+        };
+        const sync = ({ persist = false } = {}) => {
           const rules = [...editor.querySelectorAll("[data-chain-index]")].map(row => Object.fromEntries(
             [...row.querySelectorAll("[data-chain-field]")].map(input => [input.dataset.chainField, input.value])
           )).filter(rule => rule.activityId);
           editor.querySelector("[data-tov-chain-value]").value = JSON.stringify(rules);
+          if (persist) {
+            pendingSave = pendingSave
+              .catch(() => {})
+              .then(async () => {
+                const followUps = rules
+                  .map(rule => this.activity.item.system.activities.get(rule.activityId))
+                  .filter(activity => activity && !isFollowUpActivity(activity));
+                await Promise.all(followUps.map(activity => activity.update({
+                  [`flags.${MODULE_ID}.${CHILD_FLAG}`]: true
+                })));
+                await this.activity.update({
+                  [`flags.${MODULE_ID}.${FLAG}`]: JSON.stringify(rules)
+                });
+              })
+              .catch(error => {
+                console.error(`${MODULE_ID} | Failed to save Activity Chain.`, error);
+                ui.notifications.error("Die Folge-Activity konnte nicht gespeichert werden.");
+              });
+          }
+          return pendingSave;
         };
-        editor.addEventListener("change", sync);
-        editor.addEventListener("click", event => {
+        editor.addEventListener("change", event => {
+          event.stopPropagation();
+          sync({ persist: true });
+        });
+        editor.addEventListener("click", async event => {
           const button = event.target.closest("[data-action]");
           if (!button) return;
+          event.preventDefault();
+          event.stopPropagation();
+          const row = button.closest("[data-chain-index]");
+          const select = row?.querySelector('[data-chain-field="activityId"]');
+          const followUp = select?.value ? this.activity.item.system.activities.get(select.value) : null;
           if (button.dataset.action === "deleteChainRule") {
-            button.closest("[data-chain-index]")?.remove();
-            sync();
+            row?.remove();
+            await sync({ persist: true });
           } else if (button.dataset.action === "addChainRule") {
-            const list = editor.querySelector("[data-tov-chain-rules]");
-            const row = list.querySelector("[data-chain-index]")?.cloneNode(true);
-            if (row) {
-              row.querySelectorAll("select").forEach(select => { select.selectedIndex = 0; });
-              list.append(row);
-            } else {
+            if (!appendEmptyRow()) {
               ui.notifications.info(game.i18n.localize("TOV.ActivityChain.SaveThenAdd"));
             }
-            sync();
+          } else if (button.dataset.action === "editChainActivity") {
+            followUp?.sheet?.render(true);
+          } else if (button.dataset.action === "createChainActivity") {
+            const type = await chooseActivityType(this.activity.item);
+            if (!type) return;
+            const ActivityClass = CONFIG.Activity.types[type]?.documentClass;
+            const name = ActivityClass ? game.i18n.localize(ActivityClass.metadata.title) : type;
+            const targetRow = select?.value ? appendEmptyRow() : row;
+            const targetSelect = targetRow?.querySelector('[data-chain-field="activityId"]');
+            const [created] = await this.activity.item.createEmbeddedDocuments("Activity", [{
+              type,
+              name,
+              flags: { [MODULE_ID]: { [CHILD_FLAG]: true } }
+            }], { render: false });
+            if (!created || !targetSelect) return;
+            targetSelect.append(new Option(`${created.name} (${created.type})`, created.id, true, true));
+            targetSelect.value = created.id;
+            await sync({ persist: true });
+            created.sheet?.render(true);
+          } else if (button.dataset.action === "deleteChainActivity") {
+            if (!followUp) return;
+            const confirmed = await foundry.applications.api.DialogV2.confirm({
+              window: { title: game.i18n.localize("TOV.ActivityChain.DeleteActivity") },
+              content: `<p>${game.i18n.format("TOV.ActivityChain.DeleteActivityConfirm", {
+                activity: foundry.utils.escapeHTML(followUp.name)
+              })}</p>`
+            });
+            if (!confirmed) return;
+            row?.remove();
+            await sync({ persist: true });
+            await this.activity.item.deleteEmbeddedDocuments("Activity", [followUp.id]);
           }
         });
       }
@@ -272,10 +368,29 @@ function installSheetPart() {
   }
 }
 
+function installItemSheetFilter() {
+  const prototype = BlackFlag?.applications?.item?.BaseItemSheet?.prototype;
+  if (!prototype || prototype.__tovfActivityChainFilter) return;
+  const original = prototype._prepareDetailsContext;
+  prototype._prepareDetailsContext = async function(context, options) {
+    context = await original.call(this, context, options);
+    const followUpIds = new Set(
+      [...(this.item.system.activities ?? [])]
+        .flatMap(activity => activityChainRules(activity).map(rule => rule.activityId))
+    );
+    if (Array.isArray(context.activities) && followUpIds.size) {
+      context.activities = context.activities.filter(activity => !followUpIds.has(activity.id));
+    }
+    return context;
+  };
+  Object.defineProperty(prototype, "__tovfActivityChainFilter", { value: true });
+}
+
 export function installActivityChaining() {
   if (installed || game.system.id !== "black-flag") return;
   installed = true;
   queueMicrotask(installSheetPart);
+  installItemSheetFilter();
 
   Hooks.on("blackFlag.postActivateActivity", (activity, config, results) => {
     const inherited = config?.[WORKFLOW_FLAG] ?? workflowFromMessage(results?.message);

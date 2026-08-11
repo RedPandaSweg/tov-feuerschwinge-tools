@@ -8,9 +8,6 @@
       {{#each chainEditorRules as |rule index|}}
         <div class="form-group tov-chain-rule" data-chain-index="{{index}}">
           <div class="form-fields">
-            <select data-chain-field="trigger" aria-label="{{localize 'TOV.ActivityChain.Trigger.Label'}}">
-              {{selectOptions ../chainTriggerOptions selected=rule.trigger valueAttr="value" labelAttr="label" localize=false}}
-            </select>
             <select data-chain-field="activityId" aria-label="{{localize 'TOV.ActivityChain.Activity'}}">
               {{selectOptions ../chainActivityOptions selected=rule.activityId valueAttr="value" labelAttr="label" localize=false}}
             </select>
@@ -20,8 +17,16 @@
             <select data-chain-field="targets" aria-label="{{localize 'TOV.ActivityChain.Targets.Label'}}">
               {{selectOptions ../chainTargetOptions selected=rule.targets valueAttr="value" labelAttr="label" localize=false}}
             </select>
-            <button type="button" class="icon fa-solid fa-trash" data-action="deleteChainRule"
-                    aria-label="{{localize 'TOV.ActivityChain.Delete'}}"></button>
+            <div class="tov-chain-actions">
+              <button type="button" class="icon fa-solid fa-pen-to-square" data-action="editChainActivity"
+                      aria-label="{{localize 'TOV.ActivityChain.Edit'}}" title="{{localize 'TOV.ActivityChain.Edit'}}"></button>
+              <button type="button" class="icon fa-solid fa-file-circle-plus" data-action="createChainActivity"
+                      aria-label="{{localize 'TOV.ActivityChain.Create'}}" title="{{localize 'TOV.ActivityChain.Create'}}"></button>
+              <button type="button" class="icon fa-solid fa-link-slash" data-action="deleteChainRule"
+                      aria-label="{{localize 'TOV.ActivityChain.Unlink'}}" title="{{localize 'TOV.ActivityChain.Unlink'}}"></button>
+              <button type="button" class="icon fa-solid fa-trash" data-action="deleteChainActivity"
+                      aria-label="{{localize 'TOV.ActivityChain.DeleteActivity'}}" title="{{localize 'TOV.ActivityChain.DeleteActivity'}}"></button>
+            </div>
           </div>
         </div>
       {{/each}}
