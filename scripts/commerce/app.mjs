@@ -1,5 +1,6 @@
 import { MODULE_ID } from "../core/constants.mjs";
 import { selectCharacters } from "../character-picker.mjs";
+import { getSystemAdapter } from "../downtime/system-adapter.mjs";
 import { formatCopper, itemQuantity, priceInCopper, purse, quantityForPrice } from "./currency.mjs";
 import { broadcastPeerTrade, commerceRequest } from "./socket.mjs";
 import { AUCTION_HOUSE_FLAG, commerceState, isAuctionHouse, merchantAllowsActor, merchantAvailableToUser, merchantConfig, ownedCharacters } from "./service.mjs";
@@ -207,6 +208,94 @@ async function itemFromDrop(event) {
   return item?.documentName === "Item" && TRADEABLE_TYPES.has(item.type) ? item : null;
 }
 
+async function requirementItemFromDrop(event) {
+  const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
+  const item = data.uuid ? await fromUuid(data.uuid) : null;
+  return item?.documentName === "Item" ? item : null;
+}
+
+function requiredItemData(item) {
+  return item ? {
+    uuid: item.uuid,
+    type: item.type,
+    identifier: String(item.system?.identifier?.value ?? item.system?.identifier ?? item.identifier ?? "").trim(),
+    name: item.name,
+    img: item.img
+  } : null;
+}
+
+async function configureMerchantRequirements(actor) {
+  const current = merchantConfig(actor);
+  const options = getSystemAdapter().getCharacterRewardOptions();
+  const esc = foundry.utils.escapeHTML;
+  const selectedLanguages = new Set(current.requiredLanguages);
+  const selectedProficiencies = new Set(current.requiredProficiencies);
+  const languageOptions = (options.language ?? []).map(option =>
+    `<label><input type="checkbox" name="languages" value="${esc(option.key)}" ${selectedLanguages.has(option.key) ? "checked" : ""}><span>${esc(option.label)}</span></label>`).join("");
+  const typeLabels = { skill: "Skills", tool: "Tools", weapon: "Waffen", armor: "Rüstungen" };
+  const proficiencyOptions = ["skill", "tool", "weapon", "armor"].map(type => {
+    return (options[type] ?? []).map(option => {
+      const value = `${type}:${option.key}`;
+      return `<label><input type="checkbox" name="proficiencies" value="${esc(value)}" ${selectedProficiencies.has(value) ? "checked" : ""}><span>${typeLabels[type]} — ${esc(option.label)}</span></label>`;
+    }).join("");
+  }).join("");
+  let requiredItem = current.requiredItem;
+  const itemMarkup = () => requiredItem
+    ? `<img src="${esc(requiredItem.img || "icons/svg/item-bag.svg")}" alt=""><span><strong>${esc(requiredItem.name)}</strong><small>${esc(requiredItem.type)}</small></span><button type="button" data-remove-required-item title="Entfernen"><i class="fa-solid fa-xmark"></i></button>`
+    : '<i class="fa-solid fa-box-open"></i><span>Item, Spell oder Feature hierher ziehen</span>';
+  const content = `<div class="standard-form tovf-merchant-requirements">
+    <p class="hint">Ein Charakter muss alle ausgewählten Voraussetzungen erfüllen. Leere Felder schränken den Zugriff nicht ein.</p>
+    <div class="form-group stacked"><label>Erforderliche Sprachen</label><details class="tovf-requirement-picker" data-requirement-picker><summary><span data-picker-label>Sprachen auswählen</span><i class="fa-solid fa-chevron-down"></i></summary><div>${languageOptions || "<em>Keine Sprachen verfügbar.</em>"}</div></details></div>
+    <div class="form-group stacked"><label>Erforderliche Proficiencies</label><details class="tovf-requirement-picker" data-requirement-picker><summary><span data-picker-label>Proficiencies auswählen</span><i class="fa-solid fa-chevron-down"></i></summary><div>${proficiencyOptions || "<em>Keine Proficiencies verfügbar.</em>"}</div></details></div>
+    <div class="form-group stacked"><label>Erforderliches Item</label><div class="tovf-merchant-requirement-drop" data-required-item-drop>${itemMarkup()}</div></div>
+    <div class="form-group stacked"><label>Nachricht bei verweigertem Zugriff</label><prose-mirror name="deniedMessage" value="${esc(current.accessDeniedMessage)}" data-document-uuid="${actor.uuid}" class="description"></prose-mirror></div>
+  </div>`;
+  return foundry.applications.api.DialogV2.prompt({
+    classes: ["tovf-commerce-dialog", "tovf-merchant-requirements-dialog"],
+    window: { title: `Voraussetzungen: ${actor.name}` }, position: { width: 620, height: 720 }, content,
+    render: (_event, dialog) => {
+      const drop = dialog.element.querySelector("[data-required-item-drop]");
+      const refresh = () => { drop.innerHTML = itemMarkup(); };
+      for (const picker of dialog.element.querySelectorAll("[data-requirement-picker]")) {
+        const updateLabel = () => {
+          const checked = [...picker.querySelectorAll('input[type="checkbox"]:checked')];
+          picker.querySelector("[data-picker-label]").textContent = checked.length
+            ? checked.length === 1 ? checked[0].nextElementSibling.textContent : `${checked.length} ausgewählt`
+            : picker.querySelector('input[name="languages"]') ? "Sprachen auswählen" : "Proficiencies auswählen";
+        };
+        picker.addEventListener("change", updateLabel);
+        updateLabel();
+      }
+      drop.addEventListener("dragover", event => { event.preventDefault(); drop.classList.add("dragover"); });
+      drop.addEventListener("dragleave", () => drop.classList.remove("dragover"));
+      drop.addEventListener("drop", async event => {
+        event.preventDefault(); drop.classList.remove("dragover");
+        const item = await requirementItemFromDrop(event);
+        if (!item) return ui.notifications.warn("Bitte ein Item, einen Spell oder ein Feature ablegen.");
+        requiredItem = requiredItemData(item); refresh();
+      });
+      drop.addEventListener("click", event => {
+        if (!event.target.closest("[data-remove-required-item]")) return;
+        requiredItem = null; refresh();
+      });
+    },
+    ok: { label: "Speichern", callback: (_event, button) => ({
+      requiredLanguages: [...button.form.querySelectorAll('input[name="languages"]:checked')].map(input => input.value),
+      requiredProficiencies: [...button.form.querySelectorAll('input[name="proficiencies"]:checked')].map(input => input.value),
+      requiredItem,
+      accessDeniedMessage: button.form.querySelector('prose-mirror[name="deniedMessage"]')?.value ?? ""
+    }) }, rejectClose: false
+  });
+}
+
+async function showMerchantAccessDenied(merchant) {
+  const configured = merchantConfig(merchant).accessDeniedMessage;
+  const source = configured || `<p><strong>${foundry.utils.escapeHTML(merchant.name)}</strong> steht diesem Charakter nicht zur Verfügung.</p>`;
+  const content = await foundry.applications.ux.TextEditor.implementation.enrichHTML(source, { async: true, relativeTo: merchant });
+  return foundry.applications.api.DialogV2.prompt({ classes: ["tovf-commerce-dialog"], window: { title: "Zugriff verweigert" },
+    content: `<div class="tovf-merchant-access-denied">${content}</div>`, ok: { label: "Schließen" }, rejectClose: false });
+}
+
 async function composeTradeRequest(actor) {
   let wanted = null;
   const offered = new Map();
@@ -279,6 +368,7 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
       acceptTrade: this.#acceptTrade, cancelTrade: this.#cancelTrade, configureMerchant: this.#configureMerchant,
       saveMerchantSettings: this.#saveMerchantSettings,
       selectMerchantCharacters: this.#selectMerchantCharacters,
+      configureMerchantRequirements: this.#configureMerchantRequirements,
       deleteMerchantItem: this.#deleteMerchantItem, clearMerchantItems: this.#clearMerchantItems,
       toggleMerchantItem: this.#toggleMerchantItem, populateFromTable: this.#populateFromTable,
       chooseMerchantImage: this.#chooseMerchantImage, openMerchantItem: this.#openMerchantItem,
@@ -533,6 +623,14 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     await actor.setFlag(MODULE_ID, "merchant", { ...current, enabled: true, allowedActorIds });
     await this.render({ force: true });
   }
+  static async #configureMerchantRequirements() {
+    const actor = this._merchant(); if (!actor || !game.user.isGM) return;
+    const current = merchantConfig(actor);
+    const requirements = await configureMerchantRequirements(actor);
+    if (!requirements) return;
+    await actor.setFlag(MODULE_ID, "merchant", { ...current, ...requirements, enabled: true });
+    await this.render({ force: true });
+  }
   static #chooseMerchantImage() {
     if (!game.user.isGM) return;
     const actor = this.mode === "auction" ? this._auctionHouse() : this._merchant(); if (!actor) return;
@@ -710,7 +808,7 @@ export function openCommerce(options = {}) {
   if (options.merchantId) {
     const merchant = game.actors.get(options.merchantId);
     if (merchant && !merchantAvailableToUser(merchant)) {
-      ui.notifications.warn("Keiner deiner Charaktere darf bei diesem Händler handeln.");
+      void showMerchantAccessDenied(merchant);
       return null;
     }
   }

@@ -59,6 +59,24 @@ function descriptionValue(value) {
   return "";
 }
 
+function cleanStrings(values, maximum = 100) {
+  return Array.isArray(values)
+    ? [...new Set(values.map(value => String(value ?? "").trim()).filter(Boolean))].slice(0, maximum)
+    : [];
+}
+
+function cleanRequiredItem(source) {
+  if (!source || typeof source !== "object") return null;
+  const item = {
+    uuid: String(source.uuid ?? "").trim(),
+    type: String(source.type ?? "").trim(),
+    identifier: String(source.identifier ?? "").trim(),
+    name: String(source.name ?? "").trim(),
+    img: String(source.img ?? "").trim()
+  };
+  return item.uuid || item.name ? item : null;
+}
+
 function serialize(operation) {
   const result = operationQueue.then(operation, operation);
   operationQueue = result.catch(() => {});
@@ -91,16 +109,18 @@ export function merchantConfig(actor) {
     enabled: source.enabled === true,
     buyModifier: Math.max(0, Number(source.buyModifier ?? 1) || 0),
     sellModifier: Math.max(0, Number(source.sellModifier ?? 0.5) || 0),
-    infiniteStock: source.infiniteStock === true,
+    infiniteStock: source.infiniteStock !== false,
     infiniteCurrency: source.infiniteCurrency !== false,
     purchaseOnly: source.purchaseOnly === true,
     keepSoldItems: source.keepSoldItems !== false,
-    hideNewItems: source.hideNewItems === true,
+    hideNewItems: source.hideNewItems !== false,
     displayQuantity: source.displayQuantity !== false,
     showZeroQuantity: source.showZeroQuantity === true,
-    allowedActorIds: Array.isArray(source.allowedActorIds)
-      ? [...new Set(source.allowedActorIds.map(String))].slice(0, 100)
-      : [],
+    allowedActorIds: cleanStrings(source.allowedActorIds),
+    requiredLanguages: cleanStrings(source.requiredLanguages),
+    requiredProficiencies: cleanStrings(source.requiredProficiencies),
+    requiredItem: cleanRequiredItem(source.requiredItem),
+    accessDeniedMessage: descriptionValue(source.accessDeniedMessage),
     description,
     merchantImage: String(source.merchantImage ?? "")
   };
@@ -114,16 +134,58 @@ export function ownedCharacters(user = game.user) {
   return game.actors.filter(actor => actor.type === "pc" && actor.testUserPermission(user, "OWNER"));
 }
 
+function hasProficiency(actor, encoded) {
+  const [type, ...keyParts] = String(encoded).split(":");
+  const key = keyParts.join(":");
+  if (!key) return false;
+  if (type === "skill" || type === "tool") {
+    return Number(actor.system?.proficiencies?.[`${type}s`]?.[key]?.proficiency?.multiplier ?? 0) >= 1;
+  }
+  if (type === "weapon" || type === "armor") {
+    const data = actor.system?.proficiencies?.[`${type}s`];
+    return new Set([...(data?.value ?? []), ...(data?.categories ?? [])]).has(key);
+  }
+  return false;
+}
+
+function itemIdentifier(item) {
+  return String(item?.system?.identifier?.value ?? item?.system?.identifier ?? item?.identifier ?? "").trim();
+}
+
+function hasRequiredItem(actor, required) {
+  if (!required) return true;
+  const requiredName = required.name.toLocaleLowerCase();
+  return actor.items.some(item => {
+    const sourceId = String(item.getFlag?.("core", "sourceId") ?? "");
+    if (required.uuid && (item.uuid === required.uuid || sourceId === required.uuid)) return true;
+    if (required.type && item.type !== required.type) return false;
+    if (required.identifier) return itemIdentifier(item) === required.identifier;
+    return !!requiredName && item.name.trim().toLocaleLowerCase() === requiredName;
+  });
+}
+
+export function merchantAccess(shop, actor, user = game.user) {
+  if (user?.isGM) return { allowed: true, reasons: [] };
+  const config = merchantConfig(shop);
+  const reasons = [];
+  if (!actor) reasons.push("character");
+  else {
+    if (config.allowedActorIds.length && !config.allowedActorIds.includes(actor.id)) reasons.push("character");
+    const languages = new Set(actor.system?.proficiencies?.languages?.value ?? []);
+    if (config.requiredLanguages.some(language => !languages.has(language))) reasons.push("language");
+    if (config.requiredProficiencies.some(proficiency => !hasProficiency(actor, proficiency))) reasons.push("proficiency");
+    if (!hasRequiredItem(actor, config.requiredItem)) reasons.push("item");
+  }
+  return { allowed: reasons.length === 0, reasons };
+}
+
 export function merchantAllowsActor(shop, actor, user = game.user) {
-  if (user?.isGM) return true;
-  const allowedActorIds = merchantConfig(shop).allowedActorIds;
-  return allowedActorIds.length === 0 || (!!actor && allowedActorIds.includes(actor.id));
+  return merchantAccess(shop, actor, user).allowed;
 }
 
 export function merchantAvailableToUser(shop, user = game.user) {
   if (user?.isGM) return true;
-  const allowedActorIds = merchantConfig(shop).allowedActorIds;
-  return allowedActorIds.length === 0 || ownedCharacters(user).some(actor => allowedActorIds.includes(actor.id));
+  return ownedCharacters(user).some(actor => merchantAllowsActor(shop, actor, user));
 }
 
 function actorOwnedBy(actor, userId) {

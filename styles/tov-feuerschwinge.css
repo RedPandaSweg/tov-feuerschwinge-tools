@@ -1560,6 +1560,24 @@
 .tovf-merchant-access > span { display: grid; gap: .1rem; }
 .tovf-merchant-access small { opacity: .72; }
 .tovf-merchant-access button { width: auto; margin: 0; }
+.tovf-merchant-access > div { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .35rem; }
+.tovf-merchant-requirements { gap: .65rem; }
+.tovf-requirement-picker { position: relative; width: 100%; border: 1px solid rgba(132,70,35,.86); border-radius: 4px; background: rgba(8,4,3,.9); }
+.tovf-requirement-picker > summary { display: flex; align-items: center; justify-content: space-between; gap: .5rem; min-height: 32px; padding: .35rem .5rem; cursor: pointer; list-style: none; }
+.tovf-requirement-picker > summary::-webkit-details-marker { display: none; }
+.tovf-requirement-picker[open] > summary i { transform: rotate(180deg); }
+.tovf-requirement-picker > div { display: grid; max-height: 230px; padding: .3rem; border-top: 1px solid rgba(132,70,35,.65); overflow-y: auto; }
+.tovf-requirement-picker > div > label { display: flex; align-items: center; gap: .45rem; padding: .28rem .35rem; cursor: pointer; border-radius: 3px; }
+.tovf-requirement-picker > div > label:hover { background: rgba(213,91,24,.14); }
+.tovf-requirement-picker input { flex: 0 0 auto; margin: 0; }
+.tovf-merchant-requirements prose-mirror { min-height: 150px; }
+.tovf-merchant-requirements prose-mirror .editor-content { min-height: 110px; }
+.tovf-merchant-requirement-drop { display: flex; align-items: center; gap: .55rem; min-height: 58px; padding: .5rem; border: 1px dashed var(--color-border-light-2); border-radius: 5px; }
+.tovf-merchant-requirement-drop.dragover { border-color: var(--color-border-highlight); background: rgba(213,91,24,.12); }
+.tovf-merchant-requirement-drop > img { width: 42px; height: 42px; object-fit: cover; border: 0; }
+.tovf-merchant-requirement-drop > span { display: grid; flex: 1; }
+.tovf-merchant-requirement-drop > button { flex: 0 0 auto; width: 32px; height: 32px; padding: 0; }
+.tovf-merchant-access-denied { min-width: 320px; padding: .35rem; }
 .tovf-merchant-stock-tools { display: grid; gap: .4rem; }
 .tovf-merchant-stock-tools > header > span { display: flex; gap: .35rem; }
 .tovf-merchant-stock-tools > div { display: grid; grid-template-columns: minmax(200px, 1fr) 70px auto; gap: .4rem; }

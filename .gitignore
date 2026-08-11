@@ -2,6 +2,7 @@
 /.agents/
 /.codex/
 /AGENTS.md
+/Release Builder.bat
 
 # Lokale Diagnose-, Sicherungs- und Build-Artefakte
 /debug.log

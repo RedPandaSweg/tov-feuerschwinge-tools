@@ -3,6 +3,7 @@ import { CONTENT_MODULE_ID, MODULE_ID } from "../core/constants.mjs";
 const ITEM_PACK = `${CONTENT_MODULE_ID}.items`;
 const MANAGED_FLAG = "weaponOptionActivity";
 const MANAGED_EFFECT_FLAG = "weaponOptionEffect";
+const CHAIN_FLAG = "activityChain";
 const UPDATE_OPTION = "weaponOptionActivitySync";
 
 const OPTION_ACTIVITIES = Object.freeze({
@@ -13,6 +14,8 @@ const OPTION_ACTIVITIES = Object.freeze({
   },
   disarm: {
     id: "tovfwoDisarm0000",
+    saveId: "tovfwoDisSave000",
+    saveAbilities: ["strength", "dexterity"],
     icon: "icons/svg/sword.svg",
     description: "Make an attack roll with this weapon. On a hit, the target must succeed on a STR or DEX save (target’s choice) or drop a weapon, shield, or object it is wielding. The dropped item lands in an unoccupied space within 5 feet of the target. If no unoccupied space is within range, the item lands at the target’s feet."
   },
@@ -23,11 +26,17 @@ const OPTION_ACTIVITIES = Object.freeze({
   },
   harmlessFusillade: {
     id: "tovfwoFusillade0",
+    saveId: "tovfwoFusSave000",
+    saveAbilities: ["constitution"],
     icon: "icons/svg/stoned.svg",
     description: "Harmlessly discharge the weapon while aiming at a creature within the weapon’s normal range. On a successful hit, the target must succeed on a CON save or have disadvantage on the next concentration check it makes before the start of your next turn."
   },
   pinningShot: {
     id: "tovfwoPinning000",
+    saveId: "tovfwoPinSave000",
+    effectActivityId: "tovfwoPinEffect0",
+    saveAbilities: ["strength", "dexterity"],
+    effect: "pinningShot",
     icon: "systems/black-flag/artwork/statuses/restrained.svg",
     description: "Make an attack roll with this weapon against a Large or smaller creature. On a hit, the target must succeed on a STR or DEX save (target’s choice) or its speed becomes 0 feet until the end of its next turn. A creature can use its action to free the target with a successful STR (Athletics) or DEX (Acrobatics) check against your weapon option DC."
   },
@@ -44,6 +53,10 @@ const OPTION_ACTIVITIES = Object.freeze({
   },
   trip: {
     id: "tovfwoTrip000000",
+    saveId: "tovfwoTripSave00",
+    effectActivityId: "tovfwoTripEffect",
+    saveAbilities: ["strength", "dexterity"],
+    effect: "trip",
     icon: "systems/black-flag/artwork/statuses/prone.svg",
     description: "Make an attack roll with this weapon against a Large or smaller creature. On a hit, the target must succeed on a STR or DEX save (target’s choice) or fall prone. A mounted target has advantage on the save."
   }
@@ -51,13 +64,32 @@ const OPTION_ACTIVITIES = Object.freeze({
 
 let installed = false;
 
-function tripEffectId() {
-  return CONFIG.statusEffects.prone?._id ?? "bfprone000000000";
+function optionEffectId(option) {
+  if (option === "trip") return CONFIG.statusEffects.prone?._id ?? "bfprone000000000";
+  if (option === "pinningShot") return "tovfwoPinned0000";
+  return null;
 }
 
-function tripEffectData() {
+function optionEffectData(option) {
+  if (option === "pinningShot") {
+    return {
+      _id: optionEffectId(option),
+      name: "Pinning Shot",
+      img: OPTION_ACTIVITIES.pinningShot.icon,
+      changes: [{
+        key: "system.traits.movement.multiplier",
+        mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE,
+        value: "0",
+        priority: 20
+      }],
+      disabled: false,
+      transfer: false,
+      duration: { rounds: 1 },
+      flags: { [MODULE_ID]: { [MANAGED_EFFECT_FLAG]: option } }
+    };
+  }
   return {
-    _id: tripEffectId(),
+    _id: optionEffectId(option),
     name: "Trip",
     img: "systems/black-flag/artwork/statuses/prone.svg",
     changes: [],
@@ -68,29 +100,39 @@ function tripEffectData() {
   };
 }
 
-function hasTripOption(item) {
-  return new Set(item.system?.options ?? []).has("trip");
+function selectedManagedEffects(item) {
+  return new Set([...new Set(item.system?.options ?? [])]
+    .map(option => OPTION_ACTIVITIES[option]?.effect)
+    .filter(Boolean));
 }
 
-function synchronizeTripEffectSource(item) {
+function synchronizeOptionEffectSource(item) {
   const effects = item.effects.map(effect => effect.toObject());
-  const index = effects.findIndex(effect => effect._id === tripEffectId());
-  if (hasTripOption(item)) {
-    if (index >= 0) effects[index] = tripEffectData();
-    else effects.push(tripEffectData());
-  } else if (index >= 0 && foundry.utils.getProperty(effects[index], `flags.${MODULE_ID}.${MANAGED_EFFECT_FLAG}`) === "trip") {
-    effects.splice(index, 1);
+  const selected = selectedManagedEffects(item);
+  for (let index = effects.length - 1; index >= 0; index -= 1) {
+    const option = foundry.utils.getProperty(effects[index], `flags.${MODULE_ID}.${MANAGED_EFFECT_FLAG}`);
+    if (option && !selected.has(option)) effects.splice(index, 1);
+  }
+  for (const option of selected) {
+    const data = optionEffectData(option);
+    const index = effects.findIndex(effect => effect._id === data._id);
+    if (index >= 0) effects[index] = data;
+    else effects.push(data);
   }
   item.updateSource({ effects });
 }
 
-async function synchronizeTripEffectDocument(item) {
-  const effect = item.effects.get(tripEffectId());
-  if (hasTripOption(item)) {
-    if (effect) await item.updateEmbeddedDocuments("ActiveEffect", [tripEffectData()]);
-    else await item.createEmbeddedDocuments("ActiveEffect", [tripEffectData()], { keepId: true });
-  } else if (effect?.getFlag(MODULE_ID, MANAGED_EFFECT_FLAG) === "trip") {
-    await item.deleteEmbeddedDocuments("ActiveEffect", [effect.id]);
+async function synchronizeOptionEffectDocuments(item) {
+  const selected = selectedManagedEffects(item);
+  const obsolete = item.effects.filter(effect => {
+    const option = effect.getFlag(MODULE_ID, MANAGED_EFFECT_FLAG);
+    return option && !selected.has(option);
+  });
+  if (obsolete.length) await item.deleteEmbeddedDocuments("ActiveEffect", obsolete.map(effect => effect.id));
+  for (const option of selected) {
+    const data = optionEffectData(option);
+    if (item.effects.get(data._id)) await item.updateEmbeddedDocuments("ActiveEffect", [data]);
+    else await item.createEmbeddedDocuments("ActiveEffect", [data], { keepId: true });
   }
 }
 
@@ -138,22 +180,69 @@ function buildActivity(item, option, definition, attack, sort) {
     source.system.damage.critical ??= {};
     source.system.damage.critical.bonus = "";
   }
-  source.system.effects = option === "trip" ? [{ _id: tripEffectId() }] : [];
+  source.system.effects = [];
+  if (definition.saveId) {
+    foundry.utils.setProperty(source, `flags.${MODULE_ID}.${CHAIN_FLAG}`, [{
+      trigger: "attackHit",
+      activityId: definition.saveId,
+      execution: "automatic",
+      targets: "successful"
+    }]);
+  } else {
+    foundry.utils.unsetProperty(source, `flags.${MODULE_ID}.${CHAIN_FLAG}`);
+  }
 
   const ActivityClass = CONFIG.Activity.types.attack.documentClass;
   return new ActivityClass(source, { parent: item }).toObject();
 }
 
-function buildUtilityActivity(item, option, definition, sort) {
-  const ActivityClass = CONFIG.Activity.types.utility.documentClass;
+function buildSaveActivity(item, option, definition, attack, sort) {
+  const ActivityClass = CONFIG.Activity.types.save.documentClass;
+  const flags = { [MODULE_ID]: { [MANAGED_FLAG]: option } };
+  if (definition.effectActivityId) {
+    flags[MODULE_ID][CHAIN_FLAG] = [{
+      trigger: "saveFailure",
+      activityId: definition.effectActivityId,
+      execution: "automatic",
+      targets: "failed"
+    }];
+  }
   return new ActivityClass({
-    _id: definition.id,
-    type: "utility",
-    name: optionLabel(option),
+    _id: definition.saveId,
+    type: "save",
+    name: `${optionLabel(option)} — Save`,
     img: definition.icon,
     description: `<p>${definition.description}</p>`,
     sort,
     activation: { primary: false },
+    system: {
+      damage: { onSave: "none", parts: [] },
+      effects: [],
+      save: {
+        ability: definition.saveAbilities,
+        bonus: "",
+        dc: { ability: attack.ability ?? attack.system?.attack?.ability ?? "", formula: "" },
+        visible: true
+      }
+    },
+    flags
+  }, { parent: item }).toObject();
+}
+
+function buildEffectActivity(item, option, definition, sort) {
+  const ActivityClass = CONFIG.Activity.types.utility.documentClass;
+  return new ActivityClass({
+    _id: definition.effectActivityId,
+    type: "utility",
+    name: `${optionLabel(option)} — Effect`,
+    img: definition.icon,
+    description: `<p>${definition.description}</p>`,
+    sort,
+    activation: { primary: false },
+    system: {
+      effects: [{ _id: optionEffectId(definition.effect) }],
+      roll: { formula: "", name: "", prompt: false, visible: false }
+    },
     flags: {
       [MODULE_ID]: { [MANAGED_FLAG]: option }
     }
@@ -178,7 +267,7 @@ function synchronizedActivities(item) {
 
   if (!selected.size) return foundry.utils.equals(original, current) ? null : current;
   const attack = baseAttack(item);
-  const attackOptions = [...selected].filter(option => option !== "harmlessFusillade");
+  const attackOptions = [...selected];
   if (!attack && attackOptions.length) {
     console.warn(`${MODULE_ID} | Cannot create Weapon Option Activities for ${item.name}: no base Attack Activity found.`);
   }
@@ -187,18 +276,24 @@ function synchronizedActivities(item) {
   for (const option of selected) {
     const definition = OPTION_ACTIVITIES[option];
     sort += CONST.SORT_INTEGER_DENSITY;
-    if (option === "harmlessFusillade") {
-      current[definition.id] = buildUtilityActivity(item, option, definition, sort);
-    } else if (attack) {
+    if (attack) {
       current[definition.id] = buildActivity(item, option, definition, attack, sort);
+      if (definition.saveId) {
+        sort += CONST.SORT_INTEGER_DENSITY;
+        current[definition.saveId] = buildSaveActivity(item, option, definition, attack, sort);
+      }
+      if (definition.effectActivityId) {
+        sort += CONST.SORT_INTEGER_DENSITY;
+        current[definition.effectActivityId] = buildEffectActivity(item, option, definition, sort);
+      }
     }
   }
   return foundry.utils.equals(original, current) ? null : current;
 }
 
 async function synchronizeWeapon(item, { persist = true } = {}) {
-  if (persist) await synchronizeTripEffectDocument(item);
-  else synchronizeTripEffectSource(item);
+  if (persist) await synchronizeOptionEffectDocuments(item);
+  else synchronizeOptionEffectSource(item);
   const activities = synchronizedActivities(item);
   if (!activities) return false;
   if (persist) {
