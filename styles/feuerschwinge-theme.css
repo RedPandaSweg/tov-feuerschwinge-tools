@@ -44,6 +44,11 @@
   --tovf-font-ui: "Roboto Condensed", "Signika", Arial, sans-serif;
 }
 
+/* Keep rich-text emphasis visibly distinct in Foundry's ProseMirror editor. */
+:is(prose-mirror, .prosemirror, .editor-content, .enriched-content) :is(strong, b) {
+  font-weight: 700 !important;
+}
+
 .tov-contested-result { padding: .35rem .5rem; border-left: 3px solid var(--color-border-light-2); }
 .tov-contested-result.success { border-left-color: #3f8f4f; }
 .tov-contested-result.failure { border-left-color: #a33f3f; }

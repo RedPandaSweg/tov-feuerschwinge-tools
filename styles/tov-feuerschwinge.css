@@ -5,6 +5,21 @@
 .tovf-token-preset-body { display: grid; gap: .5rem; padding: .4rem; }
 .tovf-token-preset-help { display: grid; gap: .4rem; margin: 0; padding: .5rem .6rem; border: 1px solid rgb(255 255 255 / 12%); border-radius: 6px; background: rgb(0 0 0 / 16%); font-weight: 400; }
 .tovf-token-preset-help strong, .tovf-token-preset-help b { font-weight: 400; }
+
+.tovf-effect-group-config {
+  margin-block: .75rem 0;
+  border-top: 1px solid var(--color-border-light-2, rgba(255, 255, 255, .16));
+  padding-block-start: .5rem;
+}
+
+.tovf-effect-group-config > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.tovf-effect-group-config > .form-group {
+  margin-block-start: .5rem;
+}
 .tovf-token-preset-explanation { display: flex; align-items: center; gap: .45rem; line-height: 1.25; }
 .tovf-token-preset-explanation > i { color: var(--color-text-accent); }
 .tovf-token-size-recommendations { display: grid; grid-template-columns: repeat(3, 1fr); gap: .25rem; font-size: var(--font-size-11); }
@@ -1393,10 +1408,14 @@
 }
 .tovf-tile-actions-tab {
   gap: 0.75rem;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .tovf-tile-actions-tab.active {
   display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
 }
 
 .tovf-tile-actions-heading p,
@@ -1419,9 +1438,15 @@
 
 .tovf-tile-action-list {
   display: grid;
+  align-content: start;
   gap: 0.5rem;
   margin: 0;
-  padding: 0;
+  min-height: 0;
+  max-height: min(55vh, 520px);
+  padding: 0 0.3rem 0 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   list-style: none;
 }
 

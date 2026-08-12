@@ -33,6 +33,7 @@ import { activityChainingApi, installActivityChaining } from "./activity-chainin
 import { installToolAbilitySelection } from "./integrations/tool-ability.mjs";
 import { installCompendiumUsability } from "./compendium-usability.mjs";
 import { installChatImagePopouts } from "./chat-image-popout.mjs";
+import { createMagicalDrinkWorldItems, effectGroupsApi, installEffectGroups } from "./effect-groups.mjs?v=3.2.5-effect-groups-7";
 import { activateTokenPresetSocket, registerTokenPresets } from "./token-presets.mjs";
 import { activateSimpleTileTriggers, registerSimpleTileTriggers } from "./simple-tile-triggers.mjs?v=3.2.2";
 import { activateCommerce, registerCommerce } from "./commerce/main.mjs";
@@ -115,6 +116,7 @@ Hooks.once("init", () => {
   installToolAbilitySelection();
   installCompendiumUsability();
   installChatImagePopouts();
+  installEffectGroups();
   registerTokenPresets();
   installArgonBlackFlagCompatibility();
   registerPlayerUnpause();
@@ -146,11 +148,20 @@ Hooks.once("ready", async () => {
   activateChallengeManager();
   activateTokenPresetSocket();
   await activateFeaturePoolIntegration();
+  if (game.user.isGM) {
+    try {
+      await createMagicalDrinkWorldItems();
+    } catch (error) {
+      console.error(`${MODULE_ID} | Creating magical drink World Items failed.`, error);
+      ui.notifications.error(`Magische Getränke konnten nicht angelegt werden: ${error.message}`);
+    }
+  }
   exposeTransferApi();
   Object.assign(game.modules.get(MODULE_ID).api, sessionTransferApi());
   Object.assign(game.modules.get(MODULE_ID).api, creatureBuilderApi());
   Object.assign(game.modules.get(MODULE_ID).api, {
     activityChaining: activityChainingApi,
+    effectGroups: effectGroupsApi,
     characterCreationOverrides: characterCreationOverridesApi,
     weaponOptionActivities: weaponOptionActivitiesApi
   });
