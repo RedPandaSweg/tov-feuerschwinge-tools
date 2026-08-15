@@ -92,6 +92,19 @@
       {{/if}}
     </nav>
     {{/if}}
+    {{#if showSpellFilters}}
+    <nav class="tovf-library-filters secondary" aria-label="{{localize 'TOVF.Library.SpellCastingTime.Label'}}">
+      <strong class="filter-label">{{localize "TOVF.Library.SpellCastingTime.Label"}}</strong>
+      <button type="button" class="{{#unless selectedSpellCastingTime}}active{{/unless}}"
+              data-action="selectSpellCastingTime" data-spell-casting-time="">{{localize "TOVF.Library.All"}}</button>
+      {{#each spellCastingTimes}}
+      <button type="button" class="{{#if active}}active{{/if}}"
+              data-action="selectSpellCastingTime" data-spell-casting-time="{{value}}">{{label}} <small>{{count}}</small></button>
+      {{/each}}
+      <button type="button" class="{{#if spellConcentration}}active{{/if}}"
+              data-action="toggleSpellConcentration">{{localize "TOVF.Library.Concentration"}} <small>{{spellConcentrationCount}}</small></button>
+    </nav>
+    {{/if}}
     </div>
     <p class="hint" data-library-count>{{localize "TOVF.Library.Results" count=resultCount}}</p>
 

@@ -3,7 +3,7 @@ import { selectCharacters } from "../character-picker.mjs";
 import { getSystemAdapter } from "../downtime/system-adapter.mjs";
 import { formatCopper, itemQuantity, priceInCopper, purse, quantityForPrice } from "./currency.mjs";
 import { broadcastPeerTrade, commerceRequest } from "./socket.mjs";
-import { AUCTION_HOUSE_FLAG, commerceState, isAuctionHouse, merchantAllowsActor, merchantAvailableToUser, merchantConfig, ownedCharacters } from "./service.mjs";
+import { AUCTION_HOUSE_FLAG, commerceState, isAuctionHouse, merchantAccess, merchantAllowsActor, merchantAvailableToUser, merchantConfig, ownedCharacters } from "./service.mjs";
 import { addItem, cleanTransferredItem } from "./transactions.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -218,6 +218,17 @@ async function requirementItemFromDrop(event) {
   return item?.documentName === "Item" ? item : null;
 }
 
+function openItemPreview(source) {
+  const data = foundry.utils.deepClone(source?.toObject ? source.toObject() : source);
+  if (!data) return false;
+  delete data._id;
+  delete data.folder;
+  data.ownership = { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER };
+  const item = new CONFIG.Item.documentClass(data, { parent: null });
+  item.sheet.render(true);
+  return true;
+}
+
 function requiredItemData(item) {
   return item ? {
     uuid: item.uuid,
@@ -292,9 +303,35 @@ async function configureMerchantRequirements(actor) {
   });
 }
 
+function merchantAccessProblem(merchant) {
+  const characters = ownedCharacters(game.user);
+  if (!characters.length) return "Du hast keinen Charakter, mit dem du auf diesen Händler zugreifen kannst.";
+
+  const options = merchantAccessOptions();
+  const config = merchantConfig(merchant);
+  const access = characters.map(actor => ({ actor, ...merchantAccess(merchant, actor, game.user, options) }));
+  const rangeOnly = access.filter(result => (
+    result.reasons.includes("distance") && result.reasons.every(reason => reason === "distance")
+  ));
+  if (!config.requireInteractionRange || !rangeOnly.length) return "";
+
+  const scene = game.scenes.get(options.sceneId);
+  if (!scene) return "Es ist keine aktive Szene vorhanden, auf der die Entfernung zum Händler geprüft werden kann.";
+  if (![...scene.tokens].some(token => token.actorId === merchant.id)) {
+    return "Der Händler hat auf der aktuellen Szene keinen Token. Die benötigte Reichweite kann deshalb nicht geprüft werden.";
+  }
+  if (!rangeOnly.some(({ actor }) => [...scene.tokens].some(token => token.actorId === actor.id))) {
+    return "Keiner deiner berechtigten Charaktere hat auf der aktuellen Szene einen Token. Stelle einen Charaktertoken auf die Szene und versuche es erneut.";
+  }
+  return `Dein Charaktertoken ist zu weit vom Händler entfernt. Er muss sich innerhalb von ${config.interactionRange} ${config.interactionRange === 1 ? "Feld" : "Feldern"} befinden.`;
+}
+
 async function showMerchantAccessDenied(merchant) {
   const configured = merchantConfig(merchant).accessDeniedMessage;
-  const source = configured || `<p><strong>${foundry.utils.escapeHTML(merchant.name)}</strong> steht diesem Charakter nicht zur Verfügung.</p>`;
+  const problem = merchantAccessProblem(merchant);
+  const source = problem
+    ? `<p>${foundry.utils.escapeHTML(problem)}</p>`
+    : configured || `<p><strong>${foundry.utils.escapeHTML(merchant.name)}</strong> steht diesem Charakter nicht zur Verfügung.</p>`;
   const content = await foundry.applications.ux.TextEditor.implementation.enrichHTML(source, { async: true, relativeTo: merchant });
   return foundry.applications.api.DialogV2.prompt({ classes: ["tovf-commerce-dialog"], window: { title: "Zugriff verweigert" },
     content: `<div class="tovf-merchant-access-denied">${content}</div>`, ok: { label: "Schließen" }, rejectClose: false });
@@ -649,18 +686,17 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const actor = game.actors.get(target.dataset.actorId);
     const item = actor?.items.get(target.dataset.itemId);
     if (!item) return ui.notifications.warn("Der Gegenstand wurde nicht gefunden.");
-    item.sheet.render(true);
+    openItemPreview(item);
   }
   static #openAuctionItem(_event, target) {
     const auction = commerceState().auctions.find(entry => entry.id === target.dataset.auctionId);
     if (!auction?.itemData) return ui.notifications.warn("Der Auktionsgegenstand wurde nicht gefunden.");
-    const item = new CONFIG.Item.documentClass(foundry.utils.deepClone(auction.itemData), { parent: null });
-    item.sheet.render(true);
+    openItemPreview(auction.itemData);
   }
   static #openRequestItem(_event, target) {
     const request = commerceState().requests.find(entry => entry.id === target.dataset.requestId);
     if (!request?.wantedItem) return ui.notifications.warn("Der gesuchte Gegenstand wurde nicht gefunden.");
-    new CONFIG.Item.documentClass(foundry.utils.deepClone(request.wantedItem), { parent: null }).sheet.render(true);
+    openItemPreview(request.wantedItem);
   }
   static async #toggleMerchantItem(_event, target) { const item = this._merchant()?.items.get(target.dataset.itemId); if (!item) return;
     await item.setFlag(MODULE_ID, "merchantItem", { hidden: target.dataset.hidden !== "true" }); await this.render({ force: true }); }
@@ -802,7 +838,10 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     updatePeerOffer(offer.trade, offer.side, offer.items, copper); await this.render({ force: true });
   }
   static async #confirmTrade(_event,target) { await confirmPeerTrade(target.dataset.tradeId); }
-  static #openTradeItem(_event,target) { game.actors.get(target.dataset.actorId)?.items.get(target.dataset.itemId)?.sheet.render(true); }
+  static #openTradeItem(_event,target) {
+    const item = game.actors.get(target.dataset.actorId)?.items.get(target.dataset.itemId);
+    if (!item || !openItemPreview(item)) ui.notifications.warn("Der Gegenstand wurde nicht gefunden.");
+  }
   static async #cancelTrade(_e,t) { cancelPeerTrade(t.dataset.tradeId); }
 }
 

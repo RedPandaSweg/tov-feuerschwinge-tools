@@ -12,6 +12,12 @@
     }
   },
   "TOVF": {
+    "ChatMessageDeletion": {
+      "Action": "Delete Own Message",
+      "Title": "Delete Chat Message",
+      "Confirm": "Permanently delete this chat message?",
+      "NoGM": "The message can only be deleted while a GM is connected."
+    },
     "Argon": {
       "CharacterLevel": "Level {level}",
       "LegacyAdapterActive": "Disable “Argon - Combat HUD (BLACK-FLAG)”. Feuerschwinge now provides this Argon integration itself.",
@@ -245,6 +251,14 @@
       "Open": "Feuerschwinge Library",
       "Search": "Search this category…",
       "AllSources": "All sources",
+      "All": "All",
+      "Concentration": "Concentration",
+      "SpellCastingTime": {
+        "Label": "Casting Time",
+        "action": "Action",
+        "bonus": "Bonus Action",
+        "reaction": "Reaction"
+      },
       "Results": "{count} entries",
       "Empty": "No matching entries found.",
       "Category": {

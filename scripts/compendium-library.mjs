@@ -221,6 +221,24 @@ function challengeRatingLabel(value) {
   return fractions.get(value) ?? String(value);
 }
 
+function spellCastingTime(entry) {
+  const type = String(foundry.utils.getProperty(entry, "system.casting.type") ?? "").toLocaleLowerCase("en");
+  if (type === "action") return "action";
+  if (type === "bonus") return "bonus";
+  if (type === "reaction" || type.startsWith("reaction")) return "reaction";
+  return "";
+}
+
+function spellRequiresConcentration(entry) {
+  const tags = foundry.utils.getProperty(entry, "system.tags");
+  const tagged = tags instanceof Set
+    ? tags.has("concentration")
+    : Array.isArray(tags)
+      ? tags.includes("concentration")
+      : Boolean(tags?.concentration);
+  return tagged || Boolean(foundry.utils.getProperty(entry, "system.duration.concentration"));
+}
+
 function classificationFor(pack, entry, category) {
   const itemType = entry.type ?? "";
   const typeCategory = itemType === "feature"
@@ -395,6 +413,8 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       selectSubcategory: this.#selectSubcategory,
       selectDetail: this.#selectDetail,
       selectExtra: this.#selectExtra,
+      selectSpellCastingTime: this.#selectSpellCastingTime,
+      toggleSpellConcentration: this.#toggleSpellConcentration,
       setLayout: this.#setLayout,
       openDocument: this.#openDocument,
       openPack: this.#openPack
@@ -413,6 +433,8 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
   #detail = "";
   #extra = "";
   #challengeRating = "";
+  #spellCastingTime = "";
+  #spellConcentration = false;
   #layout = "list";
 
   async #loadEntries() {
@@ -437,7 +459,10 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           "system.attributes.cr",
           "system.circle.base",
           "system.source",
-          "system.school"
+          "system.school",
+          "system.casting.type",
+          "system.tags",
+          "system.duration.concentration"
         ]
       });
       const packageId = packageIdFor(pack);
@@ -456,6 +481,8 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           challengeRating: pack.documentName === "Actor"
             ? Number(foundry.utils.getProperty(entry, "system.attributes.cr"))
             : null,
+          spellCastingTime: entry.type === "spell" ? spellCastingTime(entry) : "",
+          spellConcentration: entry.type === "spell" && spellRequiresConcentration(entry),
           ...classification,
           pack: pack.collection,
           packLabel: pack.title,
@@ -512,8 +539,10 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       ? this.#filterOptions(detailEntries, "extra", true)
       : [];
     if (this.#extra && !extras.some(option => option.value === this.#extra)) this.#extra = "";
-    const matchingEntries = detailEntries.filter(entry => (
-      this.#matchesFilter(entry.extra, this.#extra)
+    const spellFilterEntries = detailEntries.filter(entry => this.#matchesFilter(entry.extra, this.#extra));
+    const matchingEntries = spellFilterEntries.filter(entry => (
+      (!this.#spellCastingTime || entry.spellCastingTime === this.#spellCastingTime)
+      && (!this.#spellConcentration || entry.spellConcentration)
       && (!query || entry.name.toLocaleLowerCase(game.i18n.lang).includes(query))
     ));
     const entries = deduplicateEntries(matchingEntries);
@@ -544,6 +573,19 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       selectedDetail: this.#detail,
       selectedExtra: this.#extra,
       selectedChallengeRating: this.#challengeRating,
+      showSpellFilters: this.#category === "spells",
+      spellCastingTimes: ["action", "bonus", "reaction"].map(value => ({
+        value,
+        label: game.i18n.localize(`TOVF.Library.SpellCastingTime.${value}`),
+        count: deduplicateEntries(spellFilterEntries.filter(entry => entry.spellCastingTime === value)).length,
+        active: this.#spellCastingTime === value
+      })),
+      selectedSpellCastingTime: this.#spellCastingTime,
+      spellConcentration: this.#spellConcentration,
+      spellConcentrationCount: deduplicateEntries(spellFilterEntries.filter(entry => (
+        (!this.#spellCastingTime || entry.spellCastingTime === this.#spellCastingTime)
+        && entry.spellConcentration
+      ))).length,
       subcategoryLabel: this.#category === "spells" ? "Circle" : "Subcategory",
       detailLabel: this.#category === "spells" ? "Source of Magic" : classFeatures ? "Class" : "Type",
       extraLabel: this.#category === "spells" ? "School of Magic" : "Feature Type",
@@ -665,6 +707,8 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#detail = "";
     this.#extra = "";
     this.#challengeRating = "";
+    this.#spellCastingTime = "";
+    this.#spellConcentration = false;
     this.render();
   }
 
@@ -683,6 +727,17 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static #selectExtra(_event, target) {
     this.#extra = target.dataset.extra;
+    this.render();
+  }
+
+  static #selectSpellCastingTime(_event, target) {
+    const value = target.dataset.spellCastingTime;
+    this.#spellCastingTime = this.#spellCastingTime === value ? "" : value;
+    this.render();
+  }
+
+  static #toggleSpellConcentration() {
+    this.#spellConcentration = !this.#spellConcentration;
     this.render();
   }
 

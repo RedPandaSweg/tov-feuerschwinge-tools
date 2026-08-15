@@ -250,6 +250,27 @@
   animation: none;
 }
 
+:is(#chat-log, .chat-log, .chat-popout) .chat-message .message-header .tovf-delete-own-message {
+  flex: 0 0 1.5rem;
+  width: 1.5rem;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  margin: 0 0 0 .25rem;
+  padding: 0;
+  border: 0;
+  color: var(--tovf-color-text-muted);
+  background: transparent;
+  box-shadow: none;
+  opacity: .72;
+}
+
+:is(#chat-log, .chat-log, .chat-popout) .chat-message .message-header .tovf-delete-own-message:is(:hover, :focus-visible) {
+  color: #ff7766;
+  background: rgba(207, 63, 47, .14);
+  box-shadow: 0 0 7px rgba(207, 63, 47, .32);
+  opacity: 1;
+}
+
 /* Foundry chat: keep the Feuerschwinge treatment isolated from other sidebar tabs. */
 :is(#chat, #chat-popout, #chat-notifications) {
   color: var(--tovf-color-text);
@@ -612,6 +633,31 @@
   font-family: var(--tovf-font-ui);
 }
 
+/* Inventory capacity needs a brighter fill than the general dark sheet surface. */
+.black-flag.actor.sheet .encumbrance[role="meter"] {
+  --bf-encumbrance-color-background: #9b592b;
+  border-color: var(--tovf-color-ember-hot);
+  background: rgba(8, 6, 5, .72);
+}
+
+.black-flag.actor.sheet .encumbrance[role="meter"]::before {
+  outline-color: var(--tovf-color-gold);
+  background: linear-gradient(90deg, #7c3c1e, #b66c31);
+  box-shadow: 0 0 5px rgba(255, 138, 43, .48), inset 0 0 4px rgba(255, 216, 159, .18);
+}
+
+.black-flag.actor.sheet .encumbrance[role="meter"] > .label {
+  color: #fff2d1;
+  text-shadow: 0 1px 2px #000, 0 0 4px rgba(255, 196, 105, .45);
+}
+
+.black-flag.actor.sheet .encumbrance[role="meter"] > .label > i { opacity: .9; }
+.black-flag.actor.sheet .encumbrance[role="meter"] .breakpoint::before,
+.black-flag.actor.sheet .encumbrance[role="meter"] .breakpoint::after {
+  color: var(--tovf-color-gold-light);
+  text-shadow: 0 0 4px rgba(255, 138, 43, .7);
+}
+
 :is(.black-flag.actor.sheet, .black-flag.item.sheet) .window-header {
   color: var(--tovf-color-gold-light);
   background:
@@ -966,4 +1012,163 @@
 
 :is(#chat, #chat-popout, #chat-notifications) .item-piles-chat-card li:nth-child(even) {
   background: rgba(8, 6, 5, .58);
+}
+
+/* Foundry and Black Flag journals, including the compendium table of contents. */
+:is(
+  .application.journal-entry,
+  .application.journal-entry-page,
+  .application.journal-sheet,
+  .application.journal-editor,
+  .application.table-of-contents
+) {
+  --bf-journal-background: var(--tovf-surface-window);
+  --bf-background-color-white: var(--tovf-color-soot);
+  --bf-background-color-half-white: rgba(10, 7, 6, .72);
+  --bf-background-color-blue: var(--tovf-color-bronze);
+  --bf-background-color-dark-blue: var(--tovf-color-bronze-dark);
+  --bf-border-color-blue: var(--tovf-color-bronze-light);
+  --bf-text-color-black: var(--tovf-color-text);
+  --bf-text-color-blue: var(--tovf-color-gold-light);
+  --bf-text-color-white: #fff2d1;
+  --color-text-primary: var(--tovf-color-text);
+  --color-text-secondary: var(--tovf-color-text-muted);
+  --color-text-emphatic: var(--tovf-color-gold-light);
+  --color-border-light-tertiary: var(--tovf-color-bronze);
+  color: var(--tovf-color-text);
+  font-family: var(--tovf-font-ui);
+}
+
+:is(
+  .application.journal-entry,
+  .application.journal-entry-page,
+  .application.journal-sheet,
+  .application.journal-editor,
+  .application.table-of-contents
+) .window-header {
+  border-bottom: var(--tovf-border-strong);
+  color: var(--tovf-color-gold-light);
+  background:
+    radial-gradient(circle at 18% 120%, rgba(255, 112, 28, .34), transparent 34%),
+    linear-gradient(180deg, #541f10, #160907);
+  box-shadow: inset 0 -1px var(--tovf-color-ember), 0 3px 10px rgba(239, 88, 24, .2);
+  text-shadow: 0 1px 2px #000, 0 0 7px rgba(255, 112, 28, .32);
+}
+
+:is(
+  .application.journal-entry,
+  .application.journal-entry-page,
+  .application.journal-sheet,
+  .application.journal-editor,
+  .application.table-of-contents
+) :is(.window-content, .journal-entry-content, .editor-container, .editor-content) {
+  color: var(--tovf-color-text);
+  background: var(--tovf-surface-window);
+}
+
+.application.journal-entry :is(.journal-sidebar, .pages-list, .directory-list) {
+  border-color: var(--tovf-color-bronze);
+  color: var(--tovf-color-text);
+  background:
+    radial-gradient(circle at 0% 20%, rgba(239, 88, 24, .12), transparent 42%),
+    linear-gradient(180deg, rgba(41, 25, 17, .98), rgba(10, 7, 6, .99));
+}
+
+.application.journal-entry :is(.page-heading, .directory-item, .toc li) {
+  border-color: rgba(179, 106, 50, .38);
+}
+
+.application.journal-entry :is(.page-heading, .directory-item, .toc li):is(:hover, .active) {
+  color: var(--tovf-color-gold-light);
+  background: rgba(154, 59, 24, .25);
+}
+
+:is(
+  .application.journal-entry,
+  .application.journal-entry-page,
+  .application.journal-sheet,
+  .application.journal-editor,
+  .application.table-of-contents
+) :is(h1, h2, h3, h4, h5, h6) {
+  border-color: var(--tovf-color-bronze-light);
+  color: var(--tovf-color-gold-light);
+  text-shadow: 0 1px 2px #000, 0 0 6px rgba(239, 88, 24, .3);
+}
+
+:is(
+  .application.journal-entry,
+  .application.journal-entry-page,
+  .application.journal-sheet,
+  .application.journal-editor,
+  .application.table-of-contents
+) :is(a, .content-link, .inline-roll) {
+  color: var(--tovf-color-ember-hot);
+  text-decoration-color: var(--tovf-color-bronze-light);
+}
+
+:is(
+  .application.journal-entry,
+  .application.journal-entry-page,
+  .application.journal-sheet,
+  .application.journal-editor
+) :is(aside, blockquote) {
+  border-color: var(--tovf-color-bronze-light);
+  color: var(--tovf-color-text);
+  background:
+    radial-gradient(circle at 0% 50%, rgba(239, 88, 24, .12), transparent 48%),
+    linear-gradient(180deg, rgba(50, 23, 14, .82), rgba(14, 9, 7, .88));
+}
+
+:is(
+  .application.journal-entry,
+  .application.journal-entry-page,
+  .application.journal-sheet,
+  .application.journal-editor
+) :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea, prose-mirror) {
+  border-color: var(--tovf-color-bronze);
+  color: var(--tovf-color-text);
+  background-color: rgba(8, 6, 5, .82);
+}
+
+/* Shared Feuerschwinge table treatment. Layout remains owned by each sheet. */
+:is(.application, #sidebar, #chat-log, .chat-popout) table {
+  border: var(--tovf-border);
+  border-collapse: collapse;
+  color: var(--tovf-color-text);
+  background: rgba(10, 7, 6, .72);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, .24);
+}
+
+:is(.application, #sidebar, #chat-log, .chat-popout) table caption {
+  padding: .3rem .45rem;
+  color: var(--tovf-color-gold-light);
+  font-weight: 600;
+}
+
+:is(.application, #sidebar, #chat-log, .chat-popout) table thead {
+  color: var(--tovf-color-gold-light);
+  background: linear-gradient(180deg, rgba(112, 39, 15, .96), rgba(49, 20, 12, .98));
+  box-shadow: inset 0 -1px rgba(239, 88, 24, .55);
+  text-shadow: 0 1px 2px #000;
+}
+
+:is(.application, #sidebar, #chat-log, .chat-popout) table :is(th, td) {
+  border-color: rgba(179, 106, 50, .42);
+}
+
+:is(.application, #sidebar, #chat-log, .chat-popout) table tbody tr {
+  border-color: rgba(179, 106, 50, .36);
+  background: rgba(8, 6, 5, .34);
+}
+
+:is(.application, #sidebar, #chat-log, .chat-popout) table tbody tr:nth-child(even) {
+  background: rgba(70, 37, 19, .28);
+}
+
+:is(.application, #sidebar, #chat-log, .chat-popout) table tbody tr:hover {
+  background: rgba(154, 59, 24, .3);
+}
+
+:is(.application, #sidebar, #chat-log, .chat-popout) table tbody th {
+  color: var(--tovf-color-gold-light);
 }

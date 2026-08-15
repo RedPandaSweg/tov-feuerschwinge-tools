@@ -171,6 +171,7 @@
 .tovf-help-content ol { margin: 0; padding-left: 1.5rem; }
 
 .tovf-library-launch { width: 100%; margin-top: .35rem; }
+.tovf-creature-builder-actions .tovf-creature-builder-launch { flex: 1; }
 .tovf-library .window-content { padding: 0; overflow: hidden; }
 .tovf-library-root { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .tovf-library-categories {
@@ -549,9 +550,17 @@
 .tovf-doom-overlay-card strong { font-size: 2.2rem; line-height: 1; text-shadow: 0 0 12px #f00; }
 .tovf-doom-overlay-card button { align-self: flex-start; width: auto; padding: .15rem; border: 0; background: none; }
 
-.tovf-roll-request-card { padding: .5rem; border-left: 3px solid #b33a2b; }
-.tovf-roll-request-card h3 { margin: 0 0 .3rem; }
-.tovf-roll-request-card p { margin: .2rem 0; }
+.tovf-roll-request-card {
+  padding: .5rem;
+  border-left: 3px solid var(--tovf-color-ember, #ef5818);
+  color: var(--tovf-color-text, #ead0a5);
+}
+.tovf-roll-request-card h3 {
+  margin: 0 0 .3rem;
+  color: var(--tovf-color-gold-light, #f0d2a0);
+  text-shadow: 0 1px 2px #000, 0 0 6px rgba(239, 88, 24, .3);
+}
+.tovf-roll-request-card p { margin: .2rem 0; color: var(--tovf-color-text-muted, #bfa786); }
 .tovf-roll-request-card .tovf-roll-request-actors {
   display: flex;
   flex-direction: column;
@@ -563,7 +572,32 @@
   align-items: center;
   gap: .35rem;
 }
-.tovf-roll-request-card .tovf-roll-request-row button { width: 100%; }
+.tovf-roll-request-card .tovf-roll-request-row button {
+  width: 100%;
+  border: 1px solid var(--tovf-color-bronze, #75401f);
+  color: var(--tovf-color-gold-light, #f0d2a0);
+  background: linear-gradient(180deg, #763117, #3e160c);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, .3);
+}
+.tovf-roll-request-card .tovf-roll-request-row button:not(:disabled):is(:hover, :focus-visible) {
+  border-color: var(--tovf-color-ember-hot, #ff8a2b);
+  color: #fff2d1;
+  background: linear-gradient(180deg, #c64b17, #6f200d);
+}
+.tovf-roll-request-card .tovf-roll-request-row button:disabled {
+  opacity: .72;
+  color: var(--tovf-color-text-muted, #bfa786);
+  background: linear-gradient(180deg, rgba(57, 34, 25, .96), rgba(25, 16, 12, .98));
+}
+.tovf-roll-request-card .tovf-roll-request-row:has(.tovf-roll-request-result:not(:empty)) button:disabled {
+  border-color: color-mix(in srgb, var(--tovf-color-success, #8ca65a) 65%, #75401f);
+  color: #d9e5b7;
+  background: linear-gradient(180deg, rgba(64, 76, 39, .9), rgba(25, 32, 18, .96));
+}
+.tovf-roll-request-card .tovf-roll-request-result:not(:empty) {
+  color: #c7df91;
+  text-shadow: 0 1px 2px #000, 0 0 5px rgba(140, 166, 90, .35);
+}
 
 .tovf-doom-controls {
   display: grid;

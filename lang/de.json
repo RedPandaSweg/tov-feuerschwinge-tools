@@ -12,6 +12,12 @@
     }
   },
   "TOVF": {
+    "ChatMessageDeletion": {
+      "Action": "Eigene Nachricht löschen",
+      "Title": "Chatnachricht löschen",
+      "Confirm": "Diese eigene Chatnachricht endgültig löschen?",
+      "NoGM": "Die Nachricht kann nur gelöscht werden, während eine Spielleitung verbunden ist."
+    },
     "Argon": {
       "CharacterLevel": "Stufe {level}",
       "LegacyAdapterActive": "Deaktiviere „Argon - Combat HUD (BLACK-FLAG)“. Feuerschwinge stellt diese Argon-Integration jetzt selbst bereit.",
@@ -246,6 +252,14 @@
       "Open": "Feuerschwinge-Bibliothek",
       "Search": "In dieser Kategorie suchen …",
       "AllSources": "Alle Quellen",
+      "All": "Alle",
+      "Concentration": "Concentration",
+      "SpellCastingTime": {
+        "Label": "Casting Time",
+        "action": "Action",
+        "bonus": "Bonus Action",
+        "reaction": "Reaction"
+      },
       "Results": "{count} Einträge",
       "Empty": "Keine passenden Einträge gefunden.",
       "Category": {

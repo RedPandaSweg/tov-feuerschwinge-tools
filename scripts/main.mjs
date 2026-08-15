@@ -33,6 +33,7 @@ import { activityChainingApi, installActivityChaining } from "./activity-chainin
 import { installToolAbilitySelection } from "./integrations/tool-ability.mjs";
 import { installCompendiumUsability } from "./compendium-usability.mjs";
 import { installChatImagePopouts } from "./chat-image-popout.mjs";
+import { registerChatMessageDeletion } from "./chat-message-deletion.mjs";
 import { createMagicalDrinkWorldItems, effectGroupsApi, installEffectGroups } from "./effect-groups.mjs?v=3.2.5-effect-groups-7";
 import { activateTokenPresetSocket, registerTokenPresets } from "./token-presets.mjs";
 import { activateSimpleTileTriggers, registerSimpleTileTriggers } from "./simple-tile-triggers.mjs?v=3.2.2";
@@ -116,6 +117,7 @@ Hooks.once("init", () => {
   installToolAbilitySelection();
   installCompendiumUsability();
   installChatImagePopouts();
+  registerChatMessageDeletion();
   installEffectGroups();
   registerTokenPresets();
   installArgonBlackFlagCompatibility();

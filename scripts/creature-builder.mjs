@@ -815,7 +815,7 @@ export function createMonsterActorData(brief, embeddedSpells = [], folder = null
     system: {
       attributes: {
         ac: {
-          baseFormulas: ["unarmored"],
+          baseFormulas: [],
           formulas: [],
           flat: brief.stats.ac,
           override: null,
@@ -1045,7 +1045,40 @@ class CreatureBuilder extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 }
 
+let creatureBuilder;
+
+export function openCreatureBuilder() {
+  if (!game.user?.isGM) return;
+  creatureBuilder ??= new CreatureBuilder();
+  creatureBuilder.render({ force: true });
+}
+
+function addCreatureBuilderDirectoryButton(_app, html) {
+  if (!game.user?.isGM) return;
+  const root = html instanceof HTMLElement ? html : html?.[0];
+  if (!root || root.querySelector("[data-tovf-creature-builder]")) return;
+
+  const header = root.querySelector(".directory-header") ?? root.querySelector("header") ?? root;
+  const search = header.querySelector(":scope > .header-search, :scope > [role='search']")
+    ?? header.querySelector(".header-search, [role='search']");
+  const controls = document.createElement("div");
+  controls.className = "header-actions action-buttons flexrow tovf-creature-builder-actions";
+  controls.dataset.tovfCreatureBuilder = "";
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "tovf-creature-builder-launch";
+  button.innerHTML = `<i class="fa-solid fa-dragon" inert></i> ${
+    game.i18n.localize("TOVF.CreatureBuilder.Settings.Label")
+  }`;
+  button.addEventListener("click", openCreatureBuilder);
+  controls.append(button);
+
+  if (search) search.before(controls);
+  else header.append(controls);
+}
+
 export function registerCreatureBuilder() {
+  Hooks.on("renderActorDirectory", addCreatureBuilderDirectoryButton);
   game.settings.registerMenu(MODULE_ID, "creatureBuilder", {
     name: "TOVF.CreatureBuilder.Settings.Name",
     label: "TOVF.CreatureBuilder.Settings.Label",
@@ -1058,6 +1091,7 @@ export function registerCreatureBuilder() {
 
 export function creatureBuilderApi() {
   return {
+    openCreatureBuilder,
     validateCreature,
     normalizeCreature,
     resolveMonsterSpells,
