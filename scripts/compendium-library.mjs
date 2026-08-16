@@ -239,6 +239,25 @@ function spellRequiresConcentration(entry) {
   return tagged || Boolean(foundry.utils.getProperty(entry, "system.duration.concentration"));
 }
 
+function spellIsVoid(entry) {
+  const tags = foundry.utils.getProperty(entry, `flags.${MODULE_ID}.library.tags`);
+  const tagValues = tags instanceof Set
+    ? [...tags]
+    : Array.isArray(tags)
+      ? tags
+      : typeof tags === "string" ? tags.split(/[;,\s]+/) : [];
+  if (tagValues.some(tag => String(tag).toLocaleLowerCase("en") === "void")) return true;
+  if (/\bvoid\b/i.test(String(entry.name ?? ""))) return true;
+  const description = String(foundry.utils.getProperty(entry, "system.description.value") ?? "");
+  const plainText = description
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;|&#160;/gi, " ")
+    .replace(/&colon;|&#58;/gi, ":")
+    .replace(/\s+/g, " ")
+    .trim();
+  return /^deep magic:\s*void\b/i.test(plainText);
+}
+
 function classificationFor(pack, entry, category) {
   const itemType = entry.type ?? "";
   const typeCategory = itemType === "feature"
@@ -435,7 +454,10 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
   #challengeRating = "";
   #spellCastingTime = "";
   #spellConcentration = false;
+  #spellVoid = false;
   #layout = "list";
+  #tableBuilder = false;
+  #tableEntries = new Set();
 
   async #loadEntries() {
     const packs = game.packs.filter(pack => {
@@ -463,6 +485,8 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           "system.casting.type",
           "system.tags",
           "system.duration.concentration"
+          , "system.description.value"
+          , `flags.${MODULE_ID}.library.tags`
         ]
       });
       const packageId = packageIdFor(pack);
@@ -483,6 +507,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
             : null,
           spellCastingTime: entry.type === "spell" ? spellCastingTime(entry) : "",
           spellConcentration: entry.type === "spell" && spellRequiresConcentration(entry),
+          spellVoid: entry.type === "spell" && spellIsVoid(entry),
           ...classification,
           pack: pack.collection,
           packLabel: pack.title,
@@ -543,9 +568,14 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     const matchingEntries = spellFilterEntries.filter(entry => (
       (!this.#spellCastingTime || entry.spellCastingTime === this.#spellCastingTime)
       && (!this.#spellConcentration || entry.spellConcentration)
+      && (!this.#spellVoid || entry.spellVoid)
       && (!query || entry.name.toLocaleLowerCase(game.i18n.lang).includes(query))
     ));
-    const entries = deduplicateEntries(matchingEntries);
+    const entries = deduplicateEntries(matchingEntries).map(entry => ({
+      ...entry,
+      tableSelectable: true,
+      tableSelected: this.#tableEntries.has(entry.uuid)
+    }));
     const sources = [...new Map(
       this.#entries
         .filter(entry => entry.category === this.#category)
@@ -586,6 +616,12 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
         (!this.#spellCastingTime || entry.spellCastingTime === this.#spellCastingTime)
         && entry.spellConcentration
       ))).length,
+      spellVoid: this.#spellVoid,
+      spellVoidCount: deduplicateEntries(spellFilterEntries.filter(entry => (
+        (!this.#spellCastingTime || entry.spellCastingTime === this.#spellCastingTime)
+        && (!this.#spellConcentration || entry.spellConcentration)
+        && entry.spellVoid
+      ))).length,
       subcategoryLabel: this.#category === "spells" ? "Circle" : "Subcategory",
       detailLabel: this.#category === "spells" ? "Source of Magic" : classFeatures ? "Class" : "Type",
       extraLabel: this.#category === "spells" ? "School of Magic" : "Feature Type",
@@ -599,7 +635,9 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
         ? game.i18n.format("TOVF.Library.SelectedSources", { count: this.#sources.size })
         : game.i18n.localize("TOVF.Library.AllSources"),
       query: this.#query,
-      resultCount: entries.length
+      resultCount: entries.length,
+      tableBuilder: this.#tableBuilder,
+      tableSelectionCount: this.#tableEntries.size
     };
   }
 
@@ -685,6 +723,30 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
         }));
       });
     }
+    this.element.querySelector('[data-action="toggleTableBuilder"]')?.addEventListener("click", event => {
+      event.preventDefault();
+      this.#toggleTableBuilder();
+    });
+    this.element.querySelector('[data-table-action="select-visible"]')?.addEventListener("click", event => {
+      event.preventDefault();
+      this.#selectVisibleTableEntries();
+    });
+    this.element.querySelector('[data-table-action="clear"]')?.addEventListener("click", event => {
+      event.preventDefault();
+      this.#clearTableEntries();
+    });
+    this.element.querySelector('[data-table-action="create"]')?.addEventListener("click", event => {
+      event.preventDefault();
+      void this.#createRollTable();
+    });
+    for (const checkbox of this.element.querySelectorAll('[data-table-entry-select]')) {
+      checkbox.addEventListener("change", event => this.#toggleTableEntry(event.currentTarget));
+    }
+    this.element.querySelector("[data-library-void]")?.addEventListener("click", event => {
+      event.preventDefault();
+      this.#spellVoid = !this.#spellVoid;
+      this.render();
+    });
   }
 
   #filterRenderedEntries() {
@@ -709,6 +771,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#challengeRating = "";
     this.#spellCastingTime = "";
     this.#spellConcentration = false;
+    this.#spellVoid = false;
     this.render();
   }
 
@@ -744,6 +807,80 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
   static #setLayout(_event, target) {
     this.#layout = target.dataset.layout;
     this.render();
+  }
+
+  #toggleTableBuilder() {
+    if (!game.user.isGM) return;
+    this.#tableBuilder = !this.#tableBuilder;
+    this.render();
+  }
+
+  #toggleTableEntry(target) {
+    const uuid = target.closest("[data-library-entry]")?.dataset.uuid;
+    if (!uuid) return;
+    if (target.checked) this.#tableEntries.add(uuid);
+    else this.#tableEntries.delete(uuid);
+    this.#updateTableSelectionCount();
+  }
+
+  #selectVisibleTableEntries() {
+    for (const row of this.element.querySelectorAll('[data-library-entry]:not([hidden])')) {
+      this.#tableEntries.add(row.dataset.uuid);
+      const checkbox = row.querySelector("[data-table-entry-select]");
+      if (checkbox) checkbox.checked = true;
+    }
+    this.#updateTableSelectionCount();
+    const create = this.element.querySelector('[data-table-action="create"]');
+    if (create) create.disabled = !this.#tableEntries.size;
+  }
+
+  #clearTableEntries() {
+    this.#tableEntries.clear();
+    for (const checkbox of this.element.querySelectorAll('[data-table-entry-select]')) checkbox.checked = false;
+    this.#updateTableSelectionCount();
+    const create = this.element.querySelector('[data-table-action="create"]');
+    if (create) create.disabled = true;
+  }
+
+  #updateTableSelectionCount() {
+    const count = this.element.querySelector("[data-table-selection-count]");
+    if (count) count.textContent = String(this.#tableEntries.size);
+    const create = this.element.querySelector('[data-table-action="create"]');
+    if (create) create.disabled = !this.#tableEntries.size;
+  }
+
+  async #createRollTable() {
+    if (!game.user.isGM || !this.#tableEntries.size) return;
+    const selected = [...this.#tableEntries]
+      .map(uuid => this.#entries.find(entry => entry.uuid === uuid))
+      .filter(Boolean);
+    if (!selected.length) return;
+    const name = await foundry.applications.api.DialogV2.prompt({
+      window: { title: "Rolltable erstellen" },
+      content: `<div class="form-group"><label>Name der Rolltable</label><input name="name" value="Neue Bibliotheks-Rolltable" autofocus></div>`,
+      ok: { label: "Erstellen", callback: (_event, button) => button.form.elements.name.value.trim() },
+      rejectClose: false
+    });
+    if (!name) return;
+    const resultType = CONST.TABLE_RESULT_TYPES?.COMPENDIUM ?? 2;
+    const table = await RollTable.create({
+      name,
+      formula: `1d${selected.length}`,
+      replacement: true,
+      displayRoll: true,
+      results: selected.map((entry, index) => ({
+        type: resultType,
+        documentCollection: entry.pack,
+        documentId: entry.id,
+        text: entry.name,
+        img: entry.img,
+        weight: 1,
+        range: [index + 1, index + 1],
+        drawn: false
+      }))
+    });
+    ui.notifications.info(`Rolltable „${table.name}“ mit ${selected.length} Einträgen erstellt.`);
+    table.sheet.render(true);
   }
 
   static async #openDocument(_event, target) {

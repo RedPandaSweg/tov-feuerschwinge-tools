@@ -1,5 +1,5 @@
 import { MODULE_ID } from "./constants.mjs";
-import { GMToolsService } from "./gm-tools-service.mjs";
+import { GMToolsService } from "./gm-tools-service.mjs?v=3.2.7-flag-database-2";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -19,6 +19,14 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       repairSafe: GMToolsApp.#repairSafe,
       undo: GMToolsApp.#undo,
       exportCharacter: GMToolsApp.#exportCharacter,
+      selectDatabaseDocument: GMToolsApp.#selectDatabaseDocument,
+      selectFlag: GMToolsApp.#selectFlag,
+      selectVisibleDocuments: GMToolsApp.#selectVisibleDocuments,
+      clearDocumentSelection: GMToolsApp.#clearDocumentSelection,
+      saveFlag: GMToolsApp.#saveFlag,
+      deleteFlag: GMToolsApp.#deleteFlag,
+      createFlag: GMToolsApp.#createFlag,
+      exportFlags: GMToolsApp.#exportFlags,
       openDocument: GMToolsApp.#openDocument,
       refresh: GMToolsApp.#refresh
     }
@@ -32,6 +40,13 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     super(options);
     this.tab = "characters";
     this.actorUuid = null;
+    this.databaseType = "ActorPC";
+    this.databaseQuery = "";
+    this.databaseNamespace = "";
+    this.databaseOnlyFlagged = true;
+    this.databaseDocumentUuid = null;
+    this.databaseFlagAddress = "";
+    this.databaseSelectedUuids = new Set();
     this._updateHook = Hooks.on("updateActor", actor => {
       if (this.rendered && (!this.actorUuid || actor.uuid === this.actorUuid)) this.render();
     });
@@ -50,6 +65,44 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
         this.render();
       });
     });
+    const databaseType = this.element.querySelector("[data-database-type]");
+    databaseType?.addEventListener("change", event => {
+      this.databaseType = event.currentTarget.value;
+      this.databaseDocumentUuid = null;
+      this.databaseFlagAddress = "";
+      this.databaseSelectedUuids.clear();
+      this.render();
+    });
+    this.element.querySelector("[data-database-namespace]")?.addEventListener("change", event => {
+      this.databaseNamespace = event.currentTarget.value;
+      this.render();
+    });
+    this.element.querySelector("[data-database-only-flagged]")?.addEventListener("change", event => {
+      this.databaseOnlyFlagged = event.currentTarget.checked;
+      this.render();
+    });
+    this.element.querySelector("[data-database-query]")?.addEventListener("input", event => {
+      this.databaseQuery = event.currentTarget.value;
+      clearTimeout(this._databaseSearchTimer);
+      this._databaseSearchTimer = setTimeout(() => this.render(), 250);
+    });
+    for (const checkbox of this.element.querySelectorAll("[data-database-document-check]")) {
+      checkbox.addEventListener("change", event => {
+        if (event.currentTarget.checked) this.databaseSelectedUuids.add(event.currentTarget.value);
+        else this.databaseSelectedUuids.delete(event.currentTarget.value);
+        const count = this.element.querySelector("[data-database-selection-count]");
+        if (count) count.textContent = String(this.databaseSelectedUuids.size);
+      });
+    }
+    this.element.querySelector("[data-flag-type]")?.addEventListener("change", event => {
+      const editor = this.element.querySelector("[data-flag-value]");
+      if (!editor) return;
+      const type = event.currentTarget.value;
+      if (type === "null") editor.value = "null";
+      else if (type === "boolean" && !["true", "false"].includes(editor.value.trim())) editor.value = "false";
+      else if (type === "object" && !editor.value.trim()) editor.value = "{}";
+      else if (type === "array" && !editor.value.trim()) editor.value = "[]";
+    });
   }
 
   async _prepareContext(options) {
@@ -60,12 +113,47 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     const selected = this.actorUuid ? await GMToolsService.characterData(this.actorUuid) : null;
     const diagnostics = this.tab === "diagnostics" ? await GMToolsService.diagnostics() : [];
+    let database = null;
+    if (this.tab === "database") {
+      const documents = GMToolsService.flagDocuments(this.databaseType, {
+        query: this.databaseQuery,
+        namespace: this.databaseNamespace,
+        onlyFlagged: this.databaseOnlyFlagged
+      });
+      if (!this.databaseDocumentUuid || !documents.some(document => document.uuid === this.databaseDocumentUuid)) {
+        this.databaseDocumentUuid = documents[0]?.uuid ?? null;
+        this.databaseFlagAddress = "";
+      }
+      const detail = this.databaseDocumentUuid
+        ? await GMToolsService.flagDocumentData(this.databaseDocumentUuid, this.databaseFlagAddress)
+        : null;
+      if (detail && this.databaseFlagAddress && !detail.selected) this.databaseFlagAddress = "";
+      database = {
+        types: GMToolsService.flagDocumentTypes().map(type => ({ ...type, selected: type.id === this.databaseType, label: game.i18n.localize(`DOWNTIME_MANAGER.GMTools.Database.Types.${type.id}`) })),
+        namespaces: GMToolsService.flagNamespaces(this.databaseType).map(entry => ({ ...entry, selected: entry.id === this.databaseNamespace })),
+        query: this.databaseQuery,
+        namespace: this.databaseNamespace,
+        onlyFlagged: this.databaseOnlyFlagged,
+        documents: documents.map(document => ({ ...document, selected: document.uuid === this.databaseDocumentUuid, checked: this.databaseSelectedUuids.has(document.uuid) })),
+        selectedCount: this.databaseSelectedUuids.size,
+        detail: detail ? {
+          uuid: detail.document.uuid,
+          name: detail.document.name,
+          documentName: detail.document.documentName,
+          groups: detail.groups,
+          selected: detail.selected ? {
+            ...detail.selected,
+            typeOptions: ["string", "number", "boolean", "null", "object", "array"].map(type => ({ value: type, label: type, selected: type === detail.selected.type }))
+          } : null
+        } : null
+      };
+    }
     const activeSession = GMToolsService.activeSession();
     const undo = GMToolsService.undoData();
     return {
       ...context,
       tab: this.tab,
-      tabs: ["characters", "projects", "session", "diagnostics"].map(id => ({
+      tabs: ["characters", "projects", "session", "database", "diagnostics"].map(id => ({
         id,
         active: this.tab === id,
         label: game.i18n.localize(`DOWNTIME_MANAGER.GMTools.Tabs.${id}`)
@@ -99,6 +187,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       },
       diagnostics,
       hasDiagnostics: diagnostics.length > 0,
+      database,
       undo: undo.kind ? {
         available: true,
         date: new Intl.DateTimeFormat(game.i18n.lang, { dateStyle: "medium", timeStyle: "short" }).format(new Date(undo.timestamp))
@@ -228,6 +317,140 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     };
     const filename = `feuerschwinge-${data.actor.name.slugify({ strict: true }) || "character"}-backup.json`;
     foundry.utils.saveDataToFile(JSON.stringify(payload, null, 2), "application/json", filename);
+  }
+
+  static #selectDatabaseDocument(event, target) {
+    event.preventDefault();
+    this.databaseDocumentUuid = target.dataset.uuid;
+    this.databaseFlagAddress = "";
+    this.render();
+  }
+
+  static #selectFlag(event, target) {
+    event.preventDefault();
+    this.databaseFlagAddress = target.dataset.address ?? "";
+    this.render();
+  }
+
+  static #selectVisibleDocuments(event) {
+    event.preventDefault();
+    for (const checkbox of this.element.querySelectorAll("[data-database-document-check]")) {
+      checkbox.checked = true;
+      this.databaseSelectedUuids.add(checkbox.value);
+    }
+    const count = this.element.querySelector("[data-database-selection-count]");
+    if (count) count.textContent = String(this.databaseSelectedUuids.size);
+  }
+
+  static #clearDocumentSelection(event) {
+    event.preventDefault();
+    this.databaseSelectedUuids.clear();
+    for (const checkbox of this.element.querySelectorAll("[data-database-document-check]")) checkbox.checked = false;
+    const count = this.element.querySelector("[data-database-selection-count]");
+    if (count) count.textContent = "0";
+  }
+
+  #databaseTargets() {
+    return this.databaseSelectedUuids.size ? [...this.databaseSelectedUuids] : [this.databaseDocumentUuid].filter(Boolean);
+  }
+
+  static async #saveFlag(event) {
+    event.preventDefault();
+    try {
+      const editor = this.element.querySelector("[data-flag-editor]");
+    if (!editor || !this.databaseFlagAddress) return;
+    const [namespace, ...parts] = this.databaseFlagAddress.split(".");
+    const path = parts.join(".");
+    const type = editor.querySelector("[data-flag-type]")?.value;
+    const rawValue = editor.querySelector("[data-flag-value]")?.value;
+    const value = GMToolsService.parseFlagValue(type, rawValue);
+    const targets = this.#databaseTargets();
+    const current = await GMToolsService.flagDocumentData(this.databaseDocumentUuid, this.databaseFlagAddress);
+    const confirmed = await this.#confirmFlagChange({
+      title: game.i18n.localize("DOWNTIME_MANAGER.GMTools.Database.Save"),
+      path: this.databaseFlagAddress,
+      before: current.selected?.value ?? "—",
+      after: typeof value === "string" ? value : JSON.stringify(value, null, 2),
+      count: targets.length
+    });
+    if (!confirmed) return;
+    await this.#execute(() => GMToolsService.setFlags(targets, namespace, path, type, rawValue), "DOWNTIME_MANAGER.GMTools.Notifications.FlagsSaved");
+    } catch (error) {
+      this.#reportDatabaseError(error);
+    }
+  }
+
+  static async #deleteFlag(event) {
+    event.preventDefault();
+    try {
+      if (!this.databaseFlagAddress) return;
+    const [namespace, ...parts] = this.databaseFlagAddress.split(".");
+    const path = parts.join(".");
+    const targets = this.#databaseTargets();
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: game.i18n.localize("DOWNTIME_MANAGER.GMTools.Database.Delete") },
+      content: `<p>${game.i18n.format("DOWNTIME_MANAGER.GMTools.Database.DeleteConfirm", { path: foundry.utils.escapeHTML(this.databaseFlagAddress), count: targets.length })}</p>`
+    });
+    if (!confirmed) return;
+    this.databaseFlagAddress = "";
+    await this.#execute(() => GMToolsService.deleteFlags(targets, namespace, path), "DOWNTIME_MANAGER.GMTools.Notifications.FlagsDeleted");
+    } catch (error) {
+      this.#reportDatabaseError(error);
+    }
+  }
+
+  static async #createFlag(event) {
+    event.preventDefault();
+    try {
+      const root = this.element.querySelector("[data-create-flag]");
+    if (!root) return;
+    const namespace = root.querySelector('[name="namespace"]')?.value;
+    const path = root.querySelector('[name="path"]')?.value;
+    const type = root.querySelector('[name="type"]')?.value;
+    const rawValue = root.querySelector('[name="value"]')?.value;
+    const targets = this.#databaseTargets();
+    if (!String(path ?? "").trim()) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.GMTools.Errors.InvalidFlagPath"));
+    GMToolsService.parseFlagValue(type, rawValue);
+    const confirmed = await this.#confirmFlagChange({
+      title: game.i18n.localize("DOWNTIME_MANAGER.GMTools.Database.Create"),
+      path: `${namespace}.${path}`,
+      before: "—",
+      after: rawValue,
+      count: targets.length
+    });
+    if (!confirmed) return;
+    this.databaseFlagAddress = `${namespace}.${path}`;
+    await this.#execute(() => GMToolsService.setFlags(targets, namespace, path, type, rawValue), "DOWNTIME_MANAGER.GMTools.Notifications.FlagsSaved");
+    } catch (error) {
+      this.#reportDatabaseError(error);
+    }
+  }
+
+  static async #exportFlags(event) {
+    event.preventDefault();
+    try {
+      const targets = this.#databaseTargets();
+    if (!targets.length) return;
+    const payload = await GMToolsService.exportFlags(targets);
+    foundry.utils.saveDataToFile(JSON.stringify(payload, null, 2), "application/json", `feuerschwinge-flags-${new Date().toISOString().slice(0, 10)}.json`);
+    } catch (error) {
+      this.#reportDatabaseError(error);
+    }
+  }
+
+  #reportDatabaseError(error) {
+    console.error(`${MODULE_ID} | Flag database operation failed`, error);
+    ui.notifications.error(error.message);
+  }
+
+  async #confirmFlagChange({ title, path, before, after, count }) {
+    const escape = value => foundry.utils.escapeHTML(String(value ?? ""));
+    return foundry.applications.api.DialogV2.confirm({
+      window: { title },
+      position: { width: 720 },
+      content: `<p>${game.i18n.format("DOWNTIME_MANAGER.GMTools.Database.ChangeTargets", { count })}</p><p><code>${escape(path)}</code></p>
+        <div class="tovf-gm-flag-diff"><div><strong>${game.i18n.localize("DOWNTIME_MANAGER.GMTools.Before")}</strong><pre>${escape(before)}</pre></div><div><strong>${game.i18n.localize("DOWNTIME_MANAGER.GMTools.After")}</strong><pre>${escape(after)}</pre></div></div>`
+    });
   }
 
   static async #openDocument(event, target) {

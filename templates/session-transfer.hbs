@@ -35,6 +35,10 @@
           <i class="fa-solid fa-users" inert></i> {{localize "TOVF.Session.Primary.SelectConnected"}}
         </button>
       </div>
+      <label class="tovf-session-transfer-search">
+        <i class="fa-solid fa-magnifying-glass" inert></i>
+        <input type="search" data-session-transfer-search placeholder="{{ localize 'TOVF.Session.Search' }}" autocomplete="off">
+      </label>
       {{#if selectByCharacter}}
       {{#if connectedActors.length}}
         <h3 class="tovf-connected-actors-heading">
@@ -43,7 +47,7 @@
         </h3>
         <div class="tovf-actor-list connected">
           {{#each connectedActors as |actor|}}
-            <label>
+            <label data-session-transfer-entry data-search="{{ actor.searchText }}">
               <input type="checkbox" name="actors" value="{{ actor.id }}" data-connected="true">
               <img src="{{ actor.img }}" alt="">
               <span>{{ actor.name }}<small>{{ localize "TOVF.Session.TransferFolder" }}: {{ actor.transferFolder }}</small></span>
@@ -55,7 +59,7 @@
         <h3>{{ localize "TOVF.Session.Primary.OtherActors" }}</h3>
         <div class="tovf-actor-list">
           {{#each otherActors as |actor|}}
-            <label>
+            <label data-session-transfer-entry data-search="{{ actor.searchText }}">
               <input type="checkbox" name="actors" value="{{ actor.id }}" data-connected="false">
               <img src="{{ actor.img }}" alt="">
               <span>{{ actor.name }}<small>{{ localize "TOVF.Session.TransferFolder" }}: {{ actor.transferFolder }}</small></span>
@@ -69,7 +73,7 @@
           <h3 class="tovf-connected-actors-heading">{{ localize "TOVF.Session.Primary.ConnectedPlayers" }}</h3>
           <div class="tovf-actor-list connected">
             {{#each connectedPlayers as |player|}}
-              <label>
+              <label data-session-transfer-entry data-search="{{ player.searchText }}">
                 <input type="checkbox" name="players" value="{{ player.id }}" data-actor-ids="{{ player.actorIds }}" data-connected="true">
                 <i class="fa-solid fa-user" inert></i>
                 <span>{{ player.name }}<small>{{ player.characters }}</small></span>
@@ -81,7 +85,7 @@
           <h3>{{ localize "TOVF.Session.Primary.OtherPlayers" }}</h3>
           <div class="tovf-actor-list">
             {{#each otherPlayers as |player|}}
-              <label>
+              <label data-session-transfer-entry data-search="{{ player.searchText }}">
                 <input type="checkbox" name="players" value="{{ player.id }}" data-actor-ids="{{ player.actorIds }}" data-connected="false">
                 <i class="fa-solid fa-user" inert></i>
                 <span>{{ player.name }}<small>{{ player.characters }}</small></span>

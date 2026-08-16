@@ -194,15 +194,21 @@ async function numberPrompt({ title, label, value = 1, min = 1, step = 1 }) {
     ok: { label: "Bestätigen", callback: (_event, button) => Number(button.form.elements.value.value) }, rejectClose: false });
 }
 
-async function itemsFromTable(table, count) {
+async function itemsFromTable(table, count, { quantityMin = 1, quantityMax = 1 } = {}) {
   const draw = await table.drawMany(count, { displayChat: false });
-  const items = [];
+  const items = new Map();
+  const minimum = Math.max(1, Math.floor(Number(quantityMin) || 1));
+  const maximum = Math.max(minimum, Math.floor(Number(quantityMax) || minimum));
   for (const result of draw.results ?? []) {
     const uuid = result.documentUuid ?? (result.documentCollection && result.documentId ? `${result.documentCollection}.${result.documentId}` : "");
     const document = uuid ? await fromUuid(uuid) : null;
-    if (document?.documentName === "Item" && TRADEABLE_TYPES.has(document.type)) items.push(document.toObject());
+    if (document?.documentName !== "Item" || !TRADEABLE_TYPES.has(document.type)) continue;
+    const quantity = minimum + Math.floor(Math.random() * (maximum - minimum + 1));
+    const entry = items.get(document.uuid);
+    if (entry) entry.quantity += quantity;
+    else items.set(document.uuid, { document, quantity });
   }
-  return items;
+  return [...items.values()];
 }
 
 async function itemFromDrop(event) {
@@ -724,10 +730,14 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!confirmed) return; const ids = actor.items.filter(i => i.type !== "currency" && TRADEABLE_TYPES.has(i.type)).map(i => i.id);
     if (ids.length) await actor.deleteEmbeddedDocuments("Item", ids); await this.render({ force: true }); }
   static async #populateFromTable() { const actor = this._merchant(); const tableId = this.element.querySelector("[name=rollTableId]")?.value;
-    const count = Math.max(1, Number(this.element.querySelector("[name=rollCount]")?.value) || 1); const table = game.tables.get(tableId); if (!actor || !table) return;
-    const items = await itemsFromTable(table, count); if (!items.length) return ui.notifications.warn("Die Tabelle hat keine Item-Ergebnisse geliefert.");
-    for (const item of items) { delete item._id; delete item._stats; await actor.createEmbeddedDocuments("Item", [item]); }
-    ui.notifications.info(`${items.length} Gegenstände hinzugefügt.`); await this.render({ force: true }); }
+    const count = Math.max(1, Math.floor(Number(this.element.querySelector("[name=rollCount]")?.value) || 1));
+    const quantityMin = Math.max(1, Math.floor(Number(this.element.querySelector("[name=rollQuantityMin]")?.value) || 1));
+    const quantityMax = Math.max(quantityMin, Math.floor(Number(this.element.querySelector("[name=rollQuantityMax]")?.value) || 1));
+    const table = game.tables.get(tableId); if (!actor || !table) return;
+    const items = await itemsFromTable(table, count, { quantityMin, quantityMax }); if (!items.length) return ui.notifications.warn("Die Tabelle hat keine Item-Ergebnisse geliefert.");
+    let total = 0;
+    for (const { document, quantity } of items) { await addItem(actor, cleanTransferredItem(document, quantity), quantity, { stackWeapons: true }); total += quantity; }
+    ui.notifications.info(`${total} Gegenstände aus ${count} Würfen hinzugefügt (${items.length} verschiedene Items).`); await this.render({ force: true }); }
   static async #configureMerchant() { if (!game.user.isGM) return; const actors = game.actors.map(a => `<option value="${a.id}">${a.name}</option>`).join("");
     const id = await foundry.applications.api.DialogV2.prompt({ classes: ["tovf-commerce-dialog"], window: { title: "Händler einrichten" }, content: `<select name="actorId">${actors}</select>`,
       ok: { label: "Einrichten", callback: (_e, b) => b.form.elements.actorId.value }, rejectClose: false }); if (id) await configureMerchantActor(game.actors.get(id)); }

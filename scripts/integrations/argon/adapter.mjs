@@ -1806,8 +1806,12 @@ export function initConfig() {
         class DND5eMovementHud extends ARGON.MovementHud {
             get movementMax() {
                 if (!this.actor) return 0;
-                if (!this.actor.system.traits.movement.types[this.movementMode]?.value ?? 0) return 0;
-                return this.actor.system.traits.movement.types[this.movementMode]?.value ?? 0 / canvas.scene.dimensions.distance;
+                const movement = this.actor.system?.traits?.movement;
+                const movementTypes = movement?.types ?? {};
+                const configuredSpeed = movementTypes[this.movementMode] ?? movementTypes.walk ?? 0;
+                const speed = Number(configuredSpeed?.value ?? configuredSpeed) || 0;
+                const gridDistance = Number(canvas?.scene?.dimensions?.distance) || 1;
+                return Math.max(0, Math.floor(speed / gridDistance));
             }
         }
 

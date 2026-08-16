@@ -178,6 +178,19 @@ function resolveActorScope(selectedActors, rootId, {
   return { actors: [...actors.values()], folderIds };
 }
 
+function resolveExportPreviewScope(selectedActors, includeFolders) {
+  const actors = new Map(selectedActors.map(actor => [actor.id, actor]));
+  if (!includeFolders) return { actors: [...actors.values()], folderIds: new Set() };
+
+  const parentFolderIds = new Set(selectedActors.map(actor => actor.folder?.id).filter(Boolean));
+  const folderIds = descendantsOf(parentFolderIds);
+  for (const parentId of parentFolderIds) folderIds.delete(parentId);
+  for (const actor of game.actors) {
+    if (actor.folder && folderIds.has(actor.folder.id)) actors.set(actor.id, actor);
+  }
+  return { actors: [...actors.values()], folderIds };
+}
+
 function actorFolderPath(folder) {
   const names = [];
   const visited = new Set();
@@ -189,12 +202,12 @@ function actorFolderPath(folder) {
   return names.join(" / ");
 }
 
-async function chooseExportActors(actors, folderIds, rootId) {
+async function chooseExportActors(actors, folderIds, selectedActorIds) {
+  const selectedIds = new Set(selectedActorIds);
   const rows = actors
-    .filter(actor => actor.type === "pc")
+    .filter(actor => selectedIds.has(actor.id))
     .sort((left, right) => left.name.localeCompare(right.name, game.i18n.lang));
   const folders = [...folderIds]
-    .filter(id => id !== rootId)
     .map(id => game.folders.get(id))
     .filter(Boolean)
     .sort((left, right) => actorFolderPath(left).localeCompare(actorFolderPath(right), game.i18n.lang));
@@ -345,11 +358,9 @@ export async function exportSession(actorIds, {
   if (role() !== WORLD_ROLES.PRIMARY) throw new Error(game.i18n.localize("TOVF.Session.Error.PrimaryOnly"));
   const selectedActors = [...new Set(actorIds)].map(id => game.actors.get(id)).filter(actor => actor?.type === "pc");
   if (!selectedActors.length) throw new Error(game.i18n.localize("TOVF.Session.Error.NoActors"));
-  const previewScope = resolveActorScope(selectedActors, actorRootId, {
-    includeFolders
-  });
+  const previewScope = resolveExportPreviewScope(selectedActors, includeFolders);
   const selection = await chooseExportActors(
-    previewScope.actors, previewScope.folderIds, actorRootId
+    previewScope.actors, previewScope.folderIds, selectedActors.map(actor => actor.id)
   );
   if (!selection) return;
   const chosenActors = selection.actorIds.map(id => game.actors.get(id)).filter(actor => actor?.type === "pc");
@@ -620,9 +631,10 @@ class SessionTransferConfig extends HandlebarsApplicationMixin(ApplicationV2) {
         name: actor.name,
         img: actor.img,
         folder: actor.folder ? folderPath(actor.folder) : game.i18n.localize("TOVF.Transfer.Root"),
-        transferFolder: personalFolderFor(actor, selectedRootId)
-          ? folderPath(personalFolderFor(actor, selectedRootId))
+        transferFolder: actor.folder
+          ? folderPath(actor.folder)
           : game.i18n.localize("TOVF.Session.OnlyActor"),
+        searchText: `${actor.name} ${actor.folder ? folderPath(actor.folder) : ""}`.toLocaleLowerCase(),
         connected: game.users.some(user => (
           user.active
           && !user.isGM
@@ -640,7 +652,8 @@ class SessionTransferConfig extends HandlebarsApplicationMixin(ApplicationV2) {
         name: user.name,
         active: user.active,
         actorIds: owned.map(actor => actor.id).join(","),
-        characters: owned.map(actor => actor.name).join(", ")
+        characters: owned.map(actor => actor.name).join(", "),
+        searchText: `${user.name} ${owned.map(actor => actor.name).join(" ")}`.toLocaleLowerCase()
       };
     }).filter(player => player.actorIds);
     return {
@@ -681,11 +694,18 @@ class SessionTransferConfig extends HandlebarsApplicationMixin(ApplicationV2) {
       this._selectionMode = event.currentTarget.value;
       this.render();
     });
+    this.element.querySelector("[data-session-transfer-search]")?.addEventListener("input", event => {
+      const query = event.currentTarget.value.trim().toLocaleLowerCase();
+      for (const row of this.element.querySelectorAll("[data-session-transfer-entry]")) {
+        row.hidden = Boolean(query && !row.dataset.search.includes(query));
+      }
+    });
   }
 
   static #selectActors(_event, target) {
     const mode = target.dataset.mode;
     for (const input of this.element.querySelectorAll('[name="actors"], [name="players"]')) {
+      if (input.closest("[data-session-transfer-entry]")?.hidden) continue;
       input.checked = mode === "all" || (mode === "connected" && input.dataset.connected === "true");
     }
   }

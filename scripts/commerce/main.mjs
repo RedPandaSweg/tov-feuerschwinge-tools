@@ -1,5 +1,5 @@
 import { MODULE_ID } from "../core/constants.mjs";
-import { registerCommerceControls, openCommerce } from "./app.mjs";
+import { registerCommerceControls, openCommerce } from "./app.mjs?v=3.2.7-rolltable-stock-2";
 import { activateCommerceSocket, commerceRequest } from "./socket.mjs";
 import { COMMERCE_SETTING, commerceState, commerceSummary, settleExpiredAuctions } from "./service.mjs";
 import { migrateItemPilesMerchants } from "./migration.mjs";

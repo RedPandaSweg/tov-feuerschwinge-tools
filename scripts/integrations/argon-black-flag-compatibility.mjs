@@ -1,5 +1,5 @@
 import { MODULE_ID } from "../core/constants.mjs";
-import { initConfig } from "./argon/adapter.mjs?v=3.2.4-hud-damage-weapon-slots";
+import { initConfig } from "./argon/adapter.mjs?v=3.2.7-movement-hud-1";
 import { registerArgonSettings } from "./argon/settings.mjs";
 
 const ARGON_CORE_ID = "enhancedcombathud";

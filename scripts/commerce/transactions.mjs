@@ -38,12 +38,13 @@ function stackSignature(item) {
   delete data.sort;
   foundry.utils.deleteProperty(data, "system.quantity");
   foundry.utils.deleteProperty(data, "system.container");
+  foundry.utils.deleteProperty(data, "flags.core.sourceId");
   return JSON.stringify(data);
 }
 
-export async function addItem(actor, itemData, quantity) {
+export async function addItem(actor, itemData, quantity, { stackWeapons = false } = {}) {
   const signature = stackSignature(itemData);
-  const existing = itemData.type === "weapon" ? null : actor.items.find(item => stackSignature(item) === signature);
+  const existing = itemData.type === "weapon" && !stackWeapons ? null : actor.items.find(item => stackSignature(item) === signature);
   if (existing) {
     await existing.update({ "system.quantity": itemQuantity(existing) + quantity });
     return existing;

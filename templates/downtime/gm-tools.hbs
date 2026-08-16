@@ -73,6 +73,72 @@
   </section>
   {{/if}}
 
+  {{#if (eq tab "database")}}
+  <section class="tovf-gm-tools-section tovf-gm-database">
+    <header class="tovf-gm-database-filters">
+      <label><span>{{localize "DOWNTIME_MANAGER.GMTools.Database.DocumentType"}}</span><select data-database-type>{{#each database.types}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}} ({{count}})</option>{{/each}}</select></label>
+      <label><span>{{localize "DOWNTIME_MANAGER.GMTools.Database.Search"}}</span><input type="search" data-database-query value="{{database.query}}" placeholder="{{localize 'DOWNTIME_MANAGER.GMTools.Database.SearchPlaceholder'}}"></label>
+      <label><span>{{localize "DOWNTIME_MANAGER.GMTools.Database.Namespace"}}</span><select data-database-namespace><option value="">{{localize "DOWNTIME_MANAGER.GMTools.Database.AllNamespaces"}}</option>{{#each database.namespaces}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{id}} ({{count}})</option>{{/each}}</select></label>
+      <label class="checkbox"><input type="checkbox" data-database-only-flagged {{checked database.onlyFlagged}}> {{localize "DOWNTIME_MANAGER.GMTools.Database.OnlyFlagged"}}</label>
+    </header>
+    <div class="tovf-gm-database-toolbar">
+      <span>{{localize "DOWNTIME_MANAGER.GMTools.Database.Selected"}}: <b data-database-selection-count>{{database.selectedCount}}</b></span>
+      <button type="button" data-action="selectVisibleDocuments"><i class="fa-solid fa-check-double"></i> {{localize "DOWNTIME_MANAGER.GMTools.Database.SelectVisible"}}</button>
+      <button type="button" data-action="clearDocumentSelection"><i class="fa-solid fa-xmark"></i> {{localize "DOWNTIME_MANAGER.GMTools.Database.ClearSelection"}}</button>
+      <button type="button" data-action="exportFlags"><i class="fa-solid fa-download"></i> {{localize "DOWNTIME_MANAGER.GMTools.Database.ExportFlags"}}</button>
+    </div>
+    <div class="tovf-gm-database-grid">
+      <aside class="tovf-gm-database-documents">
+        <h3>{{localize "DOWNTIME_MANAGER.GMTools.Database.Documents"}}</h3>
+        <div class="tovf-gm-database-scroll">
+          {{#each database.documents}}
+          <div class="tovf-gm-database-document {{#if selected}}active{{/if}}">
+            <input type="checkbox" data-database-document-check value="{{uuid}}" {{checked checked}} aria-label="{{name}}">
+            <button type="button" data-action="selectDatabaseDocument" data-uuid="{{uuid}}"><img src="{{img}}" alt=""><span><strong>{{name}}</strong><small>{{flagCount}} Flags · {{#each namespaces}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}</small></span></button>
+          </div>
+          {{else}}<p class="notes">{{localize "DOWNTIME_MANAGER.GMTools.Database.NoDocuments"}}</p>{{/each}}
+        </div>
+      </aside>
+      <section class="tovf-gm-database-tree">
+        <h3>{{localize "DOWNTIME_MANAGER.GMTools.Database.FlagTree"}}</h3>
+        {{#if database.detail}}
+        <header><strong>{{database.detail.name}}</strong><button type="button" data-action="openDocument" data-uuid="{{database.detail.uuid}}"><i class="fa-solid fa-arrow-up-right-from-square"></i></button></header>
+        <div class="tovf-gm-database-scroll">
+          {{#each database.detail.groups}}
+          <details open><summary><i class="fa-solid fa-folder-tree"></i> {{namespace}} <small>{{count}}</small></summary>
+            {{#each entries}}<button type="button" class="tovf-gm-flag-node {{#if selected}}active{{/if}}" style="--flag-indent: {{indent}}rem" data-action="selectFlag" data-address="{{address}}"><code>{{label}}</code><span>{{type}} · {{summary}}</span></button>{{/each}}
+          </details>
+          {{else}}<p class="notes">{{localize "DOWNTIME_MANAGER.GMTools.Database.NoFlags"}}</p>{{/each}}
+        </div>
+        {{else}}<p class="notes">{{localize "DOWNTIME_MANAGER.GMTools.Database.NoDocumentSelected"}}</p>{{/if}}
+      </section>
+      <section class="tovf-gm-database-editor">
+        <h3>{{localize "DOWNTIME_MANAGER.GMTools.Database.Editor"}}</h3>
+        {{#if database.detail.selected}}
+        <div data-flag-editor>
+          <dl><dt>{{localize "DOWNTIME_MANAGER.GMTools.Database.Path"}}</dt><dd><code>{{database.detail.selected.address}}</code></dd><dt>{{localize "DOWNTIME_MANAGER.GMTools.Database.Summary"}}</dt><dd>{{database.detail.selected.summary}}</dd></dl>
+          <label><span>{{localize "DOWNTIME_MANAGER.GMTools.Database.ValueType"}}</span><select data-flag-type>{{#each database.detail.selected.typeOptions}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></label>
+          <label><span>{{localize "DOWNTIME_MANAGER.GMTools.Database.Value"}}</span><textarea data-flag-value rows="12">{{database.detail.selected.value}}</textarea></label>
+          <p class="notes">{{localize "DOWNTIME_MANAGER.GMTools.Database.BulkHint"}}</p>
+          <footer><button type="button" class="danger" data-action="deleteFlag"><i class="fa-solid fa-trash"></i> {{localize "DOWNTIME_MANAGER.GMTools.Database.Delete"}}</button><button type="button" data-action="saveFlag"><i class="fa-solid fa-floppy-disk"></i> {{localize "DOWNTIME_MANAGER.GMTools.Database.Save"}}</button></footer>
+        </div>
+        {{else}}
+        <p class="notes">{{localize "DOWNTIME_MANAGER.GMTools.Database.SelectFlagHint"}}</p>
+        {{/if}}
+        {{#if database.detail}}
+        <details class="tovf-gm-create-flag" data-create-flag><summary>{{localize "DOWNTIME_MANAGER.GMTools.Database.Create"}}</summary>
+          <label><span>{{localize "DOWNTIME_MANAGER.GMTools.Database.Namespace"}}</span><input name="namespace" type="text" placeholder="tov-feuerschwinge-tools"></label>
+          <label><span>{{localize "DOWNTIME_MANAGER.GMTools.Database.Path"}}</span><input name="path" type="text" placeholder="example.enabled"></label>
+          <label><span>{{localize "DOWNTIME_MANAGER.GMTools.Database.ValueType"}}</span><select name="type"><option value="string">string</option><option value="number">number</option><option value="boolean">boolean</option><option value="null">null</option><option value="object">object</option><option value="array">array</option></select></label>
+          <label><span>{{localize "DOWNTIME_MANAGER.GMTools.Database.Value"}}</span><textarea name="value" rows="5"></textarea></label>
+          <button type="button" data-action="createFlag"><i class="fa-solid fa-plus"></i> {{localize "DOWNTIME_MANAGER.GMTools.Database.Create"}}</button>
+        </details>
+        {{/if}}
+      </section>
+    </div>
+  </section>
+  {{/if}}
+
   {{#if (eq tab "diagnostics")}}
   <section class="tovf-gm-tools-section">
     <div class="tovf-gm-diagnostics-heading"><div><h2>{{localize "DOWNTIME_MANAGER.GMTools.Diagnostics.Title"}}</h2><p class="notes">{{localize "DOWNTIME_MANAGER.GMTools.Diagnostics.Hint"}}</p></div><button type="button" data-action="repairSafe" {{#unless hasDiagnostics}}disabled{{/unless}}><i class="fa-solid fa-wand-magic-sparkles"></i> {{localize "DOWNTIME_MANAGER.GMTools.Diagnostics.RepairSafe"}}</button></div>

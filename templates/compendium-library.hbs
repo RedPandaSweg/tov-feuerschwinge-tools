@@ -24,12 +24,23 @@
         </div>
       </details>
       <div class="tovf-library-layout" role="group" aria-label="Layout">
+        {{#if isGM}}<button type="button" class="{{#if tableBuilder}}active{{/if}}" data-action="toggleTableBuilder"
+                title="Rolltable aus Bibliotheks-Items erstellen"><i class="fa-solid fa-dice-d20" inert></i></button>{{/if}}
         <button type="button" class="{{#if listLayout}}active{{/if}}" data-action="setLayout" data-layout="list"
                 title="List View"><i class="fa-solid fa-list" inert></i></button>
         <button type="button" class="{{#if gridLayout}}active{{/if}}" data-action="setLayout" data-layout="grid"
                 title="Grid View"><i class="fa-solid fa-grid-2" inert></i></button>
       </div>
     </header>
+    {{#if tableBuilder}}
+    <div class="tovf-library-table-builder">
+      <strong><i class="fa-solid fa-dice-d20"></i> Rolltable-Ersteller</strong>
+      <span><b data-table-selection-count>{{tableSelectionCount}}</b> Einträge ausgewählt</span>
+      <button type="button" data-table-action="select-visible">Alle sichtbaren Einträge auswählen</button>
+      <button type="button" data-table-action="clear">Auswahl leeren</button>
+      <button type="button" data-table-action="create" {{#unless tableSelectionCount}}disabled{{/unless}}>Rolltable erstellen</button>
+    </div>
+    {{/if}}
     <div class="tovf-library-filter-area">
     {{#if challengeRatings.length}}
     <nav class="tovf-library-filters" aria-label="{{localize 'TOVF.Library.ChallengeRating'}}">
@@ -103,6 +114,8 @@
       {{/each}}
       <button type="button" class="{{#if spellConcentration}}active{{/if}}"
               data-action="toggleSpellConcentration">{{localize "TOVF.Library.Concentration"}} <small>{{spellConcentrationCount}}</small></button>
+      <button type="button" class="{{#if spellVoid}}active{{/if}}" data-library-void>
+        Void Spells <small>{{spellVoidCount}}</small></button>
     </nav>
     {{/if}}
     </div>
@@ -110,8 +123,10 @@
 
     <ol class="tovf-library-results {{#if gridLayout}}grid{{/if}}">
       {{#each entries}}
-      <li draggable="true" data-library-entry data-uuid="{{uuid}}" data-document-type="{{documentType}}"
+      <li class="{{#if @root.tableBuilder}}table-builder{{/if}}" draggable="true" data-library-entry data-uuid="{{uuid}}" data-document-type="{{documentType}}"
           data-name="{{lowerName}}">
+        {{#if @root.tableBuilder}}<span class="tovf-library-table-select-slot"><input class="tovf-library-table-select" type="checkbox"
+          data-table-entry-select aria-label="{{name}} für Rolltable auswählen" {{checked tableSelected}}></span>{{/if}}
         <img src="{{img}}" alt="">
         <button type="button" data-action="openDocument">
           <strong>{{name}}</strong>

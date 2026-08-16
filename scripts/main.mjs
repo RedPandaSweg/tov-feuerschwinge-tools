@@ -7,7 +7,7 @@ import {
 } from "./core/namespace-migration.mjs";
 import { exposeTransferApi } from "./transfer/compendium-transfer.mjs?v=3.1.2";
 import { registerSessionTransfer, sessionTransferApi } from "./transfer/session-transfer.mjs";
-import { installBlackFlagCompatibility } from "./integrations/black-flag-compatibility.mjs";
+import { installBlackFlagCompatibility } from "./integrations/black-flag-compatibility.mjs?v=3.2.7-spell-manager-tooltips-1";
 import {
   characterCreationOverridesApi,
   installCharacterCreationOverrides
@@ -16,9 +16,9 @@ import {
   installWeaponOptionActivities,
   weaponOptionActivitiesApi
 } from "./integrations/weapon-option-activities.mjs?v=3.2.4-tooltip-links-2";
-import { installArgonBlackFlagCompatibility } from "./integrations/argon-black-flag-compatibility.mjs?v=3.2.4-hud-damage-weapon-slots";
+import { installArgonBlackFlagCompatibility } from "./integrations/argon-black-flag-compatibility.mjs?v=3.2.7-movement-hud-1";
 import { activatePlayerUnpause, registerPlayerUnpause } from "./player-unpause.mjs";
-import { registerCompendiumLibrary } from "./compendium-library.mjs";
+import { registerCompendiumLibrary } from "./compendium-library.mjs?v=3.2.7-void-spells-1";
 import { activateChallengeManager, registerChallengeManager } from "./challenge-manager.mjs";
 import { registerLinkTools } from "./link-tools-config.mjs";
 import { registerHelp } from "./help-config.mjs";
@@ -31,14 +31,15 @@ import { creatureBuilderApi, registerCreatureBuilder } from "./creature-builder.
 import { registerSettingsCategories } from "./settings-categories.mjs";
 import { activityChainingApi, installActivityChaining } from "./activity-chaining.mjs?v=3.2.4-follow-up-flags";
 import { installToolAbilitySelection } from "./integrations/tool-ability.mjs";
+import { installTheurgeSpellcasting } from "./integrations/theurge-spellcasting.mjs?v=3.2.7-theurge-spellcasting-2";
 import { installCompendiumUsability } from "./compendium-usability.mjs";
 import { installChatImagePopouts } from "./chat-image-popout.mjs";
 import { registerChatMessageDeletion } from "./chat-message-deletion.mjs";
 import { createMagicalDrinkWorldItems, effectGroupsApi, installEffectGroups } from "./effect-groups.mjs?v=3.2.5-effect-groups-7";
 import { activateTokenPresetSocket, registerTokenPresets } from "./token-presets.mjs";
 import { activateSimpleTileTriggers, registerSimpleTileTriggers } from "./simple-tile-triggers.mjs?v=3.2.2";
-import { activateCommerce, registerCommerce } from "./commerce/main.mjs";
-import "./downtime/main.mjs";
+import { activateCommerce, registerCommerce } from "./commerce/main.mjs?v=3.2.7-rolltable-stock-2";
+import "./downtime/main.mjs?v=3.2.7-flag-database-2";
 import "./contested-activity.mjs";
 
 // Keep tile triggers independent from the shared initialization chain so an
@@ -115,6 +116,7 @@ Hooks.once("init", () => {
   installWeaponOptionActivities();
   installActivityChaining();
   installToolAbilitySelection();
+  installTheurgeSpellcasting();
   installCompendiumUsability();
   installChatImagePopouts();
   registerChatMessageDeletion();
