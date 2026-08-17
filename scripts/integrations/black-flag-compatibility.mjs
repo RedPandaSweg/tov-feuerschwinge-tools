@@ -134,6 +134,21 @@ function installItemStacking() {
   });
 }
 
+function installSpellManagerTooltipCoverage() {
+  Hooks.on("renderApplicationV2", app => {
+    if (!app?.options?.classes?.includes("spell-manager")) return;
+    requestAnimationFrame(() => {
+      for (const row of app.element?.querySelectorAll?.("[data-spell-uuid]") ?? []) {
+        const label = row.querySelector(":scope > label");
+        if (!label || !row.dataset.tooltip) continue;
+        label.dataset.tooltip = row.dataset.tooltip;
+        label.dataset.tooltipClass = row.dataset.tooltipClass;
+        label.dataset.tooltipDirection = row.dataset.tooltipDirection;
+      }
+    });
+  });
+}
+
 /**
  * Black Flag 3.0.077 references an undefined `config` variable while adding
  * targeted-token data to an activity chat message. Keep this patch
@@ -144,6 +159,7 @@ export function installBlackFlagCompatibility() {
   installCubeTemplateFix();
   installItemStacking();
   installCurrencyStacking();
+  installSpellManagerTooltipCoverage();
   const Activity = BlackFlag?.documents?.activity?.Activity;
   const prototype = Activity?.prototype;
   const original = prototype?._finalizeMessageConfig;

@@ -7,7 +7,7 @@ import {
 } from "./core/namespace-migration.mjs";
 import { exposeTransferApi } from "./transfer/compendium-transfer.mjs?v=3.1.2";
 import { registerSessionTransfer, sessionTransferApi } from "./transfer/session-transfer.mjs";
-import { installBlackFlagCompatibility } from "./integrations/black-flag-compatibility.mjs?v=3.3.0-spell-manager-tooltips-2";
+import { installBlackFlagCompatibility } from "./integrations/black-flag-compatibility.mjs?v=3.3.1-spell-manager-tooltips-3";
 import {
   characterCreationOverridesApi,
   installCharacterCreationOverrides
