@@ -12,6 +12,33 @@
     }
   },
   "TOVF": {
+    "Theurge": {
+      "LearningMode": {
+        "Label": "Theurge (bekannt und vorbereitet)",
+        "Hint": "Lernt eine begrenzte Auswahl an Zaubern und kann Theurge-Level + INT-Modifikator Zauber vorbereiten."
+      }
+    },
+    "VoidTaint": {
+      "Config": {
+        "Title": "Void-Taint-Konfiguration", "MenuName": "Void Taint", "MenuLabel": "Void Taint konfigurieren", "MenuHint": "Konfiguriert Schwelle und Folgentabellen für Void Taint.",
+        "Introduction": "Void Taint misst in Stufen, wie stark der Void eine Kreatur verdorben hat. Die sichere Schwelle entspricht dem Proficiency Bonus + CHA-Modifikator, mindestens jedoch dem hier festgelegten Wert.",
+        "Basic": "Grundregeln", "Enabled": "Void-Taint-Tracking aktivieren", "MinimumThreshold": "Mindestschwelle", "MinimumThresholdHint": "Die berechnete Schwelle kann diesen Wert nicht unterschreiten.",
+        "Tables": "Folgentabellen", "TablesHint": "Die Standardtabellen sind normale World-Rolltables. Sie können direkt bearbeitet oder durch andere Rolltables ersetzt werden.", "OpenTable": "Rolltable öffnen",
+        "Recreate": "Neue Standardtabellen anlegen", "RecreateHint": "Es werden neue Kopien der beiden Standardtabellen erstellt und ausgewählt. Vorhandene Tabellen werden nicht gelöscht.", "Save": "Speichern", "Saved": "Void-Taint-Konfiguration gespeichert."
+      },
+      "Tables": { "Dread": "Void Taint: Indefinite Dread", "FleshWarp": "Void Taint: Flesh Warp" },
+      "Rules": {
+        "Title": "Standardregeln", "Accruing": "Eine Kreatur kann Void Taint bis zu ihrer Schwelle ohne Nachteil ansammeln. Sobald der Wert die Schwelle um mindestens 1 überschreitet, erhält sie Indefinite Dread oder wählt stattdessen einen Flesh Warp; danach wird Void Taint auf 0 gesetzt.",
+        "Recovery": "Außerhalb des Void reduziert eine Kreatur nach 1 Woche pro aktueller Void-Taint-Stufe ihren Wert um 1. Jeder Void-Exposure-Save während dieser Zeit startet die Erholungszeit neu.",
+        "Restoration": "Greater Restoration oder ähnlich mächtige Magie des 5. Kreises oder höher reduziert Void Taint um 1. Bei einem durch Void Taint verursachten Indefinite Dread darf das Ziel anschließend einen CHA Save gegen DC 10 + seinen verbleibenden Void-Taint-Wert versuchen, um einen solchen Dread zu beenden.",
+        "Regenerate": "Ein durch Void Taint verursachter Flesh Warp kann nur durch das Regenerate-Ritual oder ähnlich mächtige Magie des 7. Kreises oder höher von einer willigen Kreatur entfernt werden.",
+        "Immunity": "Kreaturen, die im Void heimisch oder bereits vollständig vom Einfluss des Void erfüllt sind, sind gegen die Effekte von Void Taint immun."
+      },
+      "Exposure": { "Title": "Void Exposure", "Source": "Auslöser", "DC": "CHA Save DC" },
+      "GMTools": { "Title": "Void Taint", "Hint": "Verwalte aktuelle Stufen, prüfe die berechnete Schwelle und ziehe Folgen aus den konfigurierten Tabellen.", "Settings": "Konfiguration", "Threshold": "Schwelle", "Disabled": "Das Void-Taint-Tracking ist in der Modulkonfiguration deaktiviert." },
+      "Threshold": { "Title": "Void-Taint-Schwelle überschritten", "Message": "{actor} erreicht {value} Void Taint und überschreitet die Schwelle {threshold}. Welche Folge tritt ein? Der Wert wird anschließend auf 0 gesetzt.", "Dread": "Indefinite Dread", "FleshWarp": "Flesh Warp" },
+      "Errors": { "Actor": "Der ausgewählte Actor ist ungültig.", "Table": "Die konfigurierte Void-Taint-Rolltable wurde nicht gefunden." }
+    },
     "ChatMessageDeletion": {
       "Action": "Eigene Nachricht löschen",
       "Title": "Chatnachricht löschen",
@@ -343,6 +370,7 @@
       "Creatures": "Monster und Kompendien",
       "Transfer": "Transfer und Charakterwerkzeuge",
       "Items": "Items und Regeln",
+      "Void": "Void Taint",
       "Downtime": "Downtime",
       "World": "Welteinstellungen"
     },
@@ -1182,7 +1210,7 @@
                              },
                              "GMTools": {
                                "Title": "Feuerschwinge GM-Werkzeuge", "Open": "GM-Werkzeuge öffnen", "Character": "Charakter", "CharacterValues": "Charakterfortschritt", "OpenSheet": "Bogen öffnen", "Downtime": "Downtime", "Milestones": "Meilensteine", "SessionsPlayed": "Gespielte Sessions", "LastMilestoneWeek": "Letzte Meilensteinwoche", "PassiveDowntime": "Passive Downtime nach Zeitraum (JSON)", "SaveCharacter": "Charakter speichern", "Export": "Sicherung exportieren", "NoCharacters": "Es wurden keine Spielercharaktere gefunden.", "Progress": "Fortschritt", "RequiredProgress": "Benötigter Fortschritt", "IntervalProgress": "Intervallfortschritt", "Active": "Aktiv", "Completed": "Abgeschlossen", "PendingRoll": "Ausstehende Probe", "AwaitingCompletion": "Wartet auf Abschlussprüfung", "SaveProject": "Projekt speichern", "Remove": "Entfernen", "RemoveProject": "Projekt entfernen", "RemoveProjectConfirm": "Diesen gespeicherten Projektstand entfernen? Verbrauchte Ressourcen werden nicht erstattet.", "NoProjects": "Dieser Charakter hat keine gespeicherten Projekte.", "ActiveSession": "Aktive Session", "NoActiveSession": "Es gibt keine aktive Session.", "SessionTitle": "Titel", "RawData": "Technische Sessiondaten", "UnlockSession": "Als Entwurf entsperren", "ResetSession": "Aktive Session löschen", "ResetSessionConfirm": "Den vollständigen Zustand der aktiven Session löschen?", "Undo": "Letzte Änderung rückgängig", "LastChange": "Letzte Änderung", "Refresh": "Aktualisieren", "ConfirmChange": "Korrektur bestätigen", "ConfirmChangeHint": "Prüfe die Werte, bevor die Korrektur angewendet wird.", "Before": "Vorher", "After": "Nachher",
-                               "Tabs": { "characters": "Charaktere", "projects": "Projekte", "session": "Session", "database": "Datenbank", "diagnostics": "Diagnose" },
+      "Tabs": { "characters": "Charaktere", "projects": "Projekte", "session": "Session", "voidTaint": "Void Taint", "database": "Datenbank", "diagnostics": "Diagnose" },
                                "Database": { "DocumentType": "Dokumenttyp", "Search": "Suche", "SearchPlaceholder": "Name, ID, UUID oder Namespace", "Namespace": "Namespace", "AllNamespaces": "Alle Namespaces", "OnlyFlagged": "Nur Dokumente mit Flags", "Selected": "Markiert", "SelectVisible": "Alle sichtbaren markieren", "ClearSelection": "Markierung leeren", "ExportFlags": "Flag-Sicherung exportieren", "Documents": "Dokumente", "NoDocuments": "Keine passenden Dokumente gefunden.", "FlagTree": "Flag-Baum", "NoFlags": "Dieses Dokument besitzt keine Flags.", "NoDocumentSelected": "Wähle ein Dokument aus.", "Editor": "Flag-Editor", "EntireNamespace": "Gesamter Namespace", "Path": "Pfad", "Summary": "Zusammenfassung", "ValueType": "Datentyp", "Value": "Wert", "BulkHint": "Sind Dokumente links markiert, wird die Änderung auf alle markierten Dokumente angewendet. Ohne Markierung wird nur das geöffnete Dokument geändert.", "SelectFlagHint": "Wähle im Flag-Baum einen Namespace oder Pfad aus.", "Save": "Flag speichern", "Delete": "Flag löschen", "DeleteConfirm": "Den Flag-Pfad {path} bei {count} Dokument(en) löschen?", "Create": "Neues Flag anlegen", "ChangeTargets": "Diese Änderung betrifft {count} Dokument(e).", "Types": { "ActorPC": "PCs", "ActorNPC": "NPCs", "Item": "Items (einschließlich eingebetteter)", "ActiveEffect": "Active Effects", "Scene": "Szenen", "Token": "Tokens", "JournalEntry": "Journale", "JournalEntryPage": "Journalseiten", "RollTable": "Rolltables", "Macro": "Makros", "Playlist": "Playlists", "Cards": "Kartenstapel" } },
                                "Diagnostics": { "Title": "Diagnose", "Hint": "Prüft Feuerschwinge-Charakterdaten, Projektverweise und Sessionsperren. Die automatische Reparatur verändert nur eindeutig ungültige Werte und löscht keine Projekte.", "RepairSafe": "Sichere Fehler reparieren", "NoProblems": "Es wurden keine bekannten Probleme gefunden.", "InvalidDowntime": "Das Downtime-Guthaben ist ungültig.", "InvalidProgress": "Die Session-Fortschrittsdaten sind ungültig.", "MissingStation": "Die Station für {project} wurde nicht gefunden.", "MissingProject": "Die Projektquelle für {project} wurde nicht gefunden.", "LockedSession": "Die Session hängt im Status awarding fest." },
                                "Help": { "Title": "GM-Werkzeuge", "Text": "Die GM-Werkzeuge geben der Spielleitung direkte und wiederherstellbare Kontrolle über Feuerschwinge-Charakter- und Weltdaten.", "Point1": "Öffne den Schraubenschlüssel in der Feuerschwinge-Szenenkontrolle; das Fenster ist ausschließlich für die Spielleitung verfügbar.", "Point2": "Unter Charaktere lassen sich Downtime, Meilensteine, gespielte Sessions, die letzte Meilensteinwoche und passive Downtime direkt korrigieren.", "Point3": "Projektstände erlauben Korrekturen an Fortschritt, Ziel, Intervallfortschritt, Aktivität, ausstehenden Proben und Abschluss oder können entfernt werden.", "Point4": "Eine festhängende Session kann als Entwurf entsperrt oder bewusst vollständig gelöscht werden.", "Point5": "Die Diagnose meldet ungültige Flags, fehlende Projekt- oder Stationsverweise und eine festhängende Vergabe. Sichere Reparaturen löschen niemals Projekte.", "Point6": "Jede Änderung erzeugt einen rückgängig machbaren Snapshot; Charakterdaten können vor größeren Korrekturen zusätzlich als JSON exportiert werden." },

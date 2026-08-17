@@ -139,6 +139,27 @@
   </section>
   {{/if}}
 
+  {{#if (eq tab "voidTaint")}}
+  <section class="tovf-gm-tools-section">
+    <div class="tovf-void-taint-heading"><div><h2>{{localize "TOVF.VoidTaint.GMTools.Title"}}</h2><p class="notes">{{localize "TOVF.VoidTaint.GMTools.Hint"}}</p></div><button type="button" data-action="openVoidTaintConfig"><i class="fa-solid fa-gear"></i> {{localize "TOVF.VoidTaint.GMTools.Settings"}}</button></div>
+    {{#if voidTaintEnabled}}
+    <div class="tovf-void-taint-list">
+      {{#each voidTaint}}
+      <article class="tovf-void-taint-row" data-void-taint-row>
+        <img src="{{img}}" alt=""><div class="grow"><strong>{{name}}</strong><small>{{localize "TOVF.VoidTaint.GMTools.Threshold"}}: {{threshold}}</small></div>
+        <button type="button" data-action="changeVoidTaint" data-uuid="{{uuid}}" data-amount="-1" title="-1"><i class="fa-solid fa-minus"></i></button>
+        <input type="number" name="voidTaint" min="0" step="1" value="{{value}}" aria-label="Void Taint">
+        <button type="button" data-action="changeVoidTaint" data-uuid="{{uuid}}" data-amount="1" title="+1"><i class="fa-solid fa-plus"></i></button>
+        <button type="button" data-action="setVoidTaint" data-uuid="{{uuid}}"><i class="fa-solid fa-floppy-disk"></i></button>
+        <button type="button" data-action="drawVoidEffect" data-kind="dread" title="{{localize 'TOVF.VoidTaint.Tables.Dread'}}"><i class="fa-solid fa-brain"></i></button>
+        <button type="button" data-action="drawVoidEffect" data-kind="fleshWarp" title="{{localize 'TOVF.VoidTaint.Tables.FleshWarp'}}"><i class="fa-solid fa-dna"></i></button>
+      </article>
+      {{else}}<p class="notes">{{localize "DOWNTIME_MANAGER.GMTools.NoCharacters"}}</p>{{/each}}
+    </div>
+    {{else}}<p class="notification warning">{{localize "TOVF.VoidTaint.GMTools.Disabled"}}</p>{{/if}}
+  </section>
+  {{/if}}
+
   {{#if (eq tab "diagnostics")}}
   <section class="tovf-gm-tools-section">
     <div class="tovf-gm-diagnostics-heading"><div><h2>{{localize "DOWNTIME_MANAGER.GMTools.Diagnostics.Title"}}</h2><p class="notes">{{localize "DOWNTIME_MANAGER.GMTools.Diagnostics.Hint"}}</p></div><button type="button" data-action="repairSafe" {{#unless hasDiagnostics}}disabled{{/unless}}><i class="fa-solid fa-wand-magic-sparkles"></i> {{localize "DOWNTIME_MANAGER.GMTools.Diagnostics.RepairSafe"}}</button></div>

@@ -1,5 +1,14 @@
 import { MODULE_ID } from "./constants.mjs";
 import { GMToolsService } from "./gm-tools-service.mjs?v=3.2.7-flag-database-2";
+import { openVoidTaintConfig } from "../void-taint/config-app.mjs";
+import {
+  addVoidTaint,
+  drawVoidTaintEffect,
+  setVoidTaint,
+  voidTaintEnabled,
+  voidTaintThreshold,
+  voidTaintValue
+} from "../void-taint/service.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -27,6 +36,10 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       deleteFlag: GMToolsApp.#deleteFlag,
       createFlag: GMToolsApp.#createFlag,
       exportFlags: GMToolsApp.#exportFlags,
+      changeVoidTaint: GMToolsApp.#changeVoidTaint,
+      setVoidTaint: GMToolsApp.#setVoidTaint,
+      drawVoidEffect: GMToolsApp.#drawVoidEffect,
+      openVoidTaintConfig: GMToolsApp.#openVoidTaintConfig,
       openDocument: GMToolsApp.#openDocument,
       refresh: GMToolsApp.#refresh
     }
@@ -153,7 +166,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     return {
       ...context,
       tab: this.tab,
-      tabs: ["characters", "projects", "session", "database", "diagnostics"].map(id => ({
+      tabs: ["characters", "projects", "session", "voidTaint", "database", "diagnostics"].map(id => ({
         id,
         active: this.tab === id,
         label: game.i18n.localize(`DOWNTIME_MANAGER.GMTools.Tabs.${id}`)
@@ -186,6 +199,14 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
         json: JSON.stringify(activeSession, null, 2)
       },
       diagnostics,
+      voidTaintEnabled: voidTaintEnabled(),
+      voidTaint: this.tab === "voidTaint" ? game.actors.filter(actor => actor.type === "pc").map(actor => ({
+        uuid: actor.uuid,
+        name: actor.name,
+        img: actor.img,
+        value: voidTaintValue(actor),
+        threshold: voidTaintThreshold(actor)
+      })) : [],
       hasDiagnostics: diagnostics.length > 0,
       database,
       undo: undo.kind ? {
@@ -317,6 +338,55 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     };
     const filename = `feuerschwinge-${data.actor.name.slugify({ strict: true }) || "character"}-backup.json`;
     foundry.utils.saveDataToFile(JSON.stringify(payload, null, 2), "application/json", filename);
+  }
+
+  static async #chooseVoidEffect({ actor, value, threshold }) {
+    return foundry.applications.api.DialogV2.wait({
+      window: { title: game.i18n.localize("TOVF.VoidTaint.Threshold.Title") },
+      content: `<p>${game.i18n.format("TOVF.VoidTaint.Threshold.Message", {
+        actor: foundry.utils.escapeHTML(actor.name), value, threshold
+      })}</p>`,
+      buttons: [
+        { action: "dread", label: game.i18n.localize("TOVF.VoidTaint.Threshold.Dread"), icon: "fa-solid fa-brain", callback: () => "dread" },
+        { action: "fleshWarp", label: game.i18n.localize("TOVF.VoidTaint.Threshold.FleshWarp"), icon: "fa-solid fa-dna", callback: () => "fleshWarp" }
+      ],
+      rejectClose: false
+    });
+  }
+
+  static async #changeVoidTaint(event, target) {
+    event.preventDefault();
+    const actor = await fromUuid(target.dataset.uuid).catch(() => null);
+    if (!actor) return;
+    const amount = Number(target.dataset.amount) || 0;
+    await this.#execute(async () => {
+      if (amount < 0) await setVoidTaint(actor, Math.max(0, voidTaintValue(actor) + amount));
+      else await addVoidTaint(actor, amount, { chooseEffect: data => GMToolsApp.#chooseVoidEffect(data) });
+    });
+  }
+
+  static async #setVoidTaint(event, target) {
+    event.preventDefault();
+    const row = target.closest("[data-void-taint-row]");
+    const actor = await fromUuid(target.dataset.uuid).catch(() => null);
+    if (!actor || !row) return;
+    const requested = Math.max(0, Math.floor(Number(row.querySelector('[name="voidTaint"]')?.value) || 0));
+    const current = voidTaintValue(actor);
+    await this.#execute(async () => {
+      if (requested > current) {
+        await addVoidTaint(actor, requested - current, { chooseEffect: data => GMToolsApp.#chooseVoidEffect(data) });
+      } else await setVoidTaint(actor, requested);
+    });
+  }
+
+  static async #drawVoidEffect(event, target) {
+    event.preventDefault();
+    await this.#execute(() => drawVoidTaintEffect(target.dataset.kind));
+  }
+
+  static #openVoidTaintConfig(event) {
+    event.preventDefault();
+    openVoidTaintConfig();
   }
 
   static #selectDatabaseDocument(event, target) {

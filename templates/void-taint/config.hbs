@@ -1,0 +1,26 @@
+<form class="tovf-void-taint-form">
+  <p>{{localize "TOVF.VoidTaint.Config.Introduction"}}</p>
+  <fieldset>
+    <legend>{{localize "TOVF.VoidTaint.Config.Basic"}}</legend>
+    <label class="checkbox"><input type="checkbox" name="enabled" {{checked enabled}}> {{localize "TOVF.VoidTaint.Config.Enabled"}}</label>
+    <div class="form-group"><label>{{localize "TOVF.VoidTaint.Config.MinimumThreshold"}}</label><div class="form-fields"><input type="number" name="minimumThreshold" min="0" step="1" value="{{minimumThreshold}}"></div><p class="hint">{{localize "TOVF.VoidTaint.Config.MinimumThresholdHint"}}</p></div>
+  </fieldset>
+  <fieldset>
+    <legend>{{localize "TOVF.VoidTaint.Config.Tables"}}</legend>
+    <div class="form-group"><label>{{localize "TOVF.VoidTaint.Tables.Dread"}}</label><div class="form-fields"><select name="dreadTable">{{#each tables.dread}}<option value="{{uuid}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select><button type="button" data-action="openTable" data-table="dreadTable" title="{{localize 'TOVF.VoidTaint.Config.OpenTable'}}"><i class="fa-solid fa-arrow-up-right-from-square"></i></button></div></div>
+    <div class="form-group"><label>{{localize "TOVF.VoidTaint.Tables.FleshWarp"}}</label><div class="form-fields"><select name="fleshWarpTable">{{#each tables.fleshWarp}}<option value="{{uuid}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select><button type="button" data-action="openTable" data-table="fleshWarpTable" title="{{localize 'TOVF.VoidTaint.Config.OpenTable'}}"><i class="fa-solid fa-arrow-up-right-from-square"></i></button></div></div>
+    <p class="hint">{{localize "TOVF.VoidTaint.Config.TablesHint"}}</p>
+    <button type="button" data-action="recreateTables"><i class="fa-solid fa-rotate-left"></i> {{localize "TOVF.VoidTaint.Config.Recreate"}}</button>
+  </fieldset>
+  <details open><summary>{{localize "TOVF.VoidTaint.Rules.Title"}}</summary>
+    <div class="tovf-void-rules">
+      <p>{{localize "TOVF.VoidTaint.Rules.Accruing"}}</p>
+      <p>{{localize "TOVF.VoidTaint.Rules.Recovery"}}</p>
+      <p>{{localize "TOVF.VoidTaint.Rules.Restoration"}}</p>
+      <p>{{localize "TOVF.VoidTaint.Rules.Regenerate"}}</p>
+      <p>{{localize "TOVF.VoidTaint.Rules.Immunity"}}</p>
+    </div>
+  </details>
+  <details><summary>{{localize "TOVF.VoidTaint.Exposure.Title"}}</summary><table><thead><tr><th>{{localize "TOVF.VoidTaint.Exposure.Source"}}</th><th>{{localize "TOVF.VoidTaint.Exposure.DC"}}</th></tr></thead><tbody>{{#each exposures}}<tr><td>{{source}}</td><td>{{dc}}</td></tr>{{/each}}</tbody></table></details>
+  <footer class="form-footer"><button type="button" data-action="save"><i class="fa-solid fa-floppy-disk"></i> {{localize "TOVF.VoidTaint.Config.Save"}}</button></footer>
+</form>

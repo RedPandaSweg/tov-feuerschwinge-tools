@@ -31,7 +31,7 @@ import { creatureBuilderApi, registerCreatureBuilder } from "./creature-builder.
 import { registerSettingsCategories } from "./settings-categories.mjs";
 import { activityChainingApi, installActivityChaining } from "./activity-chaining.mjs?v=3.2.4-follow-up-flags";
 import { installToolAbilitySelection } from "./integrations/tool-ability.mjs";
-import { installTheurgeSpellcasting } from "./integrations/theurge-spellcasting.mjs?v=3.2.7-theurge-spellcasting-2";
+import { installTheurgeSpellcasting } from "./integrations/theurge-spellcasting.mjs?v=3.3.0-manual-theurge-mode-1";
 import { installCompendiumUsability } from "./compendium-usability.mjs";
 import { installChatImagePopouts } from "./chat-image-popout.mjs";
 import { registerChatMessageDeletion } from "./chat-message-deletion.mjs";
@@ -39,8 +39,9 @@ import { createMagicalDrinkWorldItems, effectGroupsApi, installEffectGroups } fr
 import { activateTokenPresetSocket, registerTokenPresets } from "./token-presets.mjs";
 import { activateSimpleTileTriggers, registerSimpleTileTriggers } from "./simple-tile-triggers.mjs?v=3.2.2";
 import { activateCommerce, registerCommerce } from "./commerce/main.mjs?v=3.2.7-rolltable-stock-2";
-import "./downtime/main.mjs?v=3.2.7-flag-database-2";
+import "./downtime/main.mjs?v=3.3.0-void-taint-1";
 import "./contested-activity.mjs";
+import "./void-taint/main.mjs?v=3.3.0-void-taint-1";
 
 // Keep tile triggers independent from the shared initialization chain so an
 // unrelated tool cannot prevent their hooks and diagnostics from registering.

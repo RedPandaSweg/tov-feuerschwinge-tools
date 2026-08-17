@@ -12,6 +12,33 @@
     }
   },
   "TOVF": {
+    "Theurge": {
+      "LearningMode": {
+        "Label": "Theurge (Known and Prepared)",
+        "Hint": "Learns a limited repertoire and can prepare a number of spells equal to Theurge level + INT modifier."
+      }
+    },
+    "VoidTaint": {
+      "Config": {
+        "Title": "Void Taint Configuration", "MenuName": "Void Taint", "MenuLabel": "Configure Void Taint", "MenuHint": "Configure the threshold and consequence tables for Void Taint.",
+        "Introduction": "Void Taint measures in levels how deeply the Void has corrupted a creature. Its safe threshold equals Proficiency Bonus + CHA modifier, but never less than the configured minimum.",
+        "Basic": "Basic Rules", "Enabled": "Enable Void Taint tracking", "MinimumThreshold": "Minimum Threshold", "MinimumThresholdHint": "The calculated threshold can’t be lower than this value.",
+        "Tables": "Consequence Tables", "TablesHint": "The standard tables are ordinary world Roll Tables. Edit them directly or replace them with other Roll Tables.", "OpenTable": "Open Roll Table",
+        "Recreate": "Create New Standard Tables", "RecreateHint": "New copies of both standard tables will be created and selected. Existing tables won’t be deleted.", "Save": "Save", "Saved": "Void Taint configuration saved."
+      },
+      "Tables": { "Dread": "Void Taint: Indefinite Dread", "FleshWarp": "Void Taint: Flesh Warp" },
+      "Rules": {
+        "Title": "Standard Rules", "Accruing": "A creature can safely accumulate Void Taint up to its threshold. As soon as the value exceeds the threshold by at least 1, it gains an Indefinite Dread or chooses a Flesh Warp instead; its Void Taint then resets to 0.",
+        "Recovery": "Outside the Void, a creature reduces its Void Taint by 1 after 1 week per current Void Taint level. Any Void Exposure save during this time restarts the recovery period.",
+        "Restoration": "Greater restoration or similarly potent magic of 5th circle or higher reduces Void Taint by 1. For an Indefinite Dread caused by Void Taint, the target can then make a CHA save against DC 10 + its remaining Void Taint to end one such dread.",
+        "Regenerate": "A Flesh Warp caused by Void Taint can only be removed from a willing creature by the regenerate ritual or similarly potent magic of 7th circle or higher.",
+        "Immunity": "Creatures native to the Void or already suffused with the Void’s influence are immune to the effects of Void Taint."
+      },
+      "Exposure": { "Title": "Void Exposure", "Source": "Exposure", "DC": "CHA Save DC" },
+      "GMTools": { "Title": "Void Taint", "Hint": "Manage current levels, review calculated thresholds, and draw consequences from the configured tables.", "Settings": "Configuration", "Threshold": "Threshold", "Disabled": "Void Taint tracking is disabled in the module configuration." },
+      "Threshold": { "Title": "Void Taint Threshold Exceeded", "Message": "{actor} reaches {value} Void Taint and exceeds threshold {threshold}. Which consequence occurs? The value will then reset to 0.", "Dread": "Indefinite Dread", "FleshWarp": "Flesh Warp" },
+      "Errors": { "Actor": "The selected Actor is invalid.", "Table": "The configured Void Taint Roll Table could not be found." }
+    },
     "ChatMessageDeletion": {
       "Action": "Delete Own Message",
       "Title": "Delete Chat Message",
@@ -342,6 +369,7 @@
       "Creatures": "Monsters and Compendiums",
       "Transfer": "Transfer and Character Tools",
       "Items": "Items and Rules",
+      "Void": "Void Taint",
       "Downtime": "Downtime",
       "World": "World Settings"
     },
@@ -1174,7 +1202,7 @@
     },
     "GMTools": {
       "Title": "Feuerschwinge GM Tools", "Open": "Open GM Tools", "Character": "Character", "CharacterValues": "Character progress", "OpenSheet": "Open sheet", "Downtime": "Downtime", "Milestones": "Milestones", "SessionsPlayed": "Sessions played", "LastMilestoneWeek": "Last milestone week", "PassiveDowntime": "Passive downtime by period (JSON)", "SaveCharacter": "Save character", "Export": "Export backup", "NoCharacters": "No player characters were found.", "Progress": "Progress", "RequiredProgress": "Required progress", "IntervalProgress": "Interval progress", "Active": "Active", "Completed": "Completed", "PendingRoll": "Pending check", "AwaitingCompletion": "Awaiting completion check", "SaveProject": "Save project", "Remove": "Remove", "RemoveProject": "Remove project", "RemoveProjectConfirm": "Remove this saved project state? Spent resources are not refunded.", "NoProjects": "This character has no saved projects.", "ActiveSession": "Active session", "NoActiveSession": "There is no active session.", "SessionTitle": "Title", "RawData": "Technical session data", "UnlockSession": "Unlock as draft", "ResetSession": "Delete active session", "ResetSessionConfirm": "Delete the complete active session state?", "Undo": "Undo last change", "LastChange": "Last change", "Refresh": "Refresh", "ConfirmChange": "Confirm correction", "ConfirmChangeHint": "Review the values before applying the correction.", "Before": "Before", "After": "After",
-      "Tabs": { "characters": "Characters", "projects": "Projects", "session": "Session", "database": "Database", "diagnostics": "Diagnostics" },
+      "Tabs": { "characters": "Characters", "projects": "Projects", "session": "Session", "voidTaint": "Void Taint", "database": "Database", "diagnostics": "Diagnostics" },
       "Database": { "DocumentType": "Document type", "Search": "Search", "SearchPlaceholder": "Name, ID, UUID, or namespace", "Namespace": "Namespace", "AllNamespaces": "All namespaces", "OnlyFlagged": "Only documents with flags", "Selected": "Selected", "SelectVisible": "Select all visible", "ClearSelection": "Clear selection", "ExportFlags": "Export flag backup", "Documents": "Documents", "NoDocuments": "No matching documents found.", "FlagTree": "Flag tree", "NoFlags": "This document has no flags.", "NoDocumentSelected": "Select a document.", "Editor": "Flag editor", "EntireNamespace": "Entire namespace", "Path": "Path", "Summary": "Summary", "ValueType": "Value type", "Value": "Value", "BulkHint": "If documents are selected on the left, the change is applied to every selected document. With no selection, only the open document is changed.", "SelectFlagHint": "Select a namespace or path in the flag tree.", "Save": "Save flag", "Delete": "Delete flag", "DeleteConfirm": "Delete flag path {path} on {count} document(s)?", "Create": "Create flag", "ChangeTargets": "This change affects {count} document(s).", "Types": { "ActorPC": "PCs", "ActorNPC": "NPCs", "Item": "Items (including embedded)", "ActiveEffect": "Active Effects", "Scene": "Scenes", "Token": "Tokens", "JournalEntry": "Journals", "JournalEntryPage": "Journal Pages", "RollTable": "Roll Tables", "Macro": "Macros", "Playlist": "Playlists", "Cards": "Card Stacks" } },
       "Diagnostics": { "Title": "Diagnostics", "Hint": "Checks Feuerschwinge character flags, project references, and session locks. Automatic repair only changes unambiguously invalid values and never deletes projects.", "RepairSafe": "Repair safe problems", "NoProblems": "No known problems were found.", "InvalidDowntime": "The downtime balance is invalid.", "InvalidProgress": "The session progress data is invalid.", "MissingStation": "The station for {project} can no longer be found.", "MissingProject": "The project source for {project} can no longer be found.", "LockedSession": "The session is stuck in the awarding state." },
       "Help": { "Title": "GM Tools", "Text": "The GM Tools provide direct, recoverable control over Feuerschwinge character and world data.", "Point1": "Open the wrench in the Feuerschwinge canvas controls; the window is only available to Game Masters.", "Point2": "Character values allow downtime, milestones, played sessions, the last milestone week, and passive downtime to be corrected directly.", "Point3": "Project states allow progress, target, interval progress, activity, pending checks, and completion to be repaired or removed.", "Point4": "A stuck session can be unlocked as a draft or deliberately deleted.", "Point5": "Diagnostics report invalid flags, missing project or station references, and a stuck awarding lock. Safe repair never removes projects.", "Point6": "Every modification creates one recoverable undo snapshot; character data can additionally be exported as JSON before larger corrections." },

@@ -18,6 +18,10 @@ const SECTIONS = [
     selector: `[data-key="${MODULE_ID}.weaponCustomization"]`
   },
   {
+    label: "TOVF.SettingsSections.Void",
+    selector: `[data-key="${MODULE_ID}.voidTaint"]`
+  },
+  {
     label: "TOVF.SettingsSections.Downtime",
     selector: `[data-key="${MODULE_ID}.itemDefaults"]`
   },

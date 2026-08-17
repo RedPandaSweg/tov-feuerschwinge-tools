@@ -31,7 +31,7 @@ import {
 import { MIGRATION_SETTING, migrateIntegratedDowntime } from "./migration.mjs";
 import { openChallengeManager } from "../challenge-manager.mjs";
 import { openFeuerschwingeSettings } from "../settings-categories.mjs";
-import { GMToolsApp } from "./gm-tools-app.mjs?v=3.2.7-flag-database-2";
+import { GMToolsApp } from "./gm-tools-app.mjs?v=3.3.0-void-taint-1";
 import { isCompendiumItem, synchronizeCompendiumItem } from "../item-compendium-sync.mjs";
 
 function documentFromApp(app, documentName) {
