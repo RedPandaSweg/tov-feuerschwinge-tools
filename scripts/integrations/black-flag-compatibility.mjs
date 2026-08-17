@@ -2,30 +2,6 @@ import { MODULE_ID } from "../core/constants.mjs";
 
 let cubeTemplateFixInstalled = false;
 let currencyStackingInstalled = false;
-let spellManagerTooltipFixInstalled = false;
-
-/**
- * Black Flag attaches spell-manager tooltips to the outer list row while the
- * higher-z-index label covers almost the complete row. Attach the same tooltip
- * to the label that actually receives pointer hover.
- */
-function installSpellManagerTooltipFix() {
-  if (spellManagerTooltipFixInstalled) return;
-  spellManagerTooltipFixInstalled = true;
-  Hooks.on("renderApplicationV2", app => {
-    const root = app?.element;
-    if (!root?.classList?.contains("spell-manager")) return;
-    for (const row of root.querySelectorAll("[data-spell-uuid]")) {
-      const label = row.querySelector(":scope > label");
-      if (!label) continue;
-      label.dataset.tooltip = row.dataset.tooltip
-        ?? `<section class="loading" data-uuid="${row.dataset.spellUuid}"></section>`;
-      label.dataset.tooltipClass = row.dataset.tooltipClass
-        ?? "black-flag black-flag-tooltip item-tooltip";
-      label.dataset.tooltipDirection = row.dataset.tooltipDirection ?? "LEFT";
-    }
-  });
-}
 
 /**
  * Black Flag 3.0.077 calls an unbound `formatNumber` identifier while preparing
@@ -168,7 +144,6 @@ export function installBlackFlagCompatibility() {
   installCubeTemplateFix();
   installItemStacking();
   installCurrencyStacking();
-  installSpellManagerTooltipFix();
   const Activity = BlackFlag?.documents?.activity?.Activity;
   const prototype = Activity?.prototype;
   const original = prototype?._finalizeMessageConfig;

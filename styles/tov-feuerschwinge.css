@@ -726,6 +726,51 @@
 .tovf-void-taint-form details table { margin-top: .5rem; }
 .tovf-void-rules { padding: .25rem .5rem; }
 .tovf-void-rules p { margin: .45rem 0; }
+
+/* Let Black Flag's original spell-row tooltip receive hover events without
+   duplicating its asynchronous tooltip on the covering label. */
+.spell-manager [data-spell-uuid] > label {
+  pointer-events: none;
+}
+
+.spell-manager [data-spell-uuid] > label :is(input, button, select) {
+  pointer-events: auto;
+}
+
+/* Place the campaign token behind Foundry's rotating pause clock. */
+#pause.paused {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 100px auto;
+  align-content: center;
+  justify-items: center;
+  row-gap: 1.5rem;
+}
+
+#pause::before {
+  content: "";
+  grid-column: 1;
+  grid-row: 1;
+  width: 600px;
+  height: 350px;
+  align-self: center;
+  background: url("../assets/HUD/FeuerschwingenToken.webp") center / contain no-repeat;
+  opacity: .25;
+}
+
+#pause > img {
+  position: relative;
+  z-index: 1;
+  grid-column: 1;
+  grid-row: 1;
+}
+
+#pause > figcaption {
+  position: relative;
+  z-index: 1;
+  grid-column: 1;
+  grid-row: 2;
+}
 .tovf-gm-diagnostics-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
 .tovf-gm-diagnostics-heading h2 { margin-bottom: .2rem; }
 .tovf-gm-diagnostics-heading button { width: auto; }
@@ -1888,4 +1933,222 @@
 .tovf-link-tools .window-content {
   min-height: 0;
   overflow-y: auto;
+}
+
+.concept-selection-dialog .background > .tovf-custom-background-option {
+  border-bottom: 2px solid var(--color-border-highlight, #c08a4b);
+  margin-bottom: .75rem;
+  padding-bottom: .75rem;
+}
+
+.tovf-custom-background-dialog {
+  max-height: calc(100vh - 48px);
+}
+
+.tovf-custom-background-dialog .window-content {
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.tovf-custom-background-dialog form {
+  min-height: 0;
+}
+
+.tovf-custom-background-form fieldset {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .5rem;
+}
+
+.tovf-background-name-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 1rem;
+}
+
+.tovf-background-name-row > label {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: .3rem;
+}
+
+.tovf-background-starting-gold {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: .15rem;
+  justify-self: end;
+  width: max-content;
+  min-width: 0;
+  min-height: 50px;
+  padding: .35rem .55rem;
+  border: 1px solid var(--color-border-light-2);
+  border-radius: 5px;
+  background: rgba(0, 0, 0, .12);
+}
+
+.tovf-background-starting-gold > span { font-size: .72rem; opacity: .75; }
+.tovf-background-starting-gold > strong { line-height: 1; }
+.tovf-background-starting-gold > strong i { margin-right: .2rem; color: #d9ae58; }
+
+.tovf-background-overview {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 1rem;
+}
+
+.tovf-background-image-field,
+.tovf-background-description {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: .35rem;
+}
+
+.tovf-background-image-field > img {
+  width: 190px;
+  height: 190px;
+  border: 1px solid var(--color-border-light-2);
+  border-radius: 5px;
+  object-fit: cover;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+
+.tovf-background-image-field > img:hover {
+  border-color: var(--color-border-highlight, #c08a4b);
+  box-shadow: 0 0 8px rgba(217, 111, 38, .45);
+  transform: translateY(-1px);
+}
+
+.tovf-background-copy {
+  display: grid;
+  grid-template-rows: minmax(190px, 1fr);
+  min-width: 0;
+  min-height: 190px;
+}
+
+.tovf-background-field-label {
+  font-weight: 700;
+}
+
+.tovf-background-description prose-mirror {
+  flex: 1 1 auto;
+  min-height: 190px;
+  max-height: 520px;
+  border: 1px solid var(--color-border-light-2);
+  border-radius: 4px;
+  overflow: auto;
+  resize: vertical;
+}
+
+.tovf-background-description prose-mirror .editor-content {
+  min-height: 145px;
+  padding: .2rem .65rem .55rem;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+}
+
+.tovf-background-motivation {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: .25rem;
+  padding: .4rem .55rem;
+  border: 1px solid var(--color-border-light-2);
+  border-radius: 5px;
+  background: rgba(0, 0, 0, .1);
+}
+
+.tovf-background-motivation textarea {
+  min-height: 48px;
+  max-height: 180px;
+  resize: vertical;
+}
+
+.tovf-custom-background-form .tovf-background-talent {
+  grid-template-columns: 1fr;
+}
+
+.tovf-talent-drop {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: .2rem .6rem;
+  min-height: 64px;
+  padding: .55rem .7rem;
+  border: 2px dashed var(--color-border-light-2);
+  border-radius: 5px;
+  transition: border-color .15s, background .15s;
+}
+
+.tovf-talent-drop > i { grid-row: 1 / span 2; font-size: 1.4rem; opacity: .75; }
+.tovf-talent-drop > small { opacity: .72; }
+.tovf-talent-drop.selected { border-style: solid; }
+.tovf-talent-drop.dragover { border-color: #e77627; background: rgba(197, 86, 23, .18); }
+
+.tovf-talent-browser-dialog .window-content { min-height: 0; overflow: hidden; }
+.tovf-talent-browser-dialog form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.tovf-talent-browser-dialog .dialog-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+.tovf-talent-browser-dialog .form-footer { flex: 0 0 auto; }
+.tovf-talent-browser { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100%; min-height: 0; }
+.tovf-talent-browser-list {
+  height: 100%;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  overscroll-behavior: contain;
+  padding-right: .5rem;
+  scrollbar-gutter: stable;
+}
+.tovf-talent-card {
+  display: grid;
+  grid-template-columns: auto 64px minmax(0, 1fr);
+  align-items: start;
+  gap: .65rem;
+  margin: .4rem 0;
+  padding: .65rem;
+  border: 1px solid var(--color-border-light-2);
+  border-radius: 5px;
+  cursor: pointer;
+}
+.tovf-talent-card:hover, .tovf-talent-card:has(input:checked) { border-color: #d96f26; background: rgba(162, 67, 18, .15); }
+.tovf-talent-card > input { margin-top: 22px; }
+.tovf-talent-card > img { width: 64px; height: 64px; object-fit: cover; border: 0; }
+.tovf-talent-card > span { display: grid; min-width: 0; }
+.tovf-talent-card strong { font-size: 1.08rem; }
+.tovf-talent-card small { opacity: .7; }
+.tovf-talent-prerequisite {
+  margin-top: .35rem;
+  padding: .3rem .45rem;
+  border-left: 3px solid #d08a35;
+  background: rgba(188, 112, 29, .1);
+  font-size: .85rem;
+}
+.tovf-talent-prerequisite .filter.invalid { color: #d34d3f; }
+.tovf-talent-prerequisite .filter.valid { color: #56a85b; }
+.tovf-talent-description { margin-top: .35rem; }
+.tovf-talent-description > :first-child { margin-top: 0; }
+.tovf-talent-description > :last-child { margin-bottom: 0; }
+
+@media (max-width: 620px) {
+  .tovf-background-name-row { grid-template-columns: 1fr; }
+  .tovf-background-starting-gold { justify-self: start; }
+  .tovf-background-overview { grid-template-columns: 1fr; }
+  .tovf-background-image-field > img { width: 100%; max-height: 240px; }
 }

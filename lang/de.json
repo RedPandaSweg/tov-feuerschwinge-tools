@@ -39,6 +39,12 @@
       "Threshold": { "Title": "Void-Taint-Schwelle überschritten", "Message": "{actor} erreicht {value} Void Taint und überschreitet die Schwelle {threshold}. Welche Folge tritt ein? Der Wert wird anschließend auf 0 gesetzt.", "Dread": "Indefinite Dread", "FleshWarp": "Flesh Warp" },
       "Errors": { "Actor": "Der ausgewählte Actor ist ungültig.", "Table": "Die konfigurierte Void-Taint-Rolltable wurde nicht gefunden." }
     },
+    "TalentBackgrounds": {
+      "Control": "Backgrounds ({count})",
+      "Title": "Backgrounds für {talent}",
+      "Hint": "Dieses Talent ist in den folgenden Backgrounds enthalten. Wähle einen Background aus, um ihn zu öffnen.",
+      "None": "Dieses Talent ist in keinem indexierten Background enthalten."
+    },
     "ChatMessageDeletion": {
       "Action": "Eigene Nachricht löschen",
       "Title": "Chatnachricht löschen",

@@ -39,6 +39,12 @@
       "Threshold": { "Title": "Void Taint Threshold Exceeded", "Message": "{actor} reaches {value} Void Taint and exceeds threshold {threshold}. Which consequence occurs? The value will then reset to 0.", "Dread": "Indefinite Dread", "FleshWarp": "Flesh Warp" },
       "Errors": { "Actor": "The selected Actor is invalid.", "Table": "The configured Void Taint Roll Table could not be found." }
     },
+    "TalentBackgrounds": {
+      "Control": "Backgrounds ({count})",
+      "Title": "Backgrounds for {talent}",
+      "Hint": "This talent is included in the following backgrounds. Select a background to open it.",
+      "None": "This talent isn’t included in any indexed background."
+    },
     "ChatMessageDeletion": {
       "Action": "Delete Own Message",
       "Title": "Delete Chat Message",

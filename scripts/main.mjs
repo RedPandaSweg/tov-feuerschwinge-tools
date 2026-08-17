@@ -7,7 +7,7 @@ import {
 } from "./core/namespace-migration.mjs";
 import { exposeTransferApi } from "./transfer/compendium-transfer.mjs?v=3.1.2";
 import { registerSessionTransfer, sessionTransferApi } from "./transfer/session-transfer.mjs";
-import { installBlackFlagCompatibility } from "./integrations/black-flag-compatibility.mjs?v=3.2.7-spell-manager-tooltips-1";
+import { installBlackFlagCompatibility } from "./integrations/black-flag-compatibility.mjs?v=3.3.0-spell-manager-tooltips-2";
 import {
   characterCreationOverridesApi,
   installCharacterCreationOverrides
@@ -42,6 +42,8 @@ import { activateCommerce, registerCommerce } from "./commerce/main.mjs?v=3.2.7-
 import "./downtime/main.mjs?v=3.3.0-void-taint-1";
 import "./contested-activity.mjs";
 import "./void-taint/main.mjs?v=3.3.0-void-taint-1";
+import { registerTalentBackgrounds } from "./talent-backgrounds.mjs?v=3.3.0-talent-backgrounds-4";
+import { installCustomBackground } from "./integrations/custom-background.mjs?v=3.3.1-custom-background-10";
 
 // Keep tile triggers independent from the shared initialization chain so an
 // unrelated tool cannot prevent their hooks and diagnostics from registering.
@@ -121,6 +123,8 @@ Hooks.once("init", () => {
   installCompendiumUsability();
   installChatImagePopouts();
   registerChatMessageDeletion();
+  registerTalentBackgrounds();
+  installCustomBackground();
   installEffectGroups();
   registerTokenPresets();
   installArgonBlackFlagCompatibility();
