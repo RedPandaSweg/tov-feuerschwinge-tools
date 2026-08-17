@@ -100,10 +100,7 @@ async function backgroundDocuments() {
       return [];
     }
   }));
-  return [
-    ...packed.flat(),
-    ...game.items.filter(item => item.type === "background")
-  ];
+  return packed.flat();
 }
 
 async function buildBackgroundIndex() {
@@ -209,7 +206,12 @@ export function registerTalentBackgrounds() {
   Hooks.once("ready", () => void refreshBackgroundIndex());
   for (const hook of ["createItem", "updateItem", "deleteItem"]) {
     Hooks.on(hook, item => {
-      if (item.type === "background") void refreshBackgroundIndex();
+      // Only compendium backgrounds belong in the talent-to-background
+      // catalogue. World and actor-embedded backgrounds are deliberately
+      // ignored and must never trigger a complete re-index.
+      if (item.type === "background" && item.pack) {
+        void refreshBackgroundIndex();
+      }
     });
   }
 }

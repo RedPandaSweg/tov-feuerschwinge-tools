@@ -24,28 +24,6 @@ function exceedsLevel(restriction, actor) {
   });
 }
 
-function localizeLabel(value, fallback) {
-  const label = value?.label ?? value?.name ?? fallback;
-  return game.i18n.localize(label ?? fallback);
-}
-
-function collectTraitOptions(node, prefix = [], output = []) {
-  for (const [key, value] of Object.entries(node ?? {})) {
-    if (!value || typeof value !== "object") continue;
-    const path = [...prefix, key];
-    if (value.label || value.name) output.push({ key: path.join(":"), label: localizeLabel(value, key) });
-    if (value.children) collectTraitOptions(value.children, path, output);
-  }
-  return output;
-}
-
-function selectOptions(options, selected = "") {
-  return options
-    .sort((a, b) => a.label.localeCompare(b.label, game.i18n.lang))
-    .map(({ key, label }) => `<option value="${escape(key)}" ${key === selected ? "selected" : ""}>${escape(label)}</option>`)
-    .join("");
-}
-
 async function talentOptions(actor) {
   const choices = [];
   for (const item of game.items.filter(item => item.type === "talent")) {
@@ -168,30 +146,20 @@ function setupTalentBrowser(app, element) {
 }
 
 async function promptForBackground(actor) {
-  const skills = collectTraitOptions(CONFIG.BlackFlag.skills).map(option => ({ ...option, key: `skills:${option.key}` }));
-  const tools = collectTraitOptions(CONFIG.BlackFlag.tools).map(option => ({ ...option, key: `tools:${option.key}` }));
-  const languages = collectTraitOptions(CONFIG.BlackFlag.languages).map(option => ({ ...option, key: `languages:${option.key}` }));
   const talents = await talentOptions(actor);
   currentTalents = talents;
   currentActor = actor;
-  if (!skills.length || !talents.length || !(tools.length || languages.length)) {
+  if (!talents.length) {
     ui.notifications.error("Die Auswahloptionen für den Custom Background konnten nicht geladen werden.");
     return null;
   }
 
   let draft = {
     name: "Custom Background", img: DEFAULT_IMAGE, description: "", motivation: "",
-    skill1: skills[0].key, skill2: skills[1]?.key ?? skills[0].key,
-    proficiency1: (tools[0] ?? languages[0]).key,
-    proficiency2: (tools[1] ?? languages[1] ?? tools[0] ?? languages[0]).key,
     talent: talents[0].key
   };
 
   while (true) {
-    const proficiencyOptions = selected => [
-      `<optgroup label="${escape(game.i18n.localize("BF.Tool.Label[other]"))}">${selectOptions(tools, selected)}</optgroup>`,
-      `<optgroup label="${escape(game.i18n.localize("BF.Language.Label[other]"))}">${selectOptions(languages, selected)}</optgroup>`
-    ].join("");
     const selectedTalent = talents.find(talent => talent.key === draft.talent) ?? talents[0];
     const result = await foundry.applications.api.DialogV2.prompt({
       classes: ["tovf-custom-background-dialog"],
@@ -218,12 +186,11 @@ async function promptForBackground(actor) {
           <span class="tovf-background-field-label">Adventuring Motivation</span>
           <textarea name="motivation" rows="2">${escape(draft.motivation)}</textarea>
         </div>
-        <fieldset><legend>2 Skill Proficiencies</legend>
-          <select name="skill1">${selectOptions(skills, draft.skill1)}</select><select name="skill2">${selectOptions(skills, draft.skill2)}</select>
-        </fieldset>
-        <fieldset><legend>2 Tools oder Sprachen</legend>
-          <select name="proficiency1">${proficiencyOptions(draft.proficiency1)}</select><select name="proficiency2">${proficiencyOptions(draft.proficiency2)}</select>
-        </fieldset>
+        <div class="tovf-background-proficiency-note">
+          <i class="fa-solid fa-circle-info"></i>
+          <span><strong>Proficiencies im Character Sheet auswählen</strong>
+            Nach dem Erstellen wählst du dort 2 Skill Proficiencies sowie 2 Tools oder Sprachen aus.</span>
+        </div>
         <fieldset class="tovf-background-talent"><legend>Talent</legend>
           <input type="hidden" name="talent" value="${escape(selectedTalent.key)}">
           <button type="button" data-tovf-browse-talents><i class="fa-solid fa-list"></i> Talente ansehen und auswählen</button>
@@ -249,17 +216,13 @@ async function promptForBackground(actor) {
       ui.notifications.warn("Bitte einen Namen für den Background eingeben.");
       continue;
     }
-    if (result.skill1 === result.skill2 || result.proficiency1 === result.proficiency2) {
-      ui.notifications.warn("Bitte jeweils zwei unterschiedliche Proficiencies auswählen.");
-      continue;
-    }
     return result;
   }
 }
 
-function advancement(type, title, configuration) {
+function advancement(type, title, configuration, level = {}) {
   const _id = foundry.utils.randomID();
-  return [_id, { _id, type, title, configuration, icon: null, flags: {}, level: {} }];
+  return [_id, { _id, type, title, configuration, icon: null, flags: {}, level }];
 }
 
 async function createBackground(actor, data) {
@@ -272,11 +235,13 @@ async function createBackground(actor, data) {
       identifier: { value: identifier(data.name) },
       advancement: Object.fromEntries([
         advancement("trait", "Skill Proficiencies", {
-          choices: [], choiceMode: "inclusive", grants: [data.skill1, data.skill2], mode: "default"
-        }),
+          choices: [{ count: 2, pool: ["skills:*"] }],
+          choiceMode: "inclusive", grants: [], mode: "default"
+        }, { value: 0 }),
         advancement("trait", "Tools and Languages", {
-          choices: [], choiceMode: "inclusive", grants: [data.proficiency1, data.proficiency2], mode: "default"
-        }),
+          choices: [{ count: 2, pool: ["tools:*", "languages:*"] }],
+          choiceMode: "inclusive", grants: [], mode: "default"
+        }, { value: 0 }),
         advancement("chooseFeatures", "Talent", {
           choices: { "0": { count: 1, replacement: false } }, allowDrops: false,
           type: "talent", pool: [{ uuid: data.talent }], restriction: {}
