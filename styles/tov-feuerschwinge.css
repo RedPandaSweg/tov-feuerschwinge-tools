@@ -727,16 +727,6 @@
 .tovf-void-rules { padding: .25rem .5rem; }
 .tovf-void-rules p { margin: .45rem 0; }
 
-/* Let Black Flag's original spell-row tooltip receive hover events without
-   duplicating its asynchronous tooltip on the covering label. */
-.spell-manager [data-spell-uuid] > label {
-  pointer-events: none;
-}
-
-.spell-manager [data-spell-uuid] > label :is(input, button, select) {
-  pointer-events: auto;
-}
-
 /* Place the campaign token behind Foundry's rotating pause clock. */
 #pause.paused {
   display: grid;

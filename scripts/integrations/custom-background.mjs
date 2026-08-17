@@ -39,10 +39,10 @@ function collectTraitOptions(node, prefix = [], output = []) {
   return output;
 }
 
-function selectOptions(options) {
+function selectOptions(options, selected = "") {
   return options
     .sort((a, b) => a.label.localeCompare(b.label, game.i18n.lang))
-    .map(({ key, label }) => `<option value="${escape(key)}">${escape(label)}</option>`)
+    .map(({ key, label }) => `<option value="${escape(key)}" ${key === selected ? "selected" : ""}>${escape(label)}</option>`)
     .join("");
 }
 
@@ -179,50 +179,57 @@ async function promptForBackground(actor) {
     return null;
   }
 
-  const proficiencyOptions = [
-    `<optgroup label="${escape(game.i18n.localize("BF.Tool.Label[other]"))}">${selectOptions(tools)}</optgroup>`,
-    `<optgroup label="${escape(game.i18n.localize("BF.Language.Label[other]"))}">${selectOptions(languages)}</optgroup>`
-  ].join("");
-  const skillHtml = selectOptions(skills);
+  let draft = {
+    name: "Custom Background", img: DEFAULT_IMAGE, description: "", motivation: "",
+    skill1: skills[0].key, skill2: skills[1]?.key ?? skills[0].key,
+    proficiency1: (tools[0] ?? languages[0]).key,
+    proficiency2: (tools[1] ?? languages[1] ?? tools[0] ?? languages[0]).key,
+    talent: talents[0].key
+  };
 
   while (true) {
+    const proficiencyOptions = selected => [
+      `<optgroup label="${escape(game.i18n.localize("BF.Tool.Label[other]"))}">${selectOptions(tools, selected)}</optgroup>`,
+      `<optgroup label="${escape(game.i18n.localize("BF.Language.Label[other]"))}">${selectOptions(languages, selected)}</optgroup>`
+    ].join("");
+    const selectedTalent = talents.find(talent => talent.key === draft.talent) ?? talents[0];
     const result = await foundry.applications.api.DialogV2.prompt({
       classes: ["tovf-custom-background-dialog"],
       window: { title: "Custom Background" },
       position: { width: 760 },
       content: `<div class="standard-form tovf-custom-background-form">
         <div class="tovf-background-name-row">
-          <label><span>Name</span><input type="text" name="name" required value="Custom Background"></label>
+          <label><span>Name</span><input type="text" name="name" required value="${escape(draft.name)}"></label>
           <div class="tovf-background-starting-gold"><span>Startausrüstung</span><strong><i class="fa-solid fa-coins"></i> 50 gp</strong></div>
         </div>
         <div class="tovf-background-overview">
           <label class="tovf-background-image-field"><span>Bild auswählen</span>
-            <img data-tovf-background-image src="${DEFAULT_IMAGE}" alt="Background-Bild">
-            <input type="hidden" name="img" value="${DEFAULT_IMAGE}">
+            <img data-tovf-background-image src="${escape(draft.img || DEFAULT_IMAGE)}" alt="Background-Bild">
+            <input type="hidden" name="img" value="${escape(draft.img || DEFAULT_IMAGE)}">
           </label>
           <div class="tovf-background-copy">
             <div class="tovf-background-description">
               <span class="tovf-background-field-label">Beschreibung</span>
-              <prose-mirror name="description" value="" class="description" compact></prose-mirror>
+              <prose-mirror name="description" value="${escape(draft.description)}" class="description" compact></prose-mirror>
             </div>
           </div>
         </div>
         <div class="tovf-background-motivation">
           <span class="tovf-background-field-label">Adventuring Motivation</span>
-          <textarea name="motivation" rows="2"></textarea>
+          <textarea name="motivation" rows="2">${escape(draft.motivation)}</textarea>
         </div>
         <fieldset><legend>2 Skill Proficiencies</legend>
-          <select name="skill1">${skillHtml}</select><select name="skill2">${skillHtml}</select>
+          <select name="skill1">${selectOptions(skills, draft.skill1)}</select><select name="skill2">${selectOptions(skills, draft.skill2)}</select>
         </fieldset>
         <fieldset><legend>2 Tools oder Sprachen</legend>
-          <select name="proficiency1">${proficiencyOptions}</select><select name="proficiency2">${proficiencyOptions}</select>
+          <select name="proficiency1">${proficiencyOptions(draft.proficiency1)}</select><select name="proficiency2">${proficiencyOptions(draft.proficiency2)}</select>
         </fieldset>
         <fieldset class="tovf-background-talent"><legend>Talent</legend>
-          <input type="hidden" name="talent" value="${escape(talents[0].key)}">
+          <input type="hidden" name="talent" value="${escape(selectedTalent.key)}">
           <button type="button" data-tovf-browse-talents><i class="fa-solid fa-list"></i> Talente ansehen und auswählen</button>
           <div class="tovf-talent-drop selected" data-tovf-talent-drop>
             <i class="fa-solid fa-arrow-down-to-bracket"></i>
-            <span>Ausgewählt: <strong data-tovf-selected-talent>${escape(talents[0].label)}</strong></span>
+            <span>Ausgewählt: <strong data-tovf-selected-talent>${escape(selectedTalent.label)}</strong></span>
             <small>Talent aus Welt oder Kompendium kann auch hier abgelegt werden.</small>
           </div>
         </fieldset>
@@ -237,6 +244,7 @@ async function promptForBackground(actor) {
       rejectClose: false
     });
     if (!result) return null;
+    draft = result;
     if (!String(result.name ?? "").trim()) {
       ui.notifications.warn("Bitte einen Namen für den Background eingeben.");
       continue;

@@ -43,7 +43,7 @@ import "./downtime/main.mjs?v=3.3.0-void-taint-1";
 import "./contested-activity.mjs";
 import "./void-taint/main.mjs?v=3.3.0-void-taint-1";
 import { registerTalentBackgrounds } from "./talent-backgrounds.mjs?v=3.3.0-talent-backgrounds-4";
-import { installCustomBackground } from "./integrations/custom-background.mjs?v=3.3.1-custom-background-10";
+import { installCustomBackground } from "./integrations/custom-background.mjs?v=3.3.1-custom-background-13";
 
 // Keep tile triggers independent from the shared initialization chain so an
 // unrelated tool cannot prevent their hooks and diagnostics from registering.
