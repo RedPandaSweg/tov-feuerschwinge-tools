@@ -237,7 +237,8 @@ export class SessionService {
     for (const uuid of actorUuids) {
       const actor = await fromUuid(uuid).catch(() => null);
       if (!actor || actor.documentName !== "Actor") throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Session.Errors.ActorMissing"));
-      const reward = selectedReward(rewardForLevel(actorLevel(actor)), rewardColumns);
+      const rewardLevel = levelFromMilestones(sessionProgress(actor).milestones);
+      const reward = selectedReward(rewardForLevel(rewardLevel), rewardColumns);
       await RewardService.validateItems(reward.items);
       actors.push({ actor, reward });
     }
@@ -268,7 +269,8 @@ export class SessionService {
       for (const actor of playerCharacters()) {
         const progress = sessionProgress(actor);
         if (selected.has(actor.uuid)) {
-          const reward = byUuid.get(actor.uuid)?.reward ?? selectedReward(rewardForLevel(actorLevel(actor)), rewardColumns);
+          const rewardLevel = levelFromMilestones(progress.milestones);
+          const reward = byUuid.get(actor.uuid)?.reward ?? selectedReward(rewardForLevel(rewardLevel), rewardColumns);
           const details = await sessionRewardDetails(reward, multiplier);
           await RewardService.grantItems(actor, details.items);
           const actorTier = tierOfPlay(levelFromMilestones(progress.milestones));

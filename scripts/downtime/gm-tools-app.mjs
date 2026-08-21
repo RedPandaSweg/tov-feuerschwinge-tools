@@ -1,5 +1,6 @@
 import { MODULE_ID } from "./constants.mjs";
 import { GMToolsService } from "./gm-tools-service.mjs?v=3.2.7-flag-database-2";
+import { highestMilestoneProgress } from "./session-service.mjs";
 import { openVoidTaintConfig } from "../void-taint/config-app.mjs";
 import {
   addVoidTaint,
@@ -162,6 +163,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       };
     }
     const activeSession = GMToolsService.activeSession();
+    const highestProgress = highestMilestoneProgress();
     const undo = GMToolsService.undoData();
     return {
       ...context,
@@ -197,6 +199,10 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
         ...activeSession,
         empty: !Object.keys(activeSession).length,
         json: JSON.stringify(activeSession, null, 2)
+      },
+      highestProgress: {
+        ...highestProgress,
+        names: highestProgress.leaders.map(entry => entry.actor.name).join(", ") || game.i18n.localize("DOWNTIME_MANAGER.Common.None")
       },
       diagnostics,
       voidTaintEnabled: voidTaintEnabled(),

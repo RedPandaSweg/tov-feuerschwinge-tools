@@ -1,39 +1,41 @@
-<div class="tovf-transfer-root">
-  <section>
-    <h2>{{ localize "TOVF.Transfer.Export.Title" }}</h2>
-    <p class="hint">{{ localize "TOVF.Transfer.Export.Hint" }}</p>
+<div class="tovf-session-transfer-root">
+  <p class="hint">{{localize "TOVF.Transfer.Settings.Hint"}}</p>
+
+  <fieldset class="tovf-transfer-specialist">
+    <legend>{{localize "TOVF.Transfer.Export.Title"}}</legend>
+    <p class="hint">{{localize "TOVF.Transfer.Export.Hint"}}</p>
     <div class="form-group">
-      <label>{{ localize "TOVF.Transfer.Folder" }}</label>
+      <label>{{localize "TOVF.Transfer.Folder"}}</label>
       <div class="form-fields">
-        <select name="exportFolder">
-          {{ selectOptions folders valueAttr="id" labelAttr="name" }}
+        <select name="standaloneCompendiumFolder">
+          {{selectOptions compendiumFolders valueAttr="id" labelAttr="name"}}
         </select>
       </div>
     </div>
-    <button type="button" class="light-button" data-action="exportBundle">
-      <i class="fa-solid fa-download" inert></i> {{ localize "TOVF.Transfer.Export.Action" }}
+    <button type="button" data-action="exportCompendiums">
+      <i class="fa-solid fa-download" inert></i> {{localize "TOVF.Transfer.Export.Action"}}
     </button>
-  </section>
+  </fieldset>
 
-  <hr>
-
-  <section>
-    <h2>{{ localize "TOVF.Transfer.Import.Title" }}</h2>
-    <p class="hint">{{ localize "TOVF.Transfer.Import.Hint" }}</p>
+  <fieldset class="tovf-transfer-specialist">
+    <legend>{{localize "TOVF.Transfer.Import.Title"}}</legend>
+    <p class="hint">{{localize "TOVF.Transfer.Import.Hint"}}</p>
     <div class="form-group">
-      <label>{{ localize "TOVF.Transfer.File" }}</label>
-      <div class="form-fields"><input type="file" name="importFile" accept=".json,application/json"></div>
+      <label>{{localize "TOVF.Transfer.File"}}</label>
+      <div class="form-fields">
+        <input type="file" name="compendiumFile" accept=".json,application/json">
+      </div>
     </div>
     <div class="form-group">
-      <label>{{ localize "TOVF.Transfer.Destination" }}</label>
+      <label>{{localize "TOVF.Transfer.Destination"}}</label>
       <div class="form-fields">
-        <select name="destinationFolder">
-          {{ selectOptions destinations valueAttr="id" labelAttr="name" }}
+        <select name="compendiumDestination">
+          {{selectOptions compendiumDestinations valueAttr="id" labelAttr="name"}}
         </select>
       </div>
     </div>
-    <button type="button" class="light-button" data-action="importBundle">
-      <i class="fa-solid fa-upload" inert></i> {{ localize "TOVF.Transfer.Import.Action" }}
+    <button type="button" data-action="importCompendiums">
+      <i class="fa-solid fa-upload" inert></i> {{localize "TOVF.Transfer.Import.Action"}}
     </button>
-  </section>
+  </fieldset>
 </div>

@@ -64,6 +64,7 @@
 
   {{#if (eq tab "session")}}
   <section class="tovf-gm-tools-section">
+    <dl class="tovf-gm-session-summary tovf-gm-milestone-summary"><dt><i class="fa-solid fa-flag-checkered"></i> {{localize "DOWNTIME_MANAGER.GMTools.HighestGuildProgress"}}</dt><dd>{{localize "DOWNTIME_MANAGER.GMTools.HighestMilestone" milestones=highestProgress.milestones level=highestProgress.level tier=highestProgress.tier characters=highestProgress.names}}</dd></dl>
     <h2>{{localize "DOWNTIME_MANAGER.GMTools.ActiveSession"}}</h2>
     {{#if activeSession.empty}}<p class="notes">{{localize "DOWNTIME_MANAGER.GMTools.NoActiveSession"}}</p>{{else}}
     <dl class="tovf-gm-session-summary"><dt>Status</dt><dd>{{activeSession.status}}</dd><dt>ID</dt><dd>{{activeSession.id}}</dd><dt>{{localize "DOWNTIME_MANAGER.GMTools.SessionTitle"}}</dt><dd>{{activeSession.title}}</dd></dl>

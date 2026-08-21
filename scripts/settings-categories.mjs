@@ -2,16 +2,12 @@ import { MODULE_ID } from "./core/constants.mjs";
 
 const SECTIONS = [
   {
-    label: "TOVF.SettingsSections.General",
-    selector: `[data-key="${MODULE_ID}.help"]`
-  },
-  {
     label: "TOVF.SettingsSections.Creatures",
     selector: `[data-key="${MODULE_ID}.creatureBuilder"]`
   },
   {
     label: "TOVF.SettingsSections.Transfer",
-    selector: `[data-key="${MODULE_ID}.sessionTransfer"]`
+    selector: `[data-key="${MODULE_ID}.compendiumTransfer"]`
   },
   {
     label: "TOVF.SettingsSections.Items",

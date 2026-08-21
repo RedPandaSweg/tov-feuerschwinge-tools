@@ -12,6 +12,8 @@ import {
 import { StationApp } from "./station-app.mjs";
 import { StationConfigApp } from "./station-config-app.mjs";
 import { ModuleItemSettingsApp } from "./module-item-settings-app.mjs";
+import { PlayerActorFolderSettingsApp } from "./player-actor-folder-settings-app.mjs";
+import { SessionRewardConfigApp } from "./session-reward-config-app.mjs";
 import { HelpApp } from "./help-app.mjs";
 import { ProjectLibraryApp } from "./project-library-app.mjs";
 import { DowntimeDashboardApp } from "./dashboard-app.mjs";
@@ -62,9 +64,6 @@ function openDashboard() {
 
 function openSessionManager() {
   if (!game.user.isGM) return;
-  if (game.settings.get(MODULE_ID, "worldRole") !== "primary") {
-    return ui.notifications.warn(game.i18n.localize("DOWNTIME_MANAGER.Session.Errors.PrimaryOnly"));
-  }
   new SessionApp().render(true);
 }
 
@@ -74,6 +73,10 @@ function openProjectLibrary() {
 
 function openGMTools() {
   if (game.user.isGM) new GMToolsApp().render(true);
+}
+
+function openCompendiumLibrary() {
+  game.modules.get(MODULE_ID)?.api?.openLibrary?.();
 }
 
 async function configureStation(actor, app = null) {
@@ -246,21 +249,21 @@ Hooks.once("init", async () => {
     restricted: true
   });
 
-  game.settings.registerMenu(MODULE_ID, "projectLibrary", {
-    name: "DOWNTIME_MANAGER.ProjectLibrary.SettingName",
-    label: "DOWNTIME_MANAGER.ProjectLibrary.SettingLabel",
-    hint: "DOWNTIME_MANAGER.ProjectLibrary.SettingHint",
-    icon: "fa-solid fa-scroll",
-    type: ProjectLibraryApp,
+  game.settings.registerMenu(MODULE_ID, "playerActorFolders", {
+    name: "DOWNTIME_MANAGER.Settings.PlayerActorFolders.SettingName",
+    label: "DOWNTIME_MANAGER.Settings.PlayerActorFolders.SettingLabel",
+    hint: "DOWNTIME_MANAGER.Settings.PlayerActorFolders.SettingHint",
+    icon: "fa-solid fa-folder-tree",
+    type: PlayerActorFolderSettingsApp,
     restricted: true
   });
 
-  game.settings.registerMenu(MODULE_ID, "stationPresets", {
-    name: "DOWNTIME_MANAGER.StationPresets.SettingName",
-    label: "DOWNTIME_MANAGER.StationPresets.SettingLabel",
-    hint: "DOWNTIME_MANAGER.StationPresets.SettingHint",
-    icon: "fa-solid fa-shop",
-    type: StationPresetApp,
+  game.settings.registerMenu(MODULE_ID, "sessionRewards", {
+    name: "DOWNTIME_MANAGER.Session.ConfigTitle",
+    label: "DOWNTIME_MANAGER.Session.ConfigureRewards",
+    hint: "DOWNTIME_MANAGER.Session.ConfigHint",
+    icon: "fa-solid fa-gift",
+    type: SessionRewardConfigApp,
     restricted: true
   });
 
@@ -442,29 +445,29 @@ Hooks.on("getSceneControlButtons", controls => {
     title: "DOWNTIME_MANAGER.Controls.Title",
     icon: "fa-solid fa-fire-flame-curved",
     tools: {
-      dashboard: {
-        name: "dashboard",
-        order: 1,
-        title: "DOWNTIME_MANAGER.Controls.OpenDashboard",
-        icon: "fa-solid fa-chart-simple",
-        button: true,
-        onChange: openDashboard
-      },
       session: {
         name: "session",
-        order: 2,
+        order: 1,
         title: "DOWNTIME_MANAGER.Controls.OpenSessionManager",
-        icon: "fa-solid fa-campground",
+        icon: "fa-solid fa-scroll",
         button: true,
         onChange: openSessionManager
       },
       challenge: {
         name: "challenge",
-        order: 3,
+        order: 2,
         title: "TOVF.ChallengeManager.Open",
         icon: "fa-solid fa-skull-crossbones",
         button: true,
         onChange: openChallengeManager
+      },
+      dashboard: {
+        name: "dashboard",
+        order: 3,
+        title: "DOWNTIME_MANAGER.Controls.OpenDashboard",
+        icon: "fa-solid fa-chart-simple",
+        button: true,
+        onChange: openDashboard
       },
       gmTools: {
         name: "gmTools",
@@ -474,13 +477,29 @@ Hooks.on("getSceneControlButtons", controls => {
         button: true,
         onChange: openGMTools
       },
+      library: {
+        name: "library",
+        order: 5,
+        title: "TOVF.Library.Open",
+        icon: "fa-solid fa-books",
+        button: true,
+        onChange: openCompendiumLibrary
+      },
       settings: {
         name: "settings",
-        order: 5,
+        order: 6,
         title: "TOVF.Controls.OpenSettings",
         icon: "fa-solid fa-gear",
         button: true,
         onChange: openFeuerschwingeSettings
+      },
+      help: {
+        name: "help",
+        order: 7,
+        title: "TOVF.Help.Label",
+        icon: "fa-solid fa-circle-question",
+        button: true,
+        onChange: () => new HelpApp().render(true)
       }
     },
     activeTool: null

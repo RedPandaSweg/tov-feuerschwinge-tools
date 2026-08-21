@@ -60,34 +60,122 @@ function cleanForHash(value) {
 }
 
 function normalizeLegacyActiveEffects(actorData) {
-  const collections = [
-    actorData.effects,
-    ...(actorData.items ?? []).map(item => item.effects)
-  ];
-  for (const effects of collections) {
-    if (!Array.isArray(effects)) continue;
-    for (const effect of effects) {
-      if (effect?.type === "standard") effect.type = "base";
+  const visit = value => {
+    if (Array.isArray(value)) {
+      for (const entry of value) visit(entry);
+      return;
     }
-  }
+    if (!value || typeof value !== "object") return;
+    const effects = Array.isArray(value.effects)
+      ? value.effects
+      : value.effects && typeof value.effects === "object"
+        ? Object.values(value.effects)
+        : [];
+    if (effects.length) {
+      for (const effect of effects) {
+        if (effect?.type === "standard") effect.type = "base";
+      }
+    }
+    for (const child of Object.values(value)) visit(child);
+  };
+  visit(actorData);
   return actorData;
 }
 
 async function persistMigratedActiveEffectTypes(actor) {
   const persist = async parent => {
-    const updates = parent.effects
-      .filter(effect => effect.type === "base")
-      .map(effect => ({ _id: effect.id, type: "base" }));
-    if (updates.length) {
-      await parent.updateEmbeddedDocuments("ActiveEffect", updates, {
-        diff: false,
-        recursive: false
+    const effects = parent.effects.map(effect => foundry.utils.deepClone(effect._source ?? effect.toObject()));
+    const legacy = effects.filter(effect => effect.type === "standard");
+    if (!legacy.length) return;
+    for (const effect of effects) {
+      if (effect.type === "standard") effect.type = "base";
+    }
+    try {
+      await parent.update({ effects }, { diff: false, recursive: false });
+    } catch (error) {
+      console.warn(`${MODULE_ID} | Replacing legacy Active Effects as a collection failed; recreating them`, {
+        parent: parent.uuid,
+        error
       });
+      const ids = parent.effects.map(effect => effect.id);
+      if (ids.length) await parent.deleteEmbeddedDocuments("ActiveEffect", ids);
+      if (effects.length) {
+        await parent.createEmbeddedDocuments("ActiveEffect", effects, {
+          keepId: true
+        });
+      }
     }
   };
 
   await persist(actor);
   for (const item of actor.items) await persist(item);
+}
+
+async function replaceActorFromSessionResult(actor, source) {
+  const skipped = [];
+  const data = normalizeLegacyActiveEffects(foundry.utils.deepClone(source));
+  const items = Array.isArray(data.items) ? data.items : [];
+  const effects = Array.isArray(data.effects) ? data.effects : [];
+  delete data.items;
+  delete data.effects;
+  data._id = actor.id;
+  data.folder = actor.folder?.id ?? null;
+  removeProperty(data, `flags.${MODULE_ID}.${TRANSFER_FLAG}.baselineHash`);
+  await actor.update(data, { noHook: true });
+
+  const reconcile = async (documentName, currentDocuments, incomingDocuments) => {
+    const currentById = new Map(currentDocuments.map(document => [document.id, document]));
+    const incomingById = new Map(incomingDocuments.map(document => [String(document._id ?? ""), document]));
+    const removedIds = [...currentById.keys()].filter(id => !incomingById.has(id));
+    for (const id of removedIds) {
+      try {
+        await actor.deleteEmbeddedDocuments(documentName, [id]);
+      } catch (error) {
+        skipped.push({ documentName, id, action: "delete", error });
+        console.warn(`${MODULE_ID} | Skipping failed session-result deletion`, { actor: actor.uuid, documentName, id, error });
+      }
+    }
+
+    for (const incoming of incomingDocuments) {
+      const existing = currentById.get(String(incoming._id ?? ""));
+      if (!existing) continue;
+      const current = normalizeLegacyActiveEffects(foundry.utils.deepClone(existing._source ?? existing.toObject()));
+      if (await hashDocument(current) === await hashDocument(incoming)) continue;
+      try {
+        await existing.update(incoming, { diff: false, recursive: false });
+      } catch (error) {
+        skipped.push({ documentName, id: existing.id, name: existing.name, action: "update", error });
+        console.warn(`${MODULE_ID} | Skipping failed session-result update`, { actor: actor.uuid, document: existing.uuid, error });
+      }
+    }
+
+    const additions = incomingDocuments.filter(document => !currentById.has(String(document._id ?? "")));
+    if (!additions.length) return;
+    if (documentName !== "Item") {
+      for (const addition of additions) {
+        try {
+          await actor.createEmbeddedDocuments(documentName, [addition], { keepId: true });
+        } catch (error) {
+          skipped.push({ documentName, id: addition._id, name: addition.name, action: "create", error });
+          console.warn(`${MODULE_ID} | Skipping failed session-result creation`, { actor: actor.uuid, documentName, data: addition, error });
+        }
+      }
+      return;
+    }
+    const priority = item => item.type === "class" ? 0 : item.type === "subclass" ? 2 : 1;
+    for (const item of additions.sort((left, right) => priority(left) - priority(right))) {
+      try {
+        await actor.createEmbeddedDocuments("Item", [item], { keepId: true });
+      } catch (error) {
+        skipped.push({ documentName, id: item._id, name: item.name, action: "create", error });
+        console.warn(`${MODULE_ID} | Skipping failed session-result Item creation`, { actor: actor.uuid, item, error });
+      }
+    }
+  };
+
+  await reconcile("ActiveEffect", Array.from(actor.effects), effects);
+  await reconcile("Item", Array.from(actor.items), items);
+  return skipped;
 }
 
 async function hashDocument(data) {
@@ -99,6 +187,25 @@ async function hashDocument(data) {
 function actorTransferId(actor) {
   return actor.getFlag(MODULE_ID, TRANSFER_FLAG)?.id
     ?? `world:${game.world.id}:Actor:${actor.id}`;
+}
+
+function originalActorIdFromTransferId(transferId) {
+  const parts = String(transferId ?? "").split(":");
+  const actorIndex = parts.lastIndexOf("Actor");
+  return actorIndex >= 0 ? String(parts[actorIndex + 1] ?? "") : "";
+}
+
+async function createActorFromSessionResult(entry) {
+  const data = normalizeLegacyActiveEffects(foundry.utils.deepClone(entry.data));
+  const originalId = originalActorIdFromTransferId(entry.transferId);
+  const canRestoreId = /^[A-Za-z0-9]{16}$/.test(originalId) && !game.actors.has(originalId);
+  if (canRestoreId) data._id = originalId;
+  else delete data._id;
+  const rootId = configuredActorRootId();
+  data.folder = rootId && game.folders.get(rootId)?.type === "Actor" ? rootId : null;
+  foundry.utils.setProperty(data, `flags.${MODULE_ID}.${TRANSFER_FLAG}.id`, entry.transferId);
+  removeProperty(data, `flags.${MODULE_ID}.${TRANSFER_FLAG}.baselineHash`);
+  return Actor.create(data, { keepId: canRestoreId });
 }
 
 function folderParentId(folder) {
@@ -305,6 +412,7 @@ async function exportReferencedMacros(actors, definitions) {
 
 async function importMacros(entries = []) {
   const replacements = new Map();
+  const createdUuids = [];
   const existing = new Map(game.macros.map(macro => [
     macro.getFlag(MODULE_ID, TRANSFER_FLAG)?.id,
     macro
@@ -321,11 +429,12 @@ async function importMacros(entries = []) {
     } else {
       delete data._id;
       macro = await Macro.create(data);
+      createdUuids.push(macro.uuid);
     }
     replacements.set(entry.sourceUuid, macro.uuid);
     for (const reference of entry.sourceReferences ?? []) replacements.set(reference, macro.uuid);
   }
-  return replacements;
+  return { replacements, createdUuids };
 }
 
 function baseMetadata() {
@@ -352,7 +461,8 @@ function validatePackage(bundle, expectedFormat) {
 export async function exportSession(actorIds, {
   actorRootId = configuredActorRootId(),
   compendiumFolderId = null,
-  includeFolders = true
+  includeFolders = true,
+  session = null
 } = {}) {
   assertGm();
   if (role() !== WORLD_ROLES.PRIMARY) throw new Error(game.i18n.localize("TOVF.Session.Error.PrimaryOnly"));
@@ -400,28 +510,36 @@ export async function exportSession(actorIds, {
     macros,
     actorFolders,
     actors: actorEntries,
-    compendiums
+    compendiums,
+    session: session ? {
+      id: String(session.id ?? foundry.utils.randomID()),
+      title: String(session.title ?? ""),
+      summary: String(session.summary ?? ""),
+      participantTransferIds: chosenActors.map(actorTransferId)
+    } : null
   };
   foundry.utils.saveDataToFile(
     JSON.stringify(bundle, null, 2),
     "application/json",
-    `tov-feuerschwinge-session-${filenamePart(game.world.title)}-${bundle.metadata.exportedAt.slice(0, 10)}.json`
+    `tov-feuerschwinge-session-${filenamePart(session?.title || game.world.title)}-${bundle.metadata.exportedAt.slice(0, 10)}.json`
   );
   ui.notifications.info(game.i18n.format("TOVF.Session.ExportComplete", { count: actors.length }));
+  return bundle;
 }
 
-async function synchronizeActorFolders(entries = []) {
-  const byTransferId = new Map(game.folders.filter(folder => folder.type === "Actor").map(folder => [
+async function synchronizeActorFolders(entries = [], sessionRootId = null) {
+  const byTransferId = new Map(game.folders.filter(folder => folder.type === "Actor" && !sessionRootId).map(folder => [
     folder.getFlag(MODULE_ID, TRANSFER_FLAG)?.id,
     folder
   ]).filter(([id]) => id));
   const mapping = new Map();
+  const createdIds = [];
   const pending = [...entries];
   while (pending.length) {
     const index = pending.findIndex(entry => !entry.parentId || mapping.has(entry.parentId));
     if (index < 0) throw new Error(game.i18n.localize("TOVF.Session.Error.FolderTree"));
     const entry = pending.splice(index, 1)[0];
-    const parent = entry.parentId ? mapping.get(entry.parentId) : null;
+    const parent = entry.parentId ? mapping.get(entry.parentId) : sessionRootId;
     let folder = byTransferId.get(entry.transferId);
     folder ??= game.folders.find(candidate => candidate.type === "Actor"
       && candidate.name === entry.data.name
@@ -433,17 +551,20 @@ async function synchronizeActorFolders(entries = []) {
       flags: { [MODULE_ID]: { [TRANSFER_FLAG]: { id: entry.transferId } } }
     };
     if (folder) await folder.update(data);
-    else folder = await foundry.documents.Folder.implementation.create(data);
+    else {
+      folder = await foundry.documents.Folder.implementation.create(data);
+      createdIds.push(folder.id);
+    }
     mapping.set(entry.sourceId, folder.id);
   }
-  return mapping;
+  return { mapping, createdIds };
 }
 
-async function updateOrCreateActor(entry, replacements, folderMapping = new Map()) {
+async function updateOrCreateActor(entry, replacements, folderMapping = new Map(), sessionRootId = null) {
   const data = normalizeLegacyActiveEffects(
     replaceReferences(foundry.utils.deepClone(entry.data), replacements)
   );
-  data.folder = folderMapping.get(entry.sourceFolderId) ?? null;
+  data.folder = folderMapping.get(entry.sourceFolderId) ?? sessionRootId;
   foundry.utils.setProperty(data, `flags.${MODULE_ID}.${TRANSFER_FLAG}.baselineHash`, entry.baselineHash);
   const target = game.actors.find(actor =>
     actor.getFlag(MODULE_ID, TRANSFER_FLAG)?.id === entry.transferId
@@ -480,13 +601,70 @@ export async function importSession(file) {
     properties: [],
     options: []
   });
-  const replacements = await importMacros(bundle.macros);
-  const folderMapping = await synchronizeActorFolders(bundle.actorFolders);
+  const sessionRoot = await foundry.documents.Folder.implementation.create({
+    name: String(bundle.session?.title || game.i18n.localize("DOWNTIME_MANAGER.Session.Untitled")),
+    type: "Actor",
+    folder: null,
+    flags: { [MODULE_ID]: { sessionImport: { id: bundle.session?.id ?? foundry.utils.randomID() } } }
+  });
+  const { replacements } = await importMacros(bundle.macros);
+  const { mapping: folderMapping, createdIds: actorFolderIds } = await synchronizeActorFolders(bundle.actorFolders, sessionRoot.id);
+  actorFolderIds.push(sessionRoot.id);
   const counts = { create: 0, update: 0 };
-  for (const entry of bundle.actors) counts[await updateOrCreateActor(entry, replacements, folderMapping)]++;
+  for (const entry of bundle.actors) counts[await updateOrCreateActor(entry, replacements, folderMapping, sessionRoot.id)]++;
   if (bundle.compendiums) await importCompendiumBundle(bundle.compendiums, null, { confirm: false });
+  const importedActorUuids = game.actors
+    .filter(actor => bundle.actors.some(entry => entry.transferId === actor.getFlag(MODULE_ID, TRANSFER_FLAG)?.id))
+    .map(actor => actor.uuid);
+  if (bundle.session?.id) {
+    const participantIds = new Set(bundle.session.participantTransferIds ?? []);
+    const actorUuids = game.actors
+      .filter(actor => participantIds.has(actor.getFlag(MODULE_ID, TRANSFER_FLAG)?.id))
+      .map(actor => actor.uuid);
+    await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, {
+      id: bundle.session.id,
+      title: bundle.session.title,
+      summary: bundle.session.summary,
+      actorUuids,
+      participantTransferIds: [...participantIds],
+      sourceWorld: bundle.metadata.sourceWorld,
+      importedContent: { actorUuids: importedActorUuids, actorFolderIds, sessionRootFolderId: sessionRoot.id },
+      startedAt: Date.now(),
+      status: "imported"
+    });
+  }
   ui.notifications.info(game.i18n.format("TOVF.Session.ImportComplete", counts));
   SettingsConfig.reloadConfirm({ world: true });
+}
+
+export async function cleanupSessionImport() {
+  assertGm();
+  if (role() !== WORLD_ROLES.SESSION) throw new Error(game.i18n.localize("TOVF.Session.Error.SessionOnly"));
+  const active = game.settings.get(MODULE_ID, SETTINGS.ACTIVE_SESSION) ?? {};
+  const manifest = active.importedContent ?? {};
+  const actorUuids = [...new Set(manifest.actorUuids ?? [])];
+  const confirmed = await foundry.applications.api.DialogV2.confirm({
+    window: { title: game.i18n.localize("DOWNTIME_MANAGER.Session.Workflow.Cleanup") },
+    content: `<p>${game.i18n.format("DOWNTIME_MANAGER.Session.Workflow.CleanupConfirm", {
+      actors: actorUuids.length
+    })}</p>`,
+    yes: { label: game.i18n.localize("DOWNTIME_MANAGER.Session.Workflow.Cleanup") },
+    no: { label: game.i18n.localize("Cancel") }
+  });
+  if (!confirmed) return false;
+
+  for (const uuid of actorUuids) await (await fromUuid(uuid).catch(() => null))?.delete();
+  const folderIds = [...new Set(manifest.actorFolderIds ?? [])];
+  const folders = folderIds.map(id => game.folders.get(id)).filter(Boolean)
+    .sort((left, right) => (right.ancestors?.length ?? 0) - (left.ancestors?.length ?? 0));
+  for (const folder of folders) {
+    const hasDocuments = game.actors.some(actor => actor.folder?.id === folder.id);
+    const hasChildren = game.folders.some(candidate => folderParentId(candidate) === folder.id);
+    if (!hasDocuments && !hasChildren) await folder.delete();
+  }
+  await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, {});
+  ui.notifications.info(game.i18n.localize("DOWNTIME_MANAGER.Session.Workflow.CleanupComplete"));
+  return true;
 }
 
 function managedSessionActors() {
@@ -499,7 +677,11 @@ function managedSessionActors() {
 export async function exportSessionResult() {
   assertGm();
   if (role() !== WORLD_ROLES.SESSION) throw new Error(game.i18n.localize("TOVF.Session.Error.SessionOnly"));
-  const actors = managedSessionActors();
+  const active = game.settings.get(MODULE_ID, SETTINGS.ACTIVE_SESSION) ?? {};
+  const activeUuids = new Set(active.actorUuids ?? []);
+  const actors = active.id && activeUuids.size
+    ? managedSessionActors().filter(actor => activeUuids.has(actor.uuid))
+    : managedSessionActors();
   if (!actors.length) throw new Error(game.i18n.localize("TOVF.Session.Error.NoManagedActors"));
   const entries = actors.map(actor => {
     const transfer = actor.getFlag(MODULE_ID, TRANSFER_FLAG);
@@ -513,41 +695,22 @@ export async function exportSessionResult() {
     format: RESULT_FORMAT,
     formatVersion: TRANSFER_FORMAT_VERSION,
     metadata: baseMetadata(),
-    actors: entries
+    actors: entries,
+    session: active.id ? {
+      id: active.id,
+      title: active.title ?? "",
+      summary: active.summary ?? "",
+      participantTransferIds: entries.map(entry => entry.transferId)
+    } : null
   };
   foundry.utils.saveDataToFile(
     JSON.stringify(bundle, null, 2),
     "application/json",
-    `tov-feuerschwinge-result-${filenamePart(game.world.title)}-${bundle.metadata.exportedAt.slice(0, 10)}.json`
+    `tov-feuerschwinge-result-${filenamePart(active.title || game.world.title)}-${bundle.metadata.exportedAt.slice(0, 10)}.json`
   );
   ui.notifications.info(game.i18n.format("TOVF.Session.ResultExportComplete", { count: actors.length }));
-}
-
-async function chooseResultActors(rows) {
-  const content = `<p>${game.i18n.localize("TOVF.Session.ResultHint")}</p>
-    <div class="tovf-result-list">${rows.map(row => `
-      <label class="${row.conflict ? "warning" : ""}">
-        <input type="checkbox" name="actors" value="${foundry.utils.escapeHTML(row.transferId)}" ${row.conflict ? "" : "checked"}>
-        <span>${foundry.utils.escapeHTML(row.name)}</span>
-        <small>${game.i18n.localize(row.conflict ? "TOVF.Session.Conflict" : "TOVF.Session.Unchanged")}</small>
-      </label>`).join("")}</div>`;
-  return foundry.applications.api.DialogV2.wait({
-    window: { title: game.i18n.localize("TOVF.Session.ResultImportTitle") },
-    content,
-    buttons: [{
-      action: "apply",
-      label: game.i18n.localize("TOVF.Session.ResultImportAction"),
-      icon: "fa-solid fa-check",
-      default: true,
-      callback: (_event, button) => Array.from(button.form.querySelectorAll('[name="actors"]:checked'))
-        .map(input => input.value)
-    }, {
-      action: "cancel",
-      label: game.i18n.localize("Cancel"),
-      callback: () => null
-    }],
-    rejectClose: false
-  });
+  if (active.id) await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, { ...active, status: "played" });
+  return bundle;
 }
 
 export async function importSessionResult(file) {
@@ -556,37 +719,62 @@ export async function importSessionResult(file) {
   if (!file) throw new Error(game.i18n.localize("TOVF.Session.Error.FileMissing"));
   const bundle = JSON.parse(await foundry.utils.readTextFromFile(file));
   validatePackage(bundle, RESULT_FORMAT);
+  const activeSession = game.settings.get(MODULE_ID, SETTINGS.ACTIVE_SESSION) ?? {};
 
   const candidates = new Map(game.actors.map(actor => [actorTransferId(actor), actor]));
   const rows = [];
   for (const entry of bundle.actors) {
     const actor = candidates.get(entry.transferId);
-    if (!actor) continue;
     rows.push({
       transferId: entry.transferId,
       actor,
       entry,
-      name: actor.name,
-      conflict: await hashDocument(actor.toObject()) !== entry.baselineHash
+      name: actor?.name ?? entry.data?.name ?? entry.transferId
     });
   }
   if (!rows.length) throw new Error(game.i18n.localize("TOVF.Session.Error.NoMatchingActors"));
-  const selected = await chooseResultActors(rows);
-  if (!selected) return;
-  const accepted = new Set(selected);
-  let count = 0;
-  for (const row of rows.filter(row => accepted.has(row.transferId))) {
-    const data = normalizeLegacyActiveEffects(foundry.utils.deepClone(row.entry.data));
-    data.folder = row.actor.folder?.id ?? null;
-    removeProperty(data, `flags.${MODULE_ID}.${TRANSFER_FLAG}.baselineHash`);
-    await persistMigratedActiveEffectTypes(row.actor);
-    await row.actor.importFromJSON(JSON.stringify(data));
-    count++;
+  const acceptedRows = rows.map(row => ({
+    ...row,
+    importedData: normalizeLegacyActiveEffects(foundry.utils.deepClone(row.entry.data))
+  }));
+  const importedRows = [];
+  const skippedChanges = [];
+  for (const row of acceptedRows) {
+    try {
+      const skipped = row.actor
+        ? await replaceActorFromSessionResult(row.actor, row.importedData)
+        : [];
+      row.actor ??= await createActorFromSessionResult(row.entry);
+      importedRows.push(row);
+      skippedChanges.push(...skipped.map(entry => ({ ...entry, actor: row.name })));
+    } catch (error) {
+      skippedChanges.push({ actor: row.name, documentName: "Actor", id: row.actor.id, action: "update", error });
+      console.warn(`${MODULE_ID} | Skipping failed session-result Actor`, { actor: row.actor.uuid, error });
+    }
   }
+  if (!importedRows.length) throw new Error(game.i18n.localize("TOVF.Session.Error.NoImportableActors"));
+  const count = importedRows.length;
+  const sameActiveSession = bundle.session?.id && bundle.session.id === activeSession.id ? activeSession : {};
+  await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, {
+    ...sameActiveSession,
+    id: bundle.session?.id ?? sameActiveSession.id ?? foundry.utils.randomID(),
+    title: bundle.session?.title ?? sameActiveSession.title ?? "",
+    summary: bundle.session?.summary ?? sameActiveSession.summary ?? "",
+    actorUuids: importedRows.map(row => row.actor.uuid),
+    participantTransferIds: importedRows.map(row => row.transferId),
+    status: "returned",
+    returnedAt: Date.now()
+  });
   Hooks.callAll("tovFeuerschwinge.sessionResultImported", {
-    actorIds: rows.filter(row => accepted.has(row.transferId)).map(row => row.actor.id)
+    actorIds: importedRows.map(row => row.actor.id),
+    actorUuids: importedRows.map(row => row.actor.uuid),
+    sessionId: bundle.session?.id ?? null
   });
   ui.notifications.info(game.i18n.format("TOVF.Session.ResultImportComplete", { count }));
+  if (skippedChanges.length) {
+    ui.notifications.warn(game.i18n.format("TOVF.Session.ResultImportSkipped", { count: skippedChanges.length }), { permanent: true });
+  }
+  return { count, skipped: skippedChanges, actorUuids: importedRows.map(row => row.actor.uuid), session: bundle.session ?? null };
 }
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -771,7 +959,60 @@ class SessionTransferConfig extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 }
 
+class CompendiumTransferConfig extends HandlebarsApplicationMixin(ApplicationV2) {
+  static DEFAULT_OPTIONS = {
+    id: "tov-feuerschwinge-compendium-transfer",
+    tag: "form",
+    classes: ["standard-form", "tovf-session-transfer", "tovf-compendium-transfer"],
+    position: { width: 620, height: "auto" },
+    window: { title: "TOVF.Transfer.Title", resizable: true },
+    actions: {
+      exportCompendiums: this.#exportCompendiums,
+      importCompendiums: this.#importCompendiums
+    }
+  };
+
+  static PARTS = {
+    form: { template: `modules/${MODULE_ID}/templates/compendium-transfer.hbs` }
+  };
+
+  async _prepareContext(options) {
+    return {
+      ...(await super._prepareContext(options)),
+      compendiumFolders: game.packs._formatFolderSelectOptions(),
+      compendiumDestinations: [
+        { id: "", name: game.i18n.localize("TOVF.Transfer.Root") },
+        ...game.packs._formatFolderSelectOptions()
+      ]
+    };
+  }
+
+  static async #exportCompendiums() {
+    await this.#run(() => exportCompendiumFolder(
+      this.element.querySelector('[name="standaloneCompendiumFolder"]')?.value
+    ));
+  }
+
+  static async #importCompendiums() {
+    await this.#run(() => importCompendiumFolder(
+      this.element.querySelector('[name="compendiumFile"]')?.files[0],
+      this.element.querySelector('[name="compendiumDestination"]')?.value || null
+    ));
+  }
+
+  async #run(action) {
+    try {
+      await action();
+    } catch (error) {
+      console.error(`${MODULE_ID} | Compendium transfer failed`, error);
+      ui.notifications.error(error.message);
+    }
+  }
+}
+
 export function registerSessionTransfer() {
+  // The transfer workflow itself lives in the Session Manager. Only the
+  // permanent world role belongs in Foundry's module configuration.
   game.settings.register(MODULE_ID, ROLE_SETTING, {
     name: "TOVF.Session.Role.Name",
     hint: "TOVF.Session.Role.Hint",
@@ -786,12 +1027,12 @@ export function registerSessionTransfer() {
     restricted: true,
     requiresReload: true
   });
-  game.settings.registerMenu(MODULE_ID, "sessionTransfer", {
-    name: "TOVF.Session.Settings.Name",
-    label: "TOVF.Session.Settings.Label",
-    hint: "TOVF.Session.Settings.Hint",
-    icon: "fa-solid fa-people-arrows",
-    type: SessionTransferConfig,
+  game.settings.registerMenu(MODULE_ID, "compendiumTransfer", {
+    name: "TOVF.Transfer.Settings.Name",
+    label: "TOVF.Transfer.Settings.Label",
+    hint: "TOVF.Transfer.Settings.Hint",
+    icon: "fa-solid fa-box-archive",
+    type: CompendiumTransferConfig,
     restricted: true
   });
 }
@@ -801,6 +1042,7 @@ export function sessionTransferApi() {
     exportSession,
     importSession,
     exportSessionResult,
+    cleanupSessionImport,
     importSessionResultFile: importSessionResult
   };
 }

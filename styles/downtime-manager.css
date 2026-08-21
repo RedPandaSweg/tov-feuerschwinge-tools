@@ -394,14 +394,38 @@
 .downtime-manager .sc-config-footer .sc-save-button { width: auto; margin-left: auto; }
 
 .downtime-manager .sc-session-fields { display: grid; grid-template-columns: minmax(0, 1fr) 180px; gap: .7rem; }
+.downtime-manager .sc-session-workflow { display: flex; flex-wrap: wrap; align-items: end; gap: .55rem; margin: .65rem 0; padding: .6rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.downtime-manager .sc-session-workflow > header { display: flex; flex: 1 0 100%; justify-content: space-between; gap: 1rem; }
+.downtime-manager .sc-session-workflow > label { display: grid; flex: 1 1 18rem; gap: .25rem; }
+.downtime-manager .sc-session-workflow > button { width: auto; margin: 0; }
+.downtime-manager .sc-session-workflow.session-world .sc-session-import-row { display: flex; flex: 1 0 100%; align-items: end; gap: .55rem; min-width: 0; }
+.downtime-manager .sc-session-workflow.session-world .sc-session-import-row label { flex: 0 1 32rem; width: 32rem; max-width: 32rem; min-width: 18rem; }
+.downtime-manager .sc-session-workflow.session-world .sc-session-import-row input { width: 100%; min-width: 0; }
+.downtime-manager .sc-session-workflow.session-world .sc-session-import-row button { flex: 0 0 auto; width: auto; padding-inline: .8rem; white-space: nowrap; }
+.downtime-manager .sc-session-workflow.session-world .sc-session-operation-row { display: flex; flex: 0 0 auto; gap: .55rem; width: max-content; }
+.downtime-manager .sc-session-workflow.session-world .sc-session-operation-row button { flex: 0 0 auto; width: auto; margin: 0; padding-inline: .8rem; white-space: nowrap; }
+.downtime-manager .sc-session-workflow > p { flex: 1 0 100%; margin: 0; }
+.downtime-manager .sc-session-workflow .sc-session-result-row { display: flex; flex: 1 0 100%; align-items: end; gap: .55rem; min-width: 0; }
+.downtime-manager .sc-session-workflow .sc-session-result-row label { display: grid; flex: 1 1 auto; gap: .25rem; min-width: 0; }
+.downtime-manager .sc-session-workflow .sc-session-result-row input { width: 100%; min-width: 0; }
+.downtime-manager .sc-session-workflow .sc-session-result-row button { flex: 0 0 auto; width: auto; margin: 0; padding-inline: .8rem; white-space: nowrap; }
+.downtime-manager .sc-session-current { margin-top: .7rem; padding: .7rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.downtime-manager .sc-session-current h3 { margin: 0; }
+.downtime-manager .sc-session-current p { margin: .45rem 0 0; white-space: pre-wrap; }
 .downtime-manager .sc-session-fields label,
 .downtime-manager .sc-session-level-values label,
 .downtime-manager .sc-session-footer label { display: grid; gap: .25rem; }
 .downtime-manager .sc-session-fields .wide { grid-column: 1 / -1; }
 .downtime-manager .sc-session-fields textarea { min-height: 70px; }
+.downtime-manager .sc-session-package-action { display: flex; align-items: end; }
+.downtime-manager .sc-session-package-action button { width: 100%; margin: 0; }
 .downtime-manager .sc-session-actions,
 .downtime-manager .sc-session-footer { display: flex; flex-wrap: wrap; align-items: end; gap: .5rem; margin-top: .7rem; }
+.downtime-manager .sc-session-actions > label:not(.sc-session-search) { display: grid; gap: .2rem; min-width: 9rem; }
 .downtime-manager .sc-session-distribution { margin-top: .7rem; }
+.downtime-manager .sc-session-distribution-legend { display: flex; align-items: center; justify-content: space-between; gap: 1rem; width: 100%; }
+.downtime-manager .sc-session-distribution-legend > label { display: flex; align-items: center; gap: .4rem; font-size: .75rem; font-weight: 400; }
+.downtime-manager .sc-session-distribution-legend select { width: 5rem; min-width: 5rem; }
 .downtime-manager .sc-session-column-toggles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: .4rem; }
 .downtime-manager .sc-session-column-toggles label.checkbox { border: 1px solid var(--color-border-light-2); }
 .downtime-manager .sc-session-column-toggles img { width: 26px; height: 26px; border: 0; object-fit: cover; }
@@ -416,7 +440,14 @@
 .downtime-manager .sc-session-footer button { width: auto; }
 .downtime-manager .sc-session-search { display: grid; grid-template-columns: auto minmax(10rem, 1fr); align-items: center; gap: .4rem; flex: 1 1 15rem; }
 .downtime-manager .sc-session-actors { display: grid; gap: .4rem; margin-top: .7rem; }
+.downtime-manager [data-character-selection][hidden],
+.downtime-manager [data-player-selection][hidden],
+.downtime-manager [data-actor-search-text][hidden] { display: none; }
 .downtime-manager .sc-session-actor { display: grid; grid-template-columns: 24px 42px minmax(150px, 1fr) minmax(220px, 1fr); align-items: center; gap: .55rem; padding: .45rem .55rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.downtime-manager .sc-session-player { display: grid; grid-template-columns: 24px 18px minmax(0, 1fr); align-items: center; gap: .55rem; padding: .55rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.downtime-manager .sc-session-player span,
+.downtime-manager .sc-session-player small { display: block; }
+.downtime-manager .sc-session-online { color: #3c9b55; }
 .downtime-manager .sc-session-actor-img { width: 40px; height: 40px; border: 0; border-radius: 50%; object-fit: cover; }
 .downtime-manager .sc-session-actor span,
 .downtime-manager .sc-session-actor small { display: block; }

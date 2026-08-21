@@ -11,6 +11,62 @@
     {{ formField systemFields.attackBonus value=source.system.attackBonus localize=true rootId=partId }}
     {{ formField systemFields.damageBonus value=source.system.damageBonus localize=true rootId=partId }}
     <p class="hint">{{ localize "BFI.Enchantment.BonusFormulaHint" }}</p>
+    {{ formField systemFields.criticalBonusDice value=source.system.criticalBonusDice localize=true rootId=partId }}
+    <fieldset class="bfi-enchantment-changes" data-manual-changes>
+      <legend>{{ localize "BFI.Enchantment.ManualChanges" }}</legend>
+      <p class="hint">{{ localize "BFI.Enchantment.ManualChangesHint" }}</p>
+      <div class="bfi-enchantment-change-head" aria-hidden="true">
+        <span>{{ localize "BFI.Enchantment.ChangeKey" }}</span>
+        <span>{{ localize "BFI.Enchantment.ChangeMode" }}</span>
+        <span>{{ localize "BFI.Enchantment.ChangePriority" }}</span>
+        <span></span>
+        <span class="bfi-enchantment-change-value-label">{{ localize "BFI.Enchantment.ChangeValue" }}</span>
+      </div>
+      <div class="bfi-enchantment-change-list" data-manual-change-list>
+        {{#each source.system.manualChanges as |change|}}
+          <div class="bfi-enchantment-change" data-manual-change>
+            <input class="bfi-enchantment-change-key" type="text" name="system.manualChanges.{{ @index }}.key" value="{{ change.key }}">
+            <select class="bfi-enchantment-change-mode" name="system.manualChanges.{{ @index }}.mode">
+              {{ selectOptions @root.effectModes selected=change.mode valueAttr="value" labelAttr="label" }}
+            </select>
+            <input class="bfi-enchantment-change-priority" type="number" name="system.manualChanges.{{ @index }}.priority" value="{{ change.priority }}" step="1">
+            <button type="button" data-manual-change-action="delete" data-tooltip="BFI.Enchantment.DeleteChange" aria-label="{{ localize 'BFI.Enchantment.DeleteChange' }}">
+              <i class="fa-solid fa-trash" inert></i>
+            </button>
+            <textarea class="bfi-enchantment-change-value" name="system.manualChanges.{{ @index }}.value" rows="2">{{ change.value }}</textarea>
+          </div>
+        {{/each}}
+        {{#unless source.system.manualChanges.length}}
+          <div class="bfi-enchantment-change" data-manual-change>
+            <input class="bfi-enchantment-change-key" type="text" name="system.manualChanges.0.key">
+            <select class="bfi-enchantment-change-mode" name="system.manualChanges.0.mode">
+              {{ selectOptions effectModes selected="add" valueAttr="value" labelAttr="label" }}
+            </select>
+            <input class="bfi-enchantment-change-priority" type="number" name="system.manualChanges.0.priority" step="1">
+            <button type="button" data-manual-change-action="delete" data-tooltip="BFI.Enchantment.DeleteChange" aria-label="{{ localize 'BFI.Enchantment.DeleteChange' }}">
+              <i class="fa-solid fa-trash" inert></i>
+            </button>
+            <textarea class="bfi-enchantment-change-value" name="system.manualChanges.0.value" rows="2"></textarea>
+          </div>
+        {{/unless}}
+      </div>
+      <template data-manual-change-template>
+        <div class="bfi-enchantment-change" data-manual-change>
+          <input class="bfi-enchantment-change-key" type="text" name="system.manualChanges.__INDEX__.key">
+          <select class="bfi-enchantment-change-mode" name="system.manualChanges.__INDEX__.mode">
+            {{ selectOptions effectModes selected="add" valueAttr="value" labelAttr="label" }}
+          </select>
+          <input class="bfi-enchantment-change-priority" type="number" name="system.manualChanges.__INDEX__.priority" step="1">
+          <button type="button" data-manual-change-action="delete" data-tooltip="BFI.Enchantment.DeleteChange" aria-label="{{ localize 'BFI.Enchantment.DeleteChange' }}">
+            <i class="fa-solid fa-trash" inert></i>
+          </button>
+          <textarea class="bfi-enchantment-change-value" name="system.manualChanges.__INDEX__.value" rows="2"></textarea>
+        </div>
+      </template>
+      <button type="button" data-manual-change-action="add">
+        <i class="fa-solid fa-plus" inert></i> {{ localize "BFI.Enchantment.AddChange" }}
+      </button>
+    </fieldset>
     {{ formField systemFields.durationSeconds value=source.system.durationSeconds localize=true rootId=partId }}
     <p class="hint">{{ localize "BFI.Enchantment.DurationHint" }}</p>
   </fieldset>

@@ -199,6 +199,11 @@ function installWeaponMechanics() {
         .filter(entry => entry.mechanic === "bonuses" && entry.damageBonus)
         .map(entry => entry.damageBonus));
       if (enchantment?.damageBonus) roll.parts.push(enchantment.damageBonus);
+      const criticalBonusDice = Math.max(0, Number(enchantment?.criticalBonusDice) || 0);
+      if (criticalBonusDice) {
+        const existing = Number(foundry.utils.getProperty(roll, "options.critical.bonusDice")) || 0;
+        foundry.utils.setProperty(roll, "options.critical.bonusDice", existing + criticalBonusDice);
+      }
     }
     return roll;
   };

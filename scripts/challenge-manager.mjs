@@ -3,12 +3,11 @@ import { MODULE_ID, modulePath } from "./core/constants.mjs";
 const SETTINGS = {
   doom: "doomPoints",
   active: "doomActive",
-  overlay: "doomOverlayEnabled",
+  announceDoom: "doomAnnounceCurrent",
   actors: "doomSelectedActors"
 };
+const ACTIVE_SESSION_SETTING = "activeSession";
 let panel;
-let overlay;
-let locallyHidden = false;
 let rollResultQueue = Promise.resolve();
 const pendingRollTotals = new Map();
 const pendingClientRolls = new Set();
@@ -32,27 +31,8 @@ function connectedPlayerActors() {
     )));
 }
 
-function canSeeOverlay() {
-  if (game.user.isGM) return true;
-  const selected = selectedActorIds();
-  return connectedPlayerActors().some(actor => (
-    selected.has(actor.id) && actor.testUserPermission(game.user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER)
-  ));
-}
-
 function refreshPanel() {
   if (panel?.rendered) panel.render({ force: true });
-}
-
-function refreshOverlay() {
-  const visible = game.settings.get(MODULE_ID, SETTINGS.overlay)
-    && game.settings.get(MODULE_ID, SETTINGS.active)
-    && canSeeOverlay()
-    && !locallyHidden;
-  if (visible) {
-    overlay ??= new DoomOverlay();
-    overlay.render({ force: true });
-  } else if (overlay?.rendered) overlay.close();
 }
 
 function parseCR(value) {
@@ -141,6 +121,7 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 class ChallengeManager extends HandlebarsApplicationMixin(ApplicationV2) {
   #allActorsExpanded = true;
+  #expandedSections = { doom: true, party: true, roll: true };
 
   static DEFAULT_OPTIONS = {
     id: "tovf-challenge-manager",
@@ -151,7 +132,7 @@ class ChallengeManager extends HandlebarsApplicationMixin(ApplicationV2) {
       adjustDoom: this.#adjustDoom,
       selectActor: this.#selectActor,
       addConnectedActors: this.#addConnectedActors,
-      toggleOverlay: this.#toggleOverlay,
+      addSessionActors: this.#addSessionActors,
       requestRoll: this.#requestRoll
     }
   };
@@ -163,6 +144,8 @@ class ChallengeManager extends HandlebarsApplicationMixin(ApplicationV2) {
   async _prepareContext(options) {
     const selected = selectedActorIds();
     const actors = allPlayerActors();
+    const activeSession = game.settings.get(MODULE_ID, ACTIVE_SESSION_SETTING) ?? {};
+    const sessionActorUuids = new Set(activeSession.actorUuids ?? []);
     const actorView = actor => ({
       id: actor.id,
       uuid: actor.uuid,
@@ -176,9 +159,13 @@ class ChallengeManager extends HandlebarsApplicationMixin(ApplicationV2) {
     return {
       ...(await super._prepareContext(options)),
       doom: game.settings.get(MODULE_ID, SETTINGS.doom),
-      overlayEnabled: game.settings.get(MODULE_ID, SETTINGS.overlay),
+      announceDoom: game.settings.get(MODULE_ID, SETTINGS.announceDoom),
       ...encounterStats(),
       allActorsExpanded: this.#allActorsExpanded,
+      doomExpanded: this.#expandedSections.doom,
+      partyExpanded: this.#expandedSections.party,
+      rollExpanded: this.#expandedSections.roll,
+      sessionActorCount: actors.filter(actor => sessionActorUuids.has(actor.uuid)).length,
       selectedActors: actors.filter(actor => selected.has(actor.id)).map(actorView),
       availableActors: actors.filter(actor => !selected.has(actor.id)).map(actorView),
       skills: CONFIG.BlackFlag.skills.localizedOptions,
@@ -190,11 +177,19 @@ class ChallengeManager extends HandlebarsApplicationMixin(ApplicationV2) {
   _onRender(context, options) {
     super._onRender(context, options);
     this.element.querySelector("[data-doom-value]")?.addEventListener("change", event => setDoom(event.target.value));
+    this.element.querySelector("[data-doom-announce]")?.addEventListener("change", event => (
+      game.settings.set(MODULE_ID, SETTINGS.announceDoom, event.currentTarget.checked)
+    ));
     const type = this.element.querySelector("[data-request-type]");
     type?.addEventListener("change", () => this.#updateRequestFields());
     this.element.querySelector("[data-all-actors]")?.addEventListener("toggle", event => {
       this.#allActorsExpanded = event.currentTarget.open;
     });
+    for (const section of this.element.querySelectorAll("[data-challenge-section]")) {
+      section.addEventListener("toggle", event => {
+        this.#expandedSections[event.currentTarget.dataset.challengeSection] = event.currentTarget.open;
+      });
+    }
     for (const entry of this.element.querySelectorAll("[data-selected-actor]")) {
       entry.addEventListener("dblclick", event => {
         if (event.target.closest("button")) return;
@@ -219,8 +214,22 @@ class ChallengeManager extends HandlebarsApplicationMixin(ApplicationV2) {
     if (dc) dc.hidden = type === "die";
   }
 
-  static #adjustDoom(_event, target) {
-    return setDoom(game.settings.get(MODULE_ID, SETTINGS.doom) + Number(target.dataset.amount));
+  static async #adjustDoom(_event, target) {
+    const previous = game.settings.get(MODULE_ID, SETTINGS.doom);
+    const next = Math.max(0, previous + Number(target.dataset.amount));
+    await setDoom(next);
+    if (target.dataset.doomChat !== "true") return;
+    const action = target.dataset.doomAction || target.textContent.trim();
+    const icon = ["fa-thumbs-up", "fa-thumbs-down", "fa-person-running", "fa-arrows-rotate"].includes(target.dataset.doomIcon)
+      ? target.dataset.doomIcon
+      : "fa-skull-crossbones";
+    const current = game.settings.get(MODULE_ID, SETTINGS.announceDoom)
+      ? `<div class="tovf-doom-chat-total"><span>${Handlebars.escapeExpression(game.i18n.localize("TOVF.ChallengeManager.Doom.Remaining"))}</span><strong>${next}</strong></div>`
+      : "";
+    return ChatMessage.create({
+      speaker: ChatMessage.getSpeaker(),
+      content: `<section class="tovf-doom-chat"><header><i class="fa-solid fa-skull-crossbones" inert></i><span>${Handlebars.escapeExpression(game.i18n.localize("TOVF.ChallengeManager.Doom.Bank"))}</span></header><div class="tovf-doom-chat-action"><i class="fa-solid ${icon}" inert></i><strong>${Handlebars.escapeExpression(action)}</strong></div>${current}</section>`
+    });
   }
 
   static async #selectActor(_event, target) {
@@ -237,21 +246,6 @@ class ChallengeManager extends HandlebarsApplicationMixin(ApplicationV2) {
     await game.settings.set(MODULE_ID, SETTINGS.actors, [...selected]);
   }
 
-  static async #toggleOverlay() {
-    const enabled = !game.settings.get(MODULE_ID, SETTINGS.overlay);
-    if (enabled) {
-      locallyHidden = false;
-      if (!game.settings.get(MODULE_ID, SETTINGS.active)) {
-        await game.settings.set(MODULE_ID, SETTINGS.active, true);
-      }
-    }
-    await game.settings.set(
-      MODULE_ID,
-      SETTINGS.overlay,
-      enabled
-    );
-  }
-
   static #requestRoll() {
     const type = this.element.querySelector("[data-request-type]").value;
     const key = this.element.querySelector(`[data-request-key][data-kind="${type}"]`).value;
@@ -263,30 +257,15 @@ class ChallengeManager extends HandlebarsApplicationMixin(ApplicationV2) {
     const actorIds = [...selectedActorIds()];
     return createRollRequest({ actorIds, type, key, dc, showAverage, privateRoll });
   }
-}
 
-class DoomOverlay extends HandlebarsApplicationMixin(ApplicationV2) {
-  static DEFAULT_OPTIONS = {
-    id: "tovf-doom-overlay",
-    classes: ["tovf-doom-overlay"],
-    window: { frame: false },
-    actions: { dismiss: this.#dismiss }
-  };
-
-  static PARTS = {
-    content: { template: modulePath("templates/doom-overlay.hbs") }
-  };
-
-  async _prepareContext(options) {
-    return {
-      ...(await super._prepareContext(options)),
-      doom: game.settings.get(MODULE_ID, SETTINGS.doom)
-    };
-  }
-
-  static #dismiss() {
-    locallyHidden = true;
-    return this.close();
+  static async #addSessionActors() {
+    const active = game.settings.get(MODULE_ID, ACTIVE_SESSION_SETTING) ?? {};
+    const actorUuids = new Set(active.actorUuids ?? []);
+    const selected = selectedActorIds();
+    for (const actor of allPlayerActors()) {
+      if (actorUuids.has(actor.uuid)) selected.add(actor.id);
+    }
+    await game.settings.set(MODULE_ID, SETTINGS.actors, [...selected]);
   }
 }
 
@@ -298,21 +277,6 @@ function openPanel() {
 
 export function openChallengeManager() {
   return openPanel();
-}
-
-function toggleLocalOverlay() {
-  if (overlay?.rendered) {
-    locallyHidden = true;
-    overlay.close();
-    return;
-  }
-  locallyHidden = false;
-  if (!canSeeOverlay()) {
-    ui.notifications.warn(game.i18n.localize("TOVF.ChallengeManager.Overlay.NoCharacter"));
-    return;
-  }
-  overlay ??= new DoomOverlay();
-  overlay.render({ force: true });
 }
 
 function addDoomButtons(_app, html) {
@@ -617,7 +581,7 @@ export function registerChallengeManager() {
   for (const [key, type, value] of [
     [SETTINGS.doom, Number, 0],
     [SETTINGS.active, Boolean, false],
-    [SETTINGS.overlay, Boolean, true],
+    [SETTINGS.announceDoom, Boolean, false],
     [SETTINGS.actors, Array, []]
   ]) {
     game.settings.register(MODULE_ID, key, {
@@ -627,7 +591,6 @@ export function registerChallengeManager() {
       default: value,
       onChange: () => {
         refreshPanel();
-        refreshOverlay();
       }
     });
   }
@@ -636,6 +599,9 @@ export function registerChallengeManager() {
   Hooks.on("renderChatMessageHTML", activateRollRequests);
   Hooks.on("updateChatMessage", refreshRollRequestMessage);
   Hooks.on("createChatMessage", recordCreatedChallengeRoll);
+  Hooks.on("updateSetting", setting => {
+    if (setting.key === `${MODULE_ID}.${ACTIVE_SESSION_SETTING}`) refreshPanel();
+  });
   game.socket.on(`module.${MODULE_ID}`, socketMessage => {
     if (socketMessage.type !== "challengeRollResult") return;
     if (activeGM()?.id !== game.user.id) return;
@@ -657,13 +623,10 @@ export function registerChallengeManager() {
 
 export function activateChallengeManager() {
   panel ??= game.user.isGM ? new ChallengeManager() : null;
-  overlay ??= new DoomOverlay();
-  refreshOverlay();
   game.modules.get(MODULE_ID).api ??= {};
   Object.assign(game.modules.get(MODULE_ID).api, {
     openChallengeManager: openPanel,
     openDoomPanel: openPanel,
-    toggleDoomOverlay: toggleLocalOverlay,
     requestRoll: createRollRequest
   });
 }

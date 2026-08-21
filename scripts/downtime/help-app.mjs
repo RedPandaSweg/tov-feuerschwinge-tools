@@ -3,10 +3,9 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const SECTIONS = [
   ["TOVF.Help.Overview", "overview", "fa-solid fa-fire-flame-curved", 5],
   ["TOVF.Help.CreatureBuilder", "creature-builder", "fa-solid fa-dragon", 6],
-  ["TOVF.Help.SessionTransfer", "session-transfer", "fa-solid fa-people-arrows", 6],
   ["TOVF.Help.Weapons", "weapons", "fa-solid fa-swords", 4],
   ["TOVF.Help.Compendiums", "compendiums", "fa-solid fa-books", 4],
-  ["TOVF.Help.Challenge", "challenge", "fa-solid fa-skull-crossbones", 4],
+  ["TOVF.Help.Challenge", "challenge", "fa-solid fa-skull-crossbones", 6],
   ["TOVF.Help.Links", "links", "fa-solid fa-link", 4],
   ["DOWNTIME_MANAGER.Help.QuickStart", "quickstart", "fa-solid fa-rocket", 6],
   ["DOWNTIME_MANAGER.Help.Downtime", "downtime", "fa-solid fa-hourglass-half", 4],
@@ -17,13 +16,12 @@ const SECTIONS = [
   ["DOWNTIME_MANAGER.Help.Checks", "checks", "fa-solid fa-dice-d20", 5],
   ["DOWNTIME_MANAGER.Help.Completion", "completion", "fa-solid fa-flag-checkered", 5],
   ["DOWNTIME_MANAGER.Help.Dashboard", "dashboard", "fa-solid fa-table-columns", 6],
-  ["DOWNTIME_MANAGER.Help.Sessions", "sessions", "fa-solid fa-campground", 7],
-  ["DOWNTIME_MANAGER.GMTools.Help", "gm-tools", "fa-solid fa-screwdriver-wrench", 6],
+  ["DOWNTIME_MANAGER.Help.Sessions", "sessions", "fa-solid fa-scroll", 11],
+  ["DOWNTIME_MANAGER.GMTools.Help", "gm-tools", "fa-solid fa-screwdriver-wrench", 7],
   ["DOWNTIME_MANAGER.Help.Passive", "passive", "fa-solid fa-calendar", 5],
   ["DOWNTIME_MANAGER.Help.DowntimeItems", "downtime-items", "fa-solid fa-ticket", 6],
-  ["DOWNTIME_MANAGER.Help.Settings", "settings", "fa-solid fa-gears", 7],
-  ["DOWNTIME_MANAGER.Help.Systems", "systems", "fa-solid fa-plug", 4],
-  ["DOWNTIME_MANAGER.Help.Troubleshooting", "troubleshooting", "fa-solid fa-life-ring", 6]
+  ["DOWNTIME_MANAGER.Help.Settings", "settings", "fa-solid fa-gears", 8],
+  ["DOWNTIME_MANAGER.Help.Troubleshooting", "troubleshooting", "fa-solid fa-life-ring", 8]
 ];
 
 export class HelpApp extends HandlebarsApplicationMixin(ApplicationV2) {

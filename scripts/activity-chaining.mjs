@@ -374,12 +374,11 @@ function installItemSheetFilter() {
   const original = prototype._prepareDetailsContext;
   prototype._prepareDetailsContext = async function(context, options) {
     context = await original.call(this, context, options);
-    const followUpIds = new Set(
-      [...(this.item.system.activities ?? [])]
-        .flatMap(activity => activityChainRules(activity).map(rule => rule.activityId))
-    );
-    if (Array.isArray(context.activities) && followUpIds.size) {
-      context.activities = context.activities.filter(activity => !followUpIds.has(activity.id));
+    if (Array.isArray(context.activities)) {
+      context.activities = context.activities.filter(entry => {
+        const activity = this.item.system.activities.get(entry.id) ?? entry.activity ?? entry;
+        return !isFollowUpActivity(activity);
+      });
     }
     return context;
   };

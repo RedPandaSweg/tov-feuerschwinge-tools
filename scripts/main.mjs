@@ -16,12 +16,11 @@ import {
   installWeaponOptionActivities,
   weaponOptionActivitiesApi
 } from "./integrations/weapon-option-activities.mjs?v=3.2.4-tooltip-links-2";
-import { installArgonBlackFlagCompatibility } from "./integrations/argon-black-flag-compatibility.mjs?v=3.2.7-movement-hud-1";
+import { installArgonBlackFlagCompatibility } from "./integrations/argon-black-flag-compatibility.mjs?v=3.3.1-explode-activities-default-1";
 import { activatePlayerUnpause, registerPlayerUnpause } from "./player-unpause.mjs";
 import { registerCompendiumLibrary } from "./compendium-library.mjs?v=3.2.7-void-spells-1";
 import { activateChallengeManager, registerChallengeManager } from "./challenge-manager.mjs";
 import { registerLinkTools } from "./link-tools-config.mjs";
-import { registerHelp } from "./help-config.mjs";
 import {
   activateFeaturePoolIntegration,
   registerFeaturePoolIntegration
@@ -29,7 +28,7 @@ import {
 import { registerTokenSizeSync } from "./token-size-sync.mjs";
 import { creatureBuilderApi, registerCreatureBuilder } from "./creature-builder.mjs";
 import { registerSettingsCategories } from "./settings-categories.mjs";
-import { activityChainingApi, installActivityChaining } from "./activity-chaining.mjs?v=3.2.4-follow-up-flags";
+import { activityChainingApi, installActivityChaining } from "./activity-chaining.mjs?v=3.3.1-follow-up-filter-2";
 import { installToolAbilitySelection } from "./integrations/tool-ability.mjs";
 import { installTheurgeSpellcasting } from "./integrations/theurge-spellcasting.mjs?v=3.3.0-manual-theurge-mode-1";
 import { installCompendiumUsability } from "./compendium-usability.mjs";
@@ -37,6 +36,7 @@ import { installChatImagePopouts } from "./chat-image-popout.mjs";
 import { registerChatMessageDeletion } from "./chat-message-deletion.mjs";
 import { createMagicalDrinkWorldItems, effectGroupsApi, installEffectGroups } from "./effect-groups.mjs?v=3.2.5-effect-groups-7";
 import { activateTokenPresetSocket, registerTokenPresets } from "./token-presets.mjs";
+import { activateTokenLightAuraSocket, toggleTokenLightAura } from "./token-light-aura.mjs";
 import { activateSimpleTileTriggers, registerSimpleTileTriggers } from "./simple-tile-triggers.mjs?v=3.2.2";
 import { activateCommerce, registerCommerce } from "./commerce/main.mjs?v=3.2.7-rolltable-stock-2";
 import "./downtime/main.mjs?v=3.3.0-void-taint-1";
@@ -44,6 +44,7 @@ import "./contested-activity.mjs";
 import "./void-taint/main.mjs?v=3.3.0-void-taint-1";
 import { registerTalentBackgrounds } from "./talent-backgrounds.mjs?v=3.3.1-talent-backgrounds-6";
 import { installCustomBackground } from "./integrations/custom-background.mjs?v=3.3.1-custom-background-16";
+import { installActiveEffectChangesUi } from "./active-effect-changes-ui.mjs";
 
 // Keep tile triggers independent from the shared initialization chain so an
 // unrelated tool cannot prevent their hooks and diagnostics from registering.
@@ -53,14 +54,13 @@ registerCommerce();
 Hooks.once("ready", activateCommerce);
 
 const MODULE_MENU_ORDER = new Map([
-  ["help", 0],
   ["creatureBuilder", 10],
-  ["sessionTransfer", 20],
+  ["compendiumTransfer", 20],
   ["characterLinkTools", 40],
   ["weaponCustomization", 50],
   ["itemDefaults", 60],
-  ["projectLibrary", 70],
-  ["stationPresets", 80]
+  ["playerActorFolders", 70],
+  ["sessionRewards", 80]
 ]);
 
 const MODULE_SETTING_ORDER = new Map([
@@ -113,7 +113,6 @@ function orderModuleMenus() {
 
 Hooks.once("init", () => {
   if (game.system.id !== "black-flag") return;
-  registerHelp();
   installBlackFlagCompatibility();
   installCharacterCreationOverrides();
   installWeaponOptionActivities();
@@ -125,6 +124,7 @@ Hooks.once("init", () => {
   registerChatMessageDeletion();
   registerTalentBackgrounds();
   installCustomBackground();
+  installActiveEffectChangesUi();
   installEffectGroups();
   registerTokenPresets();
   installArgonBlackFlagCompatibility();
@@ -156,6 +156,7 @@ Hooks.once("ready", async () => {
   activatePlayerUnpause();
   activateChallengeManager();
   activateTokenPresetSocket();
+  activateTokenLightAuraSocket();
   await activateFeaturePoolIntegration();
   if (game.user.isGM) {
     try {
@@ -169,6 +170,7 @@ Hooks.once("ready", async () => {
   Object.assign(game.modules.get(MODULE_ID).api, sessionTransferApi());
   Object.assign(game.modules.get(MODULE_ID).api, creatureBuilderApi());
   Object.assign(game.modules.get(MODULE_ID).api, {
+    toggleTokenLightAura,
     activityChaining: activityChainingApi,
     effectGroups: effectGroupsApi,
     characterCreationOverrides: characterCreationOverridesApi,

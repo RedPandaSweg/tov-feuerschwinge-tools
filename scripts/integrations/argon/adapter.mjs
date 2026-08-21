@@ -1,6 +1,6 @@
 import { MODULE_ID } from "../../core/constants.mjs";
-import { activityChainRules, isFollowUpActivity } from "../../activity-chaining.mjs?v=3.2.4-follow-up-flags";
-import { getSetting } from "./settings.mjs";
+import { isFollowUpActivity } from "../../activity-chaining.mjs?v=3.3.1-follow-up-filter-2";
+import { getSetting } from "./settings.mjs?v=3.3.1-explode-activities-default-1";
 
 const ECHItems = {};
 
@@ -241,11 +241,7 @@ function renderPortraitCover(container, source, label) {
 }
 
 const visibleChainActivities = (item) => {
-    const activities = activityList(item);
-    const followUpIds = new Set(
-        activities.flatMap(activity => activityChainRules(activity).map(rule => rule.activityId))
-    );
-    return activities.filter(activity => !isFollowUpActivity(activity) && !followUpIds.has(activity.id));
+    return activityList(item).filter(activity => !isFollowUpActivity(activity));
 };
 
 const combatActivityCandidates = (item) => {
@@ -275,13 +271,34 @@ export function getSpellSlotUses(actor, slotKey) {
     return slots?.[slotKey] ?? { max: Infinity, value: Infinity };
 }
 
+function resolveTooltipToHit(value, candidate) {
+    if (value === undefined || value === null || value === "") return null;
+    if (typeof value === "number") return formatSigned(value);
+
+    const text = String(value).trim();
+    const sourceItem = candidate?.item ?? candidate;
+    const actor = candidate?.actor ?? sourceItem?.actor
+        ?? (sourceItem?.parent?.documentName === "Actor" ? sourceItem.parent : null);
+    let formula = text;
+    try {
+        if (formula.includes("@") && actor?.getRollData) {
+            formula = Roll.replaceFormulaData(formula, actor.getRollData(), { missing: "0", warn: false });
+        }
+        const total = Roll.safeEval(formula);
+        if (Number.isFinite(total)) return formatSigned(total);
+    } catch {
+        // Some system labels are descriptive text rather than static formulas.
+    }
+    return text;
+}
+
 export function getTooltipToHitLabel(item) {
     for (const candidate of combatActivityCandidates(item)) {
         const toHit = fallbackLabel(
-            candidate?.labels?.toHit,
-            candidate?.toHit,
-            formatSigned(candidate?.system?.toHit),
-            formatSigned(candidate?.system?.attack?.bonus)
+            resolveTooltipToHit(candidate?.labels?.toHit, candidate),
+            resolveTooltipToHit(candidate?.toHit, candidate),
+            resolveTooltipToHit(candidate?.system?.toHit, candidate),
+            resolveTooltipToHit(candidate?.system?.attack?.bonus, candidate)
         );
         if (toHit !== "-") return toHit;
     }
@@ -1555,6 +1572,57 @@ export function initConfig() {
             }
         }
 
+        class TovfSpellAccordionCategory extends ARGON.MAIN.BUTTON_PANELS.ACCORDION.AccordionPanelCategory {
+            _setUses() {
+                if (!Number.isNumeric(this.uses.value)) return;
+                const usesElement = this.element.querySelector(".feature-spell-slots");
+                if (!usesElement) return;
+                usesElement.innerHTML = "";
+                if (this.uses.value === Infinity) {
+                    usesElement.innerHTML = '<span class="spell-slot spell-cantrip"><i class="fas fa-infinity"></i></span>';
+                    return;
+                }
+                for (let index = 0; index < this.uses.max; index++) {
+                    usesElement.innerHTML += `<span class="spell-slot spell-${index < this.uses.max - this.uses.value ? "used" : "available"}"></span>`;
+                }
+            }
+        }
+
+        class TovfSpellAccordionPanel extends ARGON.MAIN.BUTTON_PANELS.ACCORDION.AccordionPanel {
+            async _renderInner() {
+                await super._renderInner();
+                this.element.classList.add("tovf-spell-stack");
+                const tabs = document.createElement("nav");
+                tabs.className = "tovf-spell-circle-tabs";
+                tabs.style.setProperty("--tovf-spell-tab-count", this._subPanels.length);
+                const actionBarWidth = Number(ui.ARGON.actionBarWidth) || 0;
+                this.element.style.setProperty("--tovf-spell-list-width", `${Math.max(actionBarWidth, 360)}px`);
+
+                for (const panel of this._subPanels) {
+                    const sideTitle = panel.element.querySelector(".feature-accordion-title");
+                    const spellContent = panel.buttonContainer;
+                    const resources = spellContent?.querySelector(":scope > .feature-spell-slots");
+                    if (resources) panel.element.insertBefore(resources, spellContent);
+                    const tab = document.createElement("button");
+                    tab.type = "button";
+                    tab.className = "tovf-spell-circle-tab";
+                    tab.textContent = panel.label;
+                    tab.classList.toggle("active", panel.visible);
+                    const sync = () => tab.classList.toggle("active", panel.visible);
+                    tab.addEventListener("click", event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        panel.toggle();
+                        sync();
+                    });
+                    sideTitle?.addEventListener("click", () => queueMicrotask(sync));
+                    tabs.appendChild(tab);
+                }
+                for (const panel of [...this._subPanels].reverse()) this.element.appendChild(panel.element);
+                this.element.appendChild(tabs);
+            }
+        }
+
         class DND5eButtonPanelButton extends ARGON.MAIN.BUTTONS.ButtonPanelButton {
             constructor({ type, items, color }) {
                 super();
@@ -1689,7 +1757,7 @@ export function initConfig() {
 
             async _getPanel() {
                 if (this.type === "spell") {
-                    return new ARGON.MAIN.BUTTON_PANELS.ACCORDION.AccordionPanel({ id: this.id, accordionPanelCategories: this._spells.map(({ label, buttons, uses }) => new ARGON.MAIN.BUTTON_PANELS.ACCORDION.AccordionPanelCategory({ label, buttons, uses })) });
+                    return new TovfSpellAccordionPanel({ id: this.id, accordionPanelCategories: this._spells.map(({ label, buttons, uses }) => new TovfSpellAccordionCategory({ label, buttons, uses })) });
                 } else {
                     return new ARGON.MAIN.BUTTON_PANELS.ButtonPanel({ id: this.id, buttons: this.items.map((item) => new DND5eItemButton({ item })) });
                 }

@@ -1,34 +1,31 @@
 <div class="tovf-challenge-manager-root">
   <section class="encounter">
     <span>{{localize "TOVF.ChallengeManager.Encounter.Adversaries"}} <strong>{{adversaryCount}}</strong></span>
-    <button type="button" class="overlay-toggle" data-action="toggleOverlay">
-      <i class="fa-solid {{#if overlayEnabled}}fa-eye-slash{{else}}fa-eye{{/if}}" inert></i>
-      {{#if overlayEnabled}}
-        {{localize "TOVF.ChallengeManager.Overlay.Hide"}}
-      {{else}}
-        {{localize "TOVF.ChallengeManager.Overlay.Show"}}
-      {{/if}}
-    </button>
     <span>{{localize "TOVF.ChallengeManager.Encounter.MaxCR"}} <strong>{{maxCR}}</strong></span>
   </section>
 
-  <section class="doom-bank">
+  <details class="challenge-section doom-bank" data-challenge-section="doom" {{#if doomExpanded}}open{{/if}}>
+    <summary>{{localize "TOVF.ChallengeManager.Doom.Bank"}}</summary>
+    <div class="challenge-section-content">
     <h3>{{localize "TOVF.ChallengeManager.Doom.Bank"}}</h3>
-    <div>
-      <button type="button" data-action="adjustDoom" data-amount="-1">−</button>
+    <div class="doom-counter">
+      <button type="button" class="doom-adjust" data-action="adjustDoom" data-amount="-1" title="{{localize 'TOVF.ChallengeManager.Doom.Decrease'}}">−</button>
       <input type="number" min="0" value="{{doom}}" data-doom-value>
-      <button type="button" data-action="adjustDoom" data-amount="1">+</button>
+      <button type="button" class="doom-adjust" data-action="adjustDoom" data-amount="1" title="{{localize 'TOVF.ChallengeManager.Doom.Increase'}}">+</button>
     </div>
     <div class="doom-spends">
-      <button type="button" data-action="adjustDoom" data-amount="-1">{{localize "TOVF.ChallengeManager.Doom.Advantage"}}</button>
-      <button type="button" data-action="adjustDoom" data-amount="-1">{{localize "TOVF.ChallengeManager.Doom.Disadvantage"}}</button>
-      <button type="button" data-action="adjustDoom" data-amount="-2">{{localize "TOVF.ChallengeManager.Doom.ExtraAction"}}</button>
-      <button type="button" data-action="adjustDoom" data-amount="-3">{{localize "TOVF.ChallengeManager.Doom.Recharge"}}</button>
+      <button type="button" data-action="adjustDoom" data-amount="-1" data-doom-chat="true" data-doom-icon="fa-thumbs-up"><i class="fa-solid fa-thumbs-up" inert></i><span>{{localize "TOVF.ChallengeManager.Doom.Advantage"}}</span></button>
+      <button type="button" data-action="adjustDoom" data-amount="-1" data-doom-chat="true" data-doom-icon="fa-thumbs-down"><i class="fa-solid fa-thumbs-down" inert></i><span>{{localize "TOVF.ChallengeManager.Doom.Disadvantage"}}</span></button>
+      <button type="button" data-action="adjustDoom" data-amount="-2" data-doom-chat="true" data-doom-icon="fa-person-running"><i class="fa-solid fa-person-running" inert></i><span>{{localize "TOVF.ChallengeManager.Doom.ExtraAction"}}</span></button>
+      <button type="button" data-action="adjustDoom" data-amount="-3" data-doom-chat="true" data-doom-icon="fa-arrows-rotate"><i class="fa-solid fa-arrows-rotate" inert></i><span>{{localize "TOVF.ChallengeManager.Doom.Recharge"}}</span></button>
     </div>
-  </section>
+    <label class="doom-announce"><input type="checkbox" data-doom-announce {{checked announceDoom}}> {{localize "TOVF.ChallengeManager.Doom.AnnounceCurrent"}}</label>
+    </div>
+  </details>
 
-  <section class="participants">
-    <h3>{{localize "TOVF.ChallengeManager.Party.Title"}}</h3>
+  <details class="challenge-section participants" data-challenge-section="party" {{#if partyExpanded}}open{{/if}}>
+    <summary>{{localize "TOVF.ChallengeManager.Party.Title"}}</summary>
+    <div class="challenge-section-content">
     <div class="actor-list selected-actors">
       {{#each selectedActors}}
       <div class="actor-entry selected-actor-entry" draggable="true"
@@ -57,17 +54,12 @@
       <p class="hint">{{localize "TOVF.ChallengeManager.Party.Empty"}}</p>
       {{/each}}
     </div>
-  </section>
-
-  <section class="roll-request">
-    <div class="roll-request-heading">
-      <h3>{{localize "TOVF.ChallengeManager.Roll.Title"}}</h3>
-      <label class="request-dc" title="{{localize "TOVF.ChallengeManager.Roll.DC"}}" data-request-dc-field>
-        <span>{{localize "TOVF.ChallengeManager.Roll.DCShort"}}</span>
-        <input type="number" min="0" placeholder="—" data-request-dc
-               aria-label="{{localize "TOVF.ChallengeManager.Roll.DC"}}">
-      </label>
     </div>
+  </details>
+
+  <details class="challenge-section roll-request" data-challenge-section="roll" {{#if rollExpanded}}open{{/if}}>
+    <summary>{{localize "TOVF.ChallengeManager.Roll.Title"}}</summary>
+    <div class="challenge-section-content">
     <div class="request-fields">
       <select data-request-type>
         <option value="skill">{{localize "TOVF.ChallengeManager.Roll.Skill"}}</option>
@@ -92,21 +84,32 @@
           <input type="checkbox" data-request-private>
           <span>{{localize "TOVF.ChallengeManager.Roll.Private"}}</span>
         </label>
+        <label class="request-dc" title="{{localize "TOVF.ChallengeManager.Roll.DC"}}" data-request-dc-field>
+          <span>{{localize "TOVF.ChallengeManager.Roll.DCShort"}}</span>
+          <input type="number" min="0" max="99" inputmode="numeric" placeholder="—" data-request-dc
+                 aria-label="{{localize "TOVF.ChallengeManager.Roll.DC"}}">
+        </label>
       </div>
       <button type="button" data-action="requestRoll">
         <i class="fa-solid fa-message-arrow-up-right" inert></i>
         {{localize "TOVF.ChallengeManager.Roll.Post"}}
       </button>
     </div>
-  </section>
+    </div>
+  </details>
 
   <details class="all-actors" data-all-actors {{#if allActorsExpanded}}open{{/if}}>
     <summary>{{localize "TOVF.ChallengeManager.Actors.Title"}}</summary>
-    <button type="button" class="add-connected-actors" data-action="addConnectedActors"
+    <div class="actor-picker-actions"><button type="button" class="add-connected-actors" data-action="addConnectedActors"
             title="{{localize "TOVF.ChallengeManager.Actors.AddConnectedTitle"}}">
       <i class="fa-solid fa-users" inert></i>
       {{localize "TOVF.ChallengeManager.Actors.AddConnected"}}
     </button>
+    {{#if sessionActorCount}}<button type="button" class="add-session-actors" data-action="addSessionActors"
+            title="{{localize 'TOVF.ChallengeManager.Actors.AddSessionTitle'}}">
+      <i class="fa-solid fa-scroll" inert></i>
+      {{localize "TOVF.ChallengeManager.Actors.AddSession" count=sessionActorCount}}
+    </button>{{/if}}</div>
     <div class="actor-picker-scroll">
       <div class="actor-list">
         {{#each availableActors}}

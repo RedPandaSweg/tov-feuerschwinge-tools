@@ -1,7 +1,18 @@
 import { MODULE_ID } from "../../core/constants.mjs";
-import { setExplodeItemActivities } from "./adapter.mjs";
+import { setExplodeItemActivities } from "./adapter.mjs?v=3.3.1-follow-up-filter-2";
 
 export const getSetting = key => game.settings.get(MODULE_ID, key);
+
+const EXPLODE_ACTIVITIES_MIGRATION = "explodeItemActivitiesMigrationVersion";
+const EXPLODE_ACTIVITIES_MIGRATION_VERSION = 1;
+
+async function applyExplodeActivitiesDefaultOnce() {
+  if (!game.user.isGM) return;
+  const migrated = game.settings.get(MODULE_ID, EXPLODE_ACTIVITIES_MIGRATION);
+  if (migrated >= EXPLODE_ACTIVITIES_MIGRATION_VERSION) return;
+  await game.settings.set(MODULE_ID, "explodeItemActivities", "always");
+  await game.settings.set(MODULE_ID, EXPLODE_ACTIVITIES_MIGRATION, EXPLODE_ACTIVITIES_MIGRATION_VERSION);
+}
 
 export function registerArgonSettings() {
   const definitions = {
@@ -35,4 +46,13 @@ export function registerArgonSettings() {
       }
     });
   }
+  game.settings.register(MODULE_ID, EXPLODE_ACTIVITIES_MIGRATION, {
+    scope: "world",
+    config: false,
+    type: Number,
+    default: 0
+  });
+  Hooks.once("ready", () => applyExplodeActivitiesDefaultOnce().catch(error => {
+    console.error(`${MODULE_ID} | Could not apply the one-time activity display default.`, error);
+  }));
 }

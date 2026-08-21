@@ -1,6 +1,6 @@
 import { MODULE_ID } from "../core/constants.mjs";
-import { initConfig } from "./argon/adapter.mjs?v=3.2.7-movement-hud-1";
-import { registerArgonSettings } from "./argon/settings.mjs";
+import { initConfig } from "./argon/adapter.mjs?v=3.3.1-follow-up-filter-2";
+import { registerArgonSettings } from "./argon/settings.mjs?v=3.3.1-explode-activities-default-1";
 
 const ARGON_CORE_ID = "enhancedcombathud";
 const LEGACY_ADAPTER_ID = "enhancedcombathud-black-flag";

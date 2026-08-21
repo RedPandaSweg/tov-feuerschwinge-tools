@@ -9,7 +9,7 @@ Hooks.once("init", () => {
   const ActivityDataModel = BlackFlag.data.abstract.ActivityDataModel;
   const ActivitySheet = BlackFlag.applications.activity.ActivitySheet;
   const FormulaField = BlackFlag.data.fields.FormulaField;
-  const { BooleanField, NumberField, StringField } = foundry.data.fields;
+  const { ArrayField, BooleanField, NumberField, SchemaField, StringField } = foundry.data.fields;
 
   class WeaponEnchantmentData extends ActivityDataModel {
     static defineSchema() {
@@ -26,6 +26,19 @@ Hooks.once("init", () => {
         magical: new BooleanField({ initial: true, label: "BFI.Enchantment.Magical" }),
         attackBonus: new FormulaField({ initial: "", label: "BFI.Enchantment.AttackBonus" }),
         damageBonus: new FormulaField({ initial: "", label: "BFI.Enchantment.DamageBonus" }),
+        criticalBonusDice: new NumberField({
+          initial: 0,
+          integer: true,
+          min: 0,
+          label: "BFI.Enchantment.CriticalBonusDice",
+          hint: "BFI.Enchantment.CriticalBonusDiceHint"
+        }),
+        manualChanges: new ArrayField(new SchemaField({
+          key: new StringField({ initial: "" }),
+          mode: new StringField({ initial: "add" }),
+          value: new StringField({ initial: "" }),
+          priority: new NumberField({ nullable: true, integer: true })
+        }), { initial: [] }),
         durationSeconds: new NumberField({ initial: 0, min: 0, label: "BFI.Enchantment.Duration" })
       };
     }
@@ -89,6 +102,20 @@ Hooks.once("init", () => {
     async applyToWeapon(weapon) {
       await this.removeEnchantments({ notify: false });
       const ability = this.resolveAbility();
+      const manualChanges = Array.from(this.system.manualChanges ?? [])
+        .filter(change => String(change.key ?? "").trim())
+        .map(change => {
+          const legacyTypes = ["custom", "multiply", "add", "downgrade", "upgrade", "override"];
+          const type = legacyTypes[Number(change.mode)] ?? String(change.mode || "add");
+          const hasPriority = change.priority !== null && change.priority !== undefined && change.priority !== "";
+          const priority = hasPriority ? Number(change.priority) : null;
+          return {
+            key: String(change.key).trim(),
+            type: Object.hasOwn(CONST.ACTIVE_EFFECT_CHANGE_TYPES, type) ? type : "add",
+            value: String(change.value ?? ""),
+            priority: Number.isFinite(priority) ? priority : null
+          };
+        });
       const config = {
         sourceActivity: this.uuid,
         sourceItem: this.item.uuid,
@@ -100,7 +127,9 @@ Hooks.once("init", () => {
         damageFormula: this.system.damageFormula,
         magical: this.system.magical,
         attackBonus: this.system.attackBonus,
-        damageBonus: this.system.damageBonus
+        damageBonus: this.system.damageBonus,
+        criticalBonusDice: this.system.criticalBonusDice,
+        manualChanges
       };
       const seconds = this.system.durationSeconds;
       const effect = {
@@ -118,12 +147,12 @@ Hooks.once("init", () => {
         } : {},
         system: { magical: this.system.magical },
         flags: { [MODULE_ID]: { [FLAG]: config } },
-        changes: this.system.magical ? [{
+        changes: [...(this.system.magical ? [{
           key: "system.properties",
-          mode: "add",
+          type: "add",
           value: "magical",
           priority: 20
-        }] : []
+        }] : []), ...manualChanges]
       };
       await weapon.createEmbeddedDocuments("ActiveEffect", [effect]);
       ui.notifications.info(game.i18n.format("BFI.Enchantment.Applied", { weapon: weapon.name }));
@@ -191,7 +220,52 @@ Hooks.once("init", () => {
         { value: "formula", label: "BFI.Enchantment.DamageUseFormula" }
       ];
       context.dieOptions = CONFIG.BlackFlag.dieSteps.map(value => ({ value, label: `d${value}` }));
+      context.effectModes = [
+        ["custom", "BFI.Enchantment.EffectMode.Custom"],
+        ["multiply", "BFI.Enchantment.EffectMode.Multiply"],
+        ["add", "BFI.Enchantment.EffectMode.Add"],
+        ["downgrade", "BFI.Enchantment.EffectMode.Downgrade"],
+        ["upgrade", "BFI.Enchantment.EffectMode.Upgrade"],
+        ["override", "BFI.Enchantment.EffectMode.Override"]
+      ].map(([value, label]) => ({ value, label: game.i18n.localize(label) }));
       return context;
+    }
+
+    _onRender(context, options) {
+      super._onRender(context, options);
+      const editor = this.element.querySelector("[data-manual-changes]");
+      if (!editor) return;
+
+      const renumber = () => {
+        [...editor.querySelectorAll("[data-manual-change]")].forEach((row, index) => {
+          row.querySelectorAll("[name]").forEach(input => {
+            input.name = input.name.replace(
+              /system\.manualChanges\.(?:\d+|__INDEX__)\./,
+              `system.manualChanges.${index}.`
+            );
+          });
+        });
+      };
+      const appendBlank = () => {
+        const template = editor.querySelector("template[data-manual-change-template]");
+        const row = template?.content.firstElementChild?.cloneNode(true);
+        if (row) editor.querySelector("[data-manual-change-list]").append(row);
+        return row;
+      };
+
+      editor.addEventListener("click", event => {
+        const button = event.target.closest("[data-manual-change-action]");
+        if (!button) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (button.dataset.manualChangeAction === "add") {
+          appendBlank();
+        } else if (button.dataset.manualChangeAction === "delete") {
+          button.closest("[data-manual-change]")?.remove();
+          if (!editor.querySelector("[data-manual-change]")) appendBlank();
+        }
+        renumber();
+      });
     }
   }
 

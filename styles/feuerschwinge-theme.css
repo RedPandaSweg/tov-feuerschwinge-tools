@@ -482,6 +482,27 @@
   text-shadow: 0 0 5px rgba(239, 88, 24, .3);
 }
 
+/* Natural d20 results must remain unmistakable even when success/failure is also set. */
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .dice-roll.critical-success .dice-total {
+  color: #fff4b0;
+  border-color: #ffd34e;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 224, 94, .34), transparent 62%),
+    linear-gradient(180deg, rgba(126, 79, 10, .96), rgba(54, 31, 5, .98));
+  box-shadow: inset 0 0 8px rgba(255, 244, 176, .2), 0 0 9px rgba(255, 187, 45, .72);
+  text-shadow: 0 1px 1px #000, 0 0 7px rgba(255, 222, 92, .95);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .dice-roll.critical-failure .dice-total {
+  color: #ffe0e0;
+  border-color: #ff3347;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(255, 42, 62, .28), transparent 62%),
+    linear-gradient(180deg, rgba(125, 12, 25, .97), rgba(49, 5, 11, .99));
+  box-shadow: inset 0 0 8px rgba(255, 197, 197, .16), 0 0 9px rgba(255, 25, 48, .72);
+  text-shadow: 0 1px 1px #000, 0 0 7px rgba(255, 61, 78, .95);
+}
+
 :is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .card-tray > label {
   color: var(--tovf-color-gold-light);
 }

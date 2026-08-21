@@ -5,6 +5,7 @@ import { SessionApp } from "./session-app.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
 import { playerCharacters, SessionService } from "./session-service.mjs";
 import { ProjectLibraryApp } from "./project-library-app.mjs";
+import { StationPresetApp } from "./station-preset-app.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -20,6 +21,7 @@ export class DowntimeDashboardApp extends HandlebarsApplicationMixin(Application
       refresh: DowntimeDashboardApp.#refresh,
       openSessions: DowntimeDashboardApp.#openSessions,
       openProjectLibrary: DowntimeDashboardApp.#openProjectLibrary,
+      openStationPresets: DowntimeDashboardApp.#openStationPresets,
       grantSelectedDowntime: DowntimeDashboardApp.#grantSelectedDowntime,
       grantAllDowntime: DowntimeDashboardApp.#grantAllDowntime
     }
@@ -133,6 +135,7 @@ export class DowntimeDashboardApp extends HandlebarsApplicationMixin(Application
   static #refresh() { this.render(); }
   static #openSessions() { new SessionApp().render(true); }
   static #openProjectLibrary() { new ProjectLibraryApp().render(true); }
+  static #openStationPresets() { new StationPresetApp().render(true); }
   static async #grantSelectedDowntime(event) {
     event.preventDefault();
     const uuids = Array.from(this.element.querySelectorAll('[name="directDowntimeActors"]:checked')).map(input => input.value);

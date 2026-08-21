@@ -46,6 +46,116 @@
   font-family: var(--font-monospace, monospace);
 }
 
+.bfi-weapon-enchantment .bfi-enchantment-changes {
+  display: grid;
+  gap: .4rem;
+}
+
+.bfi-weapon-enchantment .bfi-enchantment-change-head,
+.bfi-weapon-enchantment .bfi-enchantment-change {
+  display: grid;
+  grid-template-columns: minmax(10rem, 2fr) minmax(8rem, 1fr) 5rem 2.25rem;
+  align-items: center;
+  gap: .35rem;
+}
+
+.bfi-weapon-enchantment .bfi-enchantment-change-head {
+  color: var(--color-text-subtle);
+  font-size: var(--font-size-11);
+  font-weight: 600;
+}
+
+.bfi-weapon-enchantment .bfi-enchantment-change input,
+.bfi-weapon-enchantment .bfi-enchantment-change select,
+.bfi-weapon-enchantment .bfi-enchantment-change textarea,
+.bfi-weapon-enchantment .bfi-enchantment-change button {
+  width: 100%;
+  margin: 0;
+}
+
+.bfi-weapon-enchantment .bfi-enchantment-change-value-label,
+.bfi-weapon-enchantment .bfi-enchantment-change-value {
+  grid-column: 1 / -1;
+}
+
+.bfi-weapon-enchantment .bfi-enchantment-change-value {
+  min-height: 3.5rem;
+  resize: vertical;
+  font-family: var(--font-monospace, monospace);
+}
+
+.active-effect-config section.changes > header.tovf-effect-change-add-header {
+  display: flex !important;
+  justify-content: flex-end;
+  min-height: 2rem;
+  padding-inline: 0;
+}
+
+.active-effect-config section.changes > header.tovf-effect-change-add-header > :not(.controls) {
+  display: none !important;
+}
+
+.active-effect-config section.changes ol[data-changes] {
+  display: block !important;
+  width: 100%;
+  max-width: none;
+  max-height: min(55vh, 32rem);
+  padding-right: .35rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.active-effect-config section.changes ol[data-changes] > li.tovf-effect-change {
+  display: grid !important;
+  grid-template-areas:
+    "key type priority controls"
+    "value value value value" !important;
+  grid-template-columns: minmax(0, 1fr) minmax(8rem, .65fr) 6rem 2.25rem !important;
+  align-items: end;
+  gap: .5rem;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 0 1.25rem;
+  padding: 0 0 .25rem;
+}
+
+.active-effect-config section.changes .tovf-effect-change > .key { grid-area: key; }
+.active-effect-config section.changes .tovf-effect-change > .type { grid-area: type; }
+.active-effect-config section.changes .tovf-effect-change > .priority { grid-area: priority; }
+.active-effect-config section.changes .tovf-effect-change > .controls { grid-area: controls; }
+.active-effect-config section.changes .tovf-effect-change > .value { grid-area: value; }
+
+.active-effect-config section.changes .tovf-effect-change > :is(.key, .type, .priority, .value) {
+  display: block !important;
+  min-width: 0;
+}
+
+.active-effect-config section.changes .tovf-effect-change-label {
+  display: block;
+  margin: 0 0 .25rem;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-12);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.active-effect-config section.changes .tovf-effect-change :is(input, select, textarea, button) {
+  width: 100%;
+  margin: 0;
+}
+
+.active-effect-config section.changes .tovf-effect-change .value textarea {
+  min-height: 4.5rem;
+  resize: vertical;
+  font-family: var(--font-monospace, monospace);
+}
+
+.bfi-weapon-enchantment .bfi-enchantment-changes > button {
+  justify-self: start;
+  width: auto;
+}
+
 .tov-macro-activity [data-tov-macro-drop] {
   border: 1px dashed var(--color-border-light-tertiary);
   border-radius: 4px;
@@ -140,8 +250,7 @@
   max-height: 20rem;
   overflow-y: auto;
 }
-.tovf-actor-list label,
-.tovf-result-list label {
+.tovf-actor-list label {
   display: flex;
   align-items: center;
   gap: .5rem;
@@ -155,14 +264,6 @@
   object-fit: cover;
   border: 0;
 }
-.tovf-result-list {
-  display: flex;
-  flex-direction: column;
-  gap: .35rem;
-}
-.tovf-result-list label small { margin-left: auto; }
-.tovf-result-list label.warning { border-color: var(--color-warm-2); }
-
 .tovf-help .window-content { overflow: hidden; }
 .tovf-help [data-application-part="content"] { overflow-y: auto; min-height: 0; }
 .tovf-help-content { display: flex; flex-direction: column; gap: 1rem; }
@@ -361,23 +462,19 @@
 }
 .tovf-challenge-manager-root section { padding-bottom: .65rem; border-bottom: 1px solid var(--tovf-color-bronze, #75401f); }
 .tovf-challenge-manager-root h3 { margin: 0 0 .45rem; color: var(--tovf-color-gold-light, #f0d2a0); font-size: .8rem; text-transform: uppercase; }
+.tovf-challenge-manager-root .challenge-section { padding-bottom: .65rem; border-bottom: 1px solid var(--tovf-color-bronze, #75401f); }
+.tovf-challenge-manager-root .challenge-section > summary { padding: .2rem 0; color: var(--tovf-color-gold-light, #f0d2a0); font-size: .8rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+.tovf-challenge-manager-root .challenge-section[open] > summary { margin-bottom: .55rem; }
+.tovf-challenge-manager-root .challenge-section-content { min-width: 0; }
 .tovf-challenge-manager-root .encounter { display: flex; align-items: center; justify-content: space-between; gap: .5rem; }
 .tovf-challenge-manager-root .encounter strong { color: #ff9b55; }
-.tovf-challenge-manager-root .encounter .overlay-toggle {
-  width: auto;
-  margin: 0 auto;
-  padding: .25rem .5rem;
-  font-size: .78rem;
-  white-space: nowrap;
-}
-.tovf-challenge-manager-root .doom-bank,
-.tovf-challenge-manager-root .doom-bank > div { display: flex; align-items: center; justify-content: center; gap: .4rem; }
-.tovf-challenge-manager-root .doom-bank { position: relative; flex-direction: column; }
+.tovf-challenge-manager-root .doom-bank .challenge-section-content { display: flex; align-items: center; flex-direction: column; gap: .4rem; }
+.tovf-challenge-manager-root .doom-bank .doom-counter { display: flex; align-items: center; justify-content: center; gap: .4rem; }
 .tovf-challenge-manager-root .doom-bank h3 {
   color: #ff6747;
-  font-size: 1.35rem;
+  font-size: .95rem;
   font-weight: 800;
-  letter-spacing: .16em;
+  letter-spacing: .1em;
   text-shadow:
     0 1px 2px #000,
     0 0 6px rgba(255, 43, 18, .9),
@@ -402,9 +499,20 @@
     animation: none;
   }
 }
-.tovf-challenge-manager-root .doom-bank input { width: 5rem; font-size: 1.7rem; text-align: center; }
+.tovf-challenge-manager-root .doom-bank input { width: 4.5rem; font-size: 1.45rem; text-align: center; }
 .tovf-challenge-manager-root .doom-bank button { width: auto; }
+.tovf-challenge-manager-root .doom-bank .doom-adjust { min-width: 2.25rem; padding-inline: .55rem; font-size: 1.15rem; font-weight: 800; }
 .tovf-challenge-manager-root .doom-bank .doom-spends { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+.tovf-challenge-manager-root .doom-bank .doom-spends button { display: grid; grid-template-columns: 1.25rem minmax(0, 1fr); align-items: center; gap: .45rem; min-height: 2.35rem; padding: .35rem .55rem; text-align: left; }
+.tovf-challenge-manager-root .doom-bank .doom-spends button i { color: #ff9b55; text-align: center; }
+.tovf-challenge-manager-root .doom-bank .doom-announce { display: flex; align-items: center; gap: .4rem; align-self: stretch; justify-content: center; font-size: .82rem; }
+.tovf-challenge-manager-root .doom-bank .doom-announce input { width: auto; font-size: inherit; }
+.tovf-doom-chat { overflow: hidden; border: 1px solid #7d2b20; border-radius: 7px; background: linear-gradient(145deg, rgba(66, 19, 14, .96), rgba(20, 12, 10, .98)); color: #f1d5b0; box-shadow: inset 0 0 18px rgba(180, 35, 18, .18); }
+.tovf-doom-chat header { display: flex; align-items: center; gap: .45rem; padding: .4rem .55rem; background: rgba(124, 30, 20, .32); color: #ff9a68; font-size: .72rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.tovf-doom-chat-action { display: flex; align-items: center; gap: .65rem; padding: .65rem; }
+.tovf-doom-chat-action > i { display: grid; place-items: center; width: 2rem; height: 2rem; border: 1px solid #8f3d27; border-radius: 50%; color: #ff9b55; background: rgba(90, 25, 15, .55); }
+.tovf-doom-chat-total { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .45rem .65rem; border-top: 1px solid rgba(143, 61, 39, .65); color: #cdb18c; }
+.tovf-doom-chat-total strong { color: #ffb077; font-size: 1.25rem; }
 .tovf-challenge-manager-root .actor-list { display: grid; grid-template-columns: 1fr 1fr; gap: .35rem; }
 .tovf-challenge-manager-root .actor-entry {
   display: grid;
@@ -471,26 +579,25 @@
   text-transform: uppercase;
   cursor: pointer;
 }
-.tovf-challenge-manager-root .add-connected-actors {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: auto;
-  padding: .2rem .45rem;
+.tovf-challenge-manager-root .actor-picker-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .3rem;
+  margin-bottom: .4rem;
+}
+.tovf-challenge-manager-root .actor-picker-actions button {
+  width: 100%;
+  min-height: 2rem;
+  height: auto;
+  padding: .35rem .5rem;
   font-size: .72rem;
+  line-height: 1.15;
+  white-space: normal;
 }
 .tovf-challenge-manager-root .actor-picker-scroll {
   padding: .1rem 0 0;
   overflow: visible;
 }
-.tovf-challenge-manager-root .roll-request-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: .5rem;
-  margin-bottom: .45rem;
-}
-.tovf-challenge-manager-root .roll-request-heading h3 { margin: 0; }
 .tovf-challenge-manager-root .request-dc {
   display: flex;
   align-items: center;
@@ -500,7 +607,7 @@
   font-weight: 700;
 }
 .tovf-challenge-manager-root .request-dc input {
-  width: 3.2rem;
+  width: 2.35rem;
   height: 1.65rem;
   padding: .1rem .25rem;
   text-align: center;
@@ -509,7 +616,8 @@
 .tovf-challenge-manager-root .request-fields .request-options {
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  align-items: center;
   gap: .4rem;
 }
 .tovf-challenge-manager-root .request-fields .request-option {
@@ -531,33 +639,6 @@
   margin-top: .6rem;
   font-weight: 700;
 }
-
-.tovf-doom-overlay {
-  position: fixed !important;
-  top: 18% !important;
-  left: 1.5rem !important;
-  width: auto !important;
-  height: auto !important;
-  z-index: 80;
-}
-.tovf-doom-overlay .window-content { padding: 0; background: transparent; overflow: visible; }
-.tovf-doom-overlay-card {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: .75rem 1rem;
-  border: 2px solid rgba(255, 70, 70, .7);
-  border-radius: 12px;
-  background: rgba(40, 0, 0, .72);
-  box-shadow: 0 0 24px rgba(0, 0, 0, .7);
-  color: #fff;
-  backdrop-filter: blur(4px);
-}
-.tovf-doom-overlay-card > i { color: #ff5555; font-size: 1.8rem; }
-.tovf-doom-overlay-card > div { display: flex; flex-direction: column; align-items: center; }
-.tovf-doom-overlay-card span { color: #ff7777; font-size: .7rem; font-weight: 700; letter-spacing: .18rem; }
-.tovf-doom-overlay-card strong { font-size: 2.2rem; line-height: 1; text-shadow: 0 0 12px #f00; }
-.tovf-doom-overlay-card button { align-self: flex-start; width: auto; padding: .15rem; border: 0; background: none; }
 
 .tovf-roll-request-card {
   padding: .5rem;
@@ -712,6 +793,7 @@
 .tovf-gm-session-summary { display: grid; grid-template-columns: minmax(100px, auto) 1fr; gap: .3rem .75rem; }
 .tovf-gm-session-summary dt { font-weight: 700; }
 .tovf-gm-session-summary dd { margin: 0; overflow-wrap: anywhere; }
+.tovf-gm-milestone-summary { margin-bottom: 1rem; padding: .6rem; border: 1px solid var(--tovf-color-bronze, #75401f); border-radius: 6px; }
 .tovf-gm-tools-section pre { max-height: 360px; overflow: auto; padding: .65rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; white-space: pre-wrap; }
 .tovf-void-taint-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; margin-bottom: .75rem; }
 .tovf-void-taint-heading h2 { margin: 0; }
@@ -1203,6 +1285,185 @@
   gap: 4px;
 }
 
+.extended-combat-hud .action-hud .features-container.is-spells.tovf-spell-stack {
+  --tovf-spell-row-height: 196px;
+  display: flex;
+  flex-flow: column nowrap;
+  align-items: flex-start;
+  width: max-content;
+  max-width: none;
+  gap: 5px;
+  overflow: visible;
+}
+
+.extended-combat-hud .action-hud .tovf-spell-stack .features-accordion:not(.show) {
+  display: none;
+}
+
+.extended-combat-hud .action-hud .tovf-spell-stack .features-accordion.show {
+  display: grid;
+  grid-template-columns: 53px 53px max-content;
+  grid-template-rows: var(--tovf-spell-row-height);
+  align-items: stretch;
+  column-gap: 6px;
+  width: max-content !important;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+}
+
+.extended-combat-hud .action-hud .tovf-spell-stack .features-accordion-content {
+  display: flex !important;
+  flex-flow: row nowrap !important;
+  grid-column: 3;
+  grid-row: 1;
+  align-items: flex-start;
+  grid-template-columns: none !important;
+  width: max-content;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  gap: 6px;
+  transform: none !important;
+  overflow: visible;
+}
+
+.extended-combat-hud .action-hud .tovf-spell-stack .features-accordion-content > .feature-element {
+  flex: 0 0 160px;
+  width: 160px;
+  min-width: 160px;
+  max-width: 160px;
+  height: var(--tovf-spell-row-height);
+  min-height: var(--tovf-spell-row-height);
+  max-height: var(--tovf-spell-row-height);
+  margin-top: 0;
+  padding: 0;
+  background-position: center top;
+  background-size: 160px 160px;
+}
+
+.extended-combat-hud .action-hud .tovf-spell-stack .features-accordion-content > .feature-element > .feature-element-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 36px;
+  height: auto;
+  max-height: var(--tovf-spell-row-height);
+  padding: .3rem .4rem;
+  font-size: 1.12rem;
+  line-height: 1.05;
+  text-align: center;
+  overflow: visible;
+}
+
+.extended-combat-hud .action-hud .tovf-spell-stack .feature-spell-slots {
+  position: static;
+  display: flex;
+  flex-flow: column nowrap;
+  grid-column: 2;
+  grid-row: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  inset: auto;
+  width: auto;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0;
+  padding: .4rem;
+  transform: none;
+  border: 1px solid var(--tovf-hud-bronze);
+  background: linear-gradient(180deg, rgba(52, 29, 17, .96), rgba(14, 9, 7, .98));
+  box-shadow: inset 0 0 9px rgba(0, 0, 0, .38);
+}
+
+.extended-combat-hud .action-hud .tovf-spell-stack .feature-spell-slots .spell-slot:not(.spell-cantrip) {
+  position: relative;
+  flex: 0 0 26px;
+  min-height: 26px;
+  width: 28px;
+  max-width: 28px;
+  height: 26px;
+  margin: 0;
+}
+
+.extended-combat-hud .action-hud .tovf-spell-stack .feature-spell-slots .spell-slot:not(.spell-cantrip)::before {
+  font-size: 1.65rem;
+}
+
+.extended-combat-hud .action-hud .tovf-spell-stack .feature-spell-slots .spell-slot.spell-cantrip {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  transform: none;
+  font-size: 1.5rem;
+}
+
+.extended-combat-hud .action-hud .tovf-spell-stack .feature-accordion-title {
+  position: static;
+  display: flex;
+  grid-column: 1;
+  grid-row: 1;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: .5rem;
+  transform: none;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  cursor: pointer;
+  background:
+    linear-gradient(rgba(179, 75, 20, .42), rgba(179, 75, 20, .42)),
+    linear-gradient(180deg, rgba(52, 29, 17, .97), rgba(14, 9, 7, .98));
+  border-color: #c1783d;
+  color: #fff0c7;
+  box-shadow: inset 0 0 9px rgba(239, 88, 24, .3);
+}
+
+.extended-combat-hud .action-hud .tovf-spell-circle-tabs {
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: stretch;
+  width: min(var(--tovf-spell-list-width), calc(var(--tovf-spell-tab-count, 1) * 160px));
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--tovf-hud-bronze);
+  background: linear-gradient(180deg, rgba(52, 29, 17, .97), rgba(14, 9, 7, .98));
+  pointer-events: all;
+}
+
+.extended-combat-hud .action-hud .tovf-spell-circle-tab {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: .5rem .6rem;
+  border: 0;
+  border-right: 1px solid var(--tovf-hud-bronze);
+  border-radius: 0;
+  background: transparent;
+  color: #e5bd7c;
+  font: inherit;
+  font-size: 1.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.extended-combat-hud .action-hud .tovf-spell-circle-tab:last-child { border-right: 0; }
+.extended-combat-hud .action-hud .tovf-spell-circle-tab:hover,
+.extended-combat-hud .action-hud .tovf-spell-circle-tab.active {
+  background: rgba(179, 75, 20, .42);
+  color: #fff0c7;
+  box-shadow: inset 0 0 9px rgba(239, 88, 24, .3);
+}
+
 .extended-combat-hud .action-hud .action-element-container .feature-element {
   width: 132px;
   min-width: 132px;
@@ -1218,6 +1479,34 @@
   padding: .35rem .45rem;
   font-size: 1.05rem;
   line-height: 1.05;
+}
+
+.extended-combat-hud .action-hud .features-container .feature-element {
+  flex: 0 0 160px;
+  width: 160px;
+  min-width: 160px;
+  max-width: 160px;
+  height: 196px;
+  min-height: 196px;
+  max-height: 196px;
+  padding: 0;
+  background-position: center top;
+  background-size: 160px 160px;
+}
+
+.extended-combat-hud .action-hud .features-container .feature-element .feature-element-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 36px;
+  height: auto;
+  max-height: 196px;
+  padding: .3rem .4rem;
+  font-size: 1.12rem;
+  line-height: 1.05;
+  text-align: center;
+  overflow: visible;
 }
 
 .extended-combat-hud .action-hud .feature-spell-slots .spell-slot:not(.spell-cantrip) {
@@ -1343,6 +1632,13 @@
   font-size: 16px;
   border: 1px solid var(--tovf-tooltip-bronze-light);
   box-shadow: 0 0 0 1px #120905, 0 0 16px rgba(239, 88, 24, .35);
+}
+
+/* A tall hover tooltip can overlap its trigger card. Let pointer input pass
+   through so the card keeps its hover state and remains clickable. */
+.ech-tooltip-container:has(.ech-tooltip.blackflag:not(.ech-locked)),
+.ech-tooltip.blackflag:not(.ech-locked) {
+  pointer-events: none;
 }
 
 .ech-tooltip.blackflag .ech-tooltip-header {
