@@ -432,6 +432,7 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this.actorId = options.actorId ?? null; this.merchantId = options.merchantId ?? null; this.auctionHouseId = options.auctionHouseId ?? null;
     this.category = ""; this.search = ""; this.sort = "type"; this.auctionPage = options.auctionPage ?? "auctions"; this.tradeId = options.tradeId ?? null;
     this.merchantSessionId = foundry.utils.randomID(); }
+  _operationPending = false;
   _onRender(context, options) {
     super._onRender(context, options);
     for (const [selector, property] of [["[name=actorId]", "actorId"], ["[name=merchantId]", "merchantId"], ["[name=category]", "category"], ["[name=sort]", "sort"]]) {
@@ -632,10 +633,16 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
         img: auctionHouse.img, description: auctionDescription }, trades, activeTrade, isGM: game.user.isGM,
       canSell: !config.purchaseOnly, rollTables: game.tables.map(t => ({ id: t.id, name: t.name })) };
   }
-  async _run(operation) { try { const result = await operation(); if (result?.message) ui.notifications.info(result.message);
+  async _run(operation) {
+    if (this._operationPending) return null;
+    this._operationPending = true;
+    for (const button of this.element?.querySelectorAll?.('[data-action="buy"], [data-action="sell"]') ?? []) button.disabled = true;
+    try { const result = await operation(); if (result?.message) ui.notifications.info(result.message);
       if (this.mode === "trade" && ["accepted", "cancelled"].includes(result?.sync?.status)) { await this.close(); return result; }
       await this.render({ force: true }); return result; }
-    catch (error) { console.error(`${MODULE_ID} | Commerce operation failed`, error); ui.notifications.error(error.message); } }
+    catch (error) { console.error(`${MODULE_ID} | Commerce operation failed`, error); ui.notifications.error(error.message); return null; }
+    finally { this._operationPending = false; }
+  }
   static async #changeMode(_event, target) { this.mode = target.dataset.mode; await this.render({ force: true }); }
   static async #changeShopPage(_event, target) { this.shopPage = target.dataset.page; this.category = ""; this.search = ""; await this.render({ force: true }); }
   static async #changeAuctionPage(_event, target) { this.auctionPage = target.dataset.page; this.category = ""; this.search = ""; await this.render({ force: true }); }

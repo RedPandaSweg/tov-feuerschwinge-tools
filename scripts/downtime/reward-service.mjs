@@ -154,4 +154,31 @@ export class RewardService {
     }
     return created;
   }
+
+  static async adjustItems(actor, rewards) {
+    const changed = [];
+    for (const reward of rewards ?? []) {
+      const delta = Number(reward.quantity ?? 0);
+      if (!reward.uuid || !Number.isFinite(delta) || delta === 0) continue;
+      if (delta > 0) {
+        changed.push(...await this.grantItems(actor, [{ ...reward, quantity: delta }]));
+        continue;
+      }
+      const source = await fromUuid(reward.uuid).catch(() => null);
+      const wantedUuid = String(reward.uuid).toLowerCase();
+      const wantedIdentifier = stableIdentifier(source);
+      const existing = actor.items.find(item => {
+        const itemSource = String(sourceUuid(item)).toLowerCase();
+        const rewardSource = String(item.getFlag?.(MODULE_ID, "rewardSourceUuid") ?? "").toLowerCase();
+        return itemSource === wantedUuid || rewardSource === wantedUuid || Boolean(wantedIdentifier && stableIdentifier(item) === wantedIdentifier);
+      });
+      if (!existing) throw new Error(game.i18n.format("DOWNTIME_MANAGER.Errors.RewardMissing", { uuid: reward.uuid }));
+      const next = round(getQuantity(existing) + delta, 6);
+      if (next < 0) throw new Error(game.i18n.format("DOWNTIME_MANAGER.Session.Errors.RewardCorrectionInsufficient", { actor: actor.name, item: existing.name }));
+      if (next === 0) await existing.delete();
+      else await existing.update(quantityUpdate(existing, next));
+      changed.push(existing.name);
+    }
+    return changed;
+  }
 }

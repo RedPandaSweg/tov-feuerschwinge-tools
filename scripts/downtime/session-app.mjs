@@ -22,6 +22,7 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
       award: this.#award,
       settle: this.#settle,
       history: this.#history,
+      correctSession: this.#correctSession,
       configureRewards: this.#configureRewards,
       workflowExportSession: this.#workflowExportSession,
       workflowImportSession: this.#workflowImportSession,
@@ -368,6 +369,46 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static #history(event) { event.preventDefault(); return SessionService.openHistory(); }
+  static async #correctSession(event) {
+    event.preventDefault();
+    const entries = SessionService.historyEntries().filter(entry => entry.id && Array.isArray(entry.participants)).slice().reverse();
+    if (!entries.length) return ui.notifications.warn(game.i18n.localize("DOWNTIME_MANAGER.Session.Correction.Empty"));
+    const options = entries.map(entry => `<option value="${foundry.utils.escapeHTML(String(entry.id))}">${foundry.utils.escapeHTML(entry.title)} · ${new Date(entry.awardedAt).toLocaleString()}</option>`).join("");
+    const recordId = await foundry.applications.api.DialogV2.prompt({
+      window: { title: game.i18n.localize("DOWNTIME_MANAGER.Session.Correction.Title") },
+      content: `<div class="standard-form"><label><span>${game.i18n.localize("DOWNTIME_MANAGER.Session.Correction.Session")}</span><select name="recordId">${options}</select></label></div>`,
+      ok: { label: game.i18n.localize("DOWNTIME_MANAGER.Session.Correction.Select"), callback: (_event, button) => new FormData(button.form).get("recordId") },
+      rejectClose: false
+    });
+    if (!recordId) return;
+    const correction = await SessionService.correctionDefaults(recordId);
+    const rows = correction.actors.map(actor => `<label class="sc-session-correction-row"><input type="checkbox" name="actors" value="${foundry.utils.escapeHTML(actor.actorUuid)}" ${actor.selected ? "checked" : ""}><strong>${foundry.utils.escapeHTML(actor.actorName)}</strong><span>${game.i18n.localize("DOWNTIME_MANAGER.Currency.GP")}</span><input type="number" name="gold.${foundry.utils.escapeHTML(actor.actorUuid)}" value="${actor.gold}" min="0" step="any"></label>`).join("");
+    const result = await foundry.applications.api.DialogV2.prompt({
+      classes: ["downtime-manager", "sc-session-correction-dialog"],
+      window: { title: game.i18n.format("DOWNTIME_MANAGER.Session.Correction.EditTitle", { title: correction.record.title }) },
+      position: { width: 620, height: 700 },
+      content: `<div class="standard-form"><p class="notes">${game.i18n.localize("DOWNTIME_MANAGER.Session.Correction.Hint")}</p><div class="sc-session-correction-list">${rows}</div></div>`,
+      ok: { label: game.i18n.localize("DOWNTIME_MANAGER.Session.Correction.Apply"), callback: (_event, button) => {
+        const data = new FormData(button.form);
+        return { actorUuids: data.getAll("actors"), goldByActor: Object.fromEntries(correction.actors.map(actor => [actor.actorUuid, data.get(`gold.${actor.actorUuid}`)])) };
+      } },
+      rejectClose: false
+    });
+    if (!result) return;
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: game.i18n.localize("DOWNTIME_MANAGER.Session.Correction.Title") },
+      content: `<p>${game.i18n.localize("DOWNTIME_MANAGER.Session.Correction.Confirm")}</p>`
+    });
+    if (!confirmed) return;
+    try {
+      await SessionService.correctSession({ recordId, ...result });
+      ui.notifications.info(game.i18n.localize("DOWNTIME_MANAGER.Session.Correction.Complete"));
+      await this.render({ force: true });
+    } catch (error) {
+      console.error(`${MODULE_ID} | Session correction failed`, error);
+      ui.notifications.error(error.message);
+    }
+  }
   static async #configureRewards(event) { event.preventDefault(); const { SessionRewardConfigApp } = await import("./session-reward-config-app.mjs"); new SessionRewardConfigApp().render(true); }
   static async #newSession(event) { event.preventDefault(); await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, {}); await this.render({ force: true }); }
 }

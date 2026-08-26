@@ -54,6 +54,7 @@ export function activateCommerceSocket() {
     if (message?.scope !== SCOPE) return;
     if (message.type === "peerTrade") { Hooks.callAll(`${MODULE_ID}.peerTrade`, message); return; }
     if (message.type === "response") {
+      if (message.targetUserId !== game.user.id) return;
       const entry = pending.get(message.requestId);
       if (!entry) return;
       pending.delete(message.requestId);

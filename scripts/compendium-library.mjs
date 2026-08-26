@@ -24,6 +24,18 @@ const CATEGORIES = [
   { id: "tools", label: "TOVF.Library.Category.Tools", icon: "fa-solid fa-toolbox" }
 ];
 
+const MAGIC_ITEM_RARITY_ORDER = new Map([
+  ["common", 0],
+  ["uncommon", 1],
+  ["rare", 2],
+  ["very rare", 3],
+  ["legendary", 4],
+  ["fabled", 5],
+  ["artifact", 6],
+  ["unique", 7],
+  ["other", 9]
+]);
+
 function isMagicItem(entry) {
   const rarity = foundry.utils.getProperty(entry, "system.rarity");
   const properties = foundry.utils.getProperty(entry, "system.properties");
@@ -446,7 +458,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
 
   #entries = null;
   #category = "monsters";
-  #sources = new Set();
+  #sources = null;
   #query = "";
   #subcategory = "";
   #detail = "";
@@ -455,6 +467,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
   #spellCastingTime = "";
   #spellConcentration = false;
   #spellVoid = false;
+  #magicAttunement = "";
   #layout = "list";
   #tableBuilder = false;
   #tableEntries = new Set();
@@ -476,6 +489,9 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           "system.type.base",
           "system.properties",
           "system.rarity",
+          "system.attunement.value",
+          "system.price.value",
+          "system.price.denomination",
           "system.identifier.associated",
           "system.level.value",
           "system.attributes.cr",
@@ -493,6 +509,8 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       for (const entry of index) {
         const category = categoryFor(pack, entry);
         const classification = classificationFor(pack, entry, category);
+        const showPrice = category === "magicItems" || category === "items";
+        const priceValue = Math.max(0, Number(foundry.utils.getProperty(entry, "system.price.value")) || 0);
         entries.push({
           id: entry._id,
           uuid: pack.getUuid(entry._id),
@@ -508,6 +526,12 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           spellCastingTime: entry.type === "spell" ? spellCastingTime(entry) : "",
           spellConcentration: entry.type === "spell" && spellRequiresConcentration(entry),
           spellVoid: entry.type === "spell" && spellIsVoid(entry),
+          magicAttunement: category === "magicItems"
+            ? String(foundry.utils.getProperty(entry, "system.attunement.value") ?? "none") || "none"
+            : "",
+          showPrice,
+          priceValue: new Intl.NumberFormat(game.i18n.lang, { maximumFractionDigits: 6 }).format(priceValue),
+          priceDenomination: String(foundry.utils.getProperty(entry, "system.price.denomination") ?? "gp"),
           ...classification,
           pack: pack.collection,
           packLabel: pack.title,
@@ -526,7 +550,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     const query = this.#query.toLocaleLowerCase(game.i18n.lang);
     const categoryEntries = this.#entries.filter(entry => (
       entry.category === this.#category
-      && (!this.#sources.size || this.#sources.has(entry.source))
+      && (this.#sources === null || this.#sources.has(entry.source))
     ));
     const challengeRatings = this.#category === "monsters"
       ? [...new Set(categoryEntries
@@ -554,7 +578,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     const subcategoryEntries = challengeRatingEntries.filter(entry => (
       !this.#subcategory || entry.subcategory === this.#subcategory
     ));
-    const details = (this.#subcategory || this.#category === "spells")
+    const details = (this.#subcategory || this.#category === "spells" || this.#category === "magicItems")
       ? this.#filterOptions(subcategoryEntries, "detail", true)
       : [];
     if (this.#detail && !details.some(option => option.value === this.#detail)) this.#detail = "";
@@ -569,6 +593,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       (!this.#spellCastingTime || entry.spellCastingTime === this.#spellCastingTime)
       && (!this.#spellConcentration || entry.spellConcentration)
       && (!this.#spellVoid || entry.spellVoid)
+      && (!this.#magicAttunement || entry.magicAttunement === this.#magicAttunement)
       && (!query || entry.name.toLocaleLowerCase(game.i18n.lang).includes(query))
     ));
     const entries = deduplicateEntries(matchingEntries).map(entry => ({
@@ -580,7 +605,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       this.#entries
         .filter(entry => entry.category === this.#category)
         .map(entry => [entry.source, entry.sourceLabel])
-    )].map(([value, label]) => ({ value, label, selected: this.#sources.has(value) }))
+    )].map(([value, label]) => ({ value, label, selected: this.#sources === null || this.#sources.has(value) }))
       .sort((a, b) => a.label.localeCompare(b.label, game.i18n.lang));
     return {
       ...(await super._prepareContext(options)),
@@ -604,6 +629,13 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       selectedExtra: this.#extra,
       selectedChallengeRating: this.#challengeRating,
       showSpellFilters: this.#category === "spells",
+      showMagicItemFilters: this.#category === "magicItems",
+      magicAttunementOptions: ["none", "optional", "required"].map(value => ({
+        value,
+        label: game.i18n.localize(`TOVF.Library.Attunement.${value}`),
+        count: deduplicateEntries(spellFilterEntries.filter(entry => entry.magicAttunement === value)).length
+      })),
+      selectedMagicAttunement: this.#magicAttunement,
       spellCastingTimes: ["action", "bonus", "reaction"].map(value => ({
         value,
         label: game.i18n.localize(`TOVF.Library.SpellCastingTime.${value}`),
@@ -630,10 +662,10 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       gridLayout: this.#layout === "grid",
       sources,
       isGM: game.user.isGM,
-      allSourcesSelected: !this.#sources.size,
-      sourceSelectionLabel: this.#sources.size
-        ? game.i18n.format("TOVF.Library.SelectedSources", { count: this.#sources.size })
-        : game.i18n.localize("TOVF.Library.AllSources"),
+      allSourcesSelected: this.#sources === null,
+      sourceSelectionLabel: this.#sources === null
+        ? game.i18n.localize("TOVF.Library.AllSources")
+        : game.i18n.format("TOVF.Library.SelectedSources", { count: this.#sources.size }),
       query: this.#query,
       resultCount: entries.length,
       tableBuilder: this.#tableBuilder,
@@ -665,6 +697,10 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
         const circleRank = label => label === "Cantrip" ? 0 : Number.parseInt(label, 10) || 99;
         return circleRank(a.label) - circleRank(b.label);
       }
+      if (property === "subcategory" && this.#category === "magicItems") {
+        const rarityRank = label => MAGIC_ITEM_RARITY_ORDER.get(label.toLocaleLowerCase("en")) ?? 8;
+        return rarityRank(a.label) - rarityRank(b.label) || a.label.localeCompare(b.label, "en");
+      }
       return a.label.localeCompare(b.label, "en");
     });
   }
@@ -684,9 +720,19 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     for (const source of this.element.querySelectorAll("[data-library-source]")) {
       source.addEventListener("change", event => {
         const value = event.currentTarget.value;
-        if (!value) this.#sources.clear();
-        else if (event.currentTarget.checked) this.#sources.add(value);
-        else this.#sources.delete(value);
+        if (!value) {
+          this.#sources = event.currentTarget.checked ? null : new Set();
+        } else {
+          const availableSources = [...this.element.querySelectorAll("[data-library-source]")]
+            .map(input => input.value)
+            .filter(Boolean);
+          if (this.#sources === null) {
+            this.#sources = new Set(availableSources);
+          }
+          if (event.currentTarget.checked) this.#sources.add(value);
+          else this.#sources.delete(value);
+          if (availableSources.every(sourceId => this.#sources.has(sourceId))) this.#sources = null;
+        }
         this.render();
       });
     }
@@ -707,6 +753,8 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           this.#subcategory = "";
           this.#detail = "";
           this.#extra = "";
+        } else if (property === "magicAttunement") {
+          this.#magicAttunement = event.currentTarget.value;
         }
         this.render();
       });
@@ -763,7 +811,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static #selectCategory(_event, target) {
     this.#category = target.dataset.category;
-    this.#sources.clear();
+    this.#sources = null;
     this.#query = "";
     this.#subcategory = "";
     this.#detail = "";
@@ -772,6 +820,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#spellCastingTime = "";
     this.#spellConcentration = false;
     this.#spellVoid = false;
+    this.#magicAttunement = "";
     this.render();
   }
 

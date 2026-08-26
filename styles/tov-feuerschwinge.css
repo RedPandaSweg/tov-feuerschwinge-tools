@@ -385,7 +385,9 @@
   padding: .25rem .4rem;
   border-bottom: 1px solid var(--color-border-light-tertiary);
 }
+.tovf-library-results li.has-price { grid-template-columns: 2.5rem minmax(0, 1fr) minmax(4.5rem, auto) minmax(4.5rem, 7rem); }
 .tovf-library-results li.table-builder { grid-template-columns: 1.25rem 2.5rem minmax(0, 1fr) minmax(4.5rem, 7rem); }
+.tovf-library-results li.table-builder.has-price { grid-template-columns: 1.25rem 2.5rem minmax(0, 1fr) minmax(4.5rem, auto) minmax(4.5rem, 7rem); }
 .tovf-library-table-select-slot { display: flex; align-items: center; justify-content: center; min-height: 2.5rem; }
 .tovf-library-results li[draggable="true"] { cursor: grab; }
 .tovf-library-results li[draggable="true"]:active { cursor: grabbing; }
@@ -394,6 +396,8 @@
 .tovf-library-results button strong,
 .tovf-library-results button span { max-width: 100%; overflow-wrap: anywhere; white-space: normal; }
 .tovf-library-results button span { color: var(--color-text-subtle); font-size: var(--font-size-12); }
+.tovf-library-results .tovf-library-price { align-self: center; color: var(--color-warm-2); font-size: var(--font-size-12); font-weight: 600; white-space: nowrap; }
+.tovf-library-results .tovf-library-price i { margin-right: .15rem; }
 .tovf-library-results button.source {
   overflow: hidden;
   width: 100%;
@@ -793,6 +797,10 @@
 .tovf-gm-session-summary { display: grid; grid-template-columns: minmax(100px, auto) 1fr; gap: .3rem .75rem; }
 .tovf-gm-session-summary dt { font-weight: 700; }
 .tovf-gm-session-summary dd { margin: 0; overflow-wrap: anywhere; }
+.sc-session-correction-list { display: grid; gap: .3rem; max-height: 520px; overflow-y: auto; }
+.sc-session-correction-row { display: grid; grid-template-columns: 1.2rem minmax(0, 1fr) auto 6rem; align-items: center; gap: .45rem; padding: .35rem .45rem; border-bottom: 1px solid var(--color-border-light-tertiary); }
+.sc-session-correction-row input[type="checkbox"] { margin: 0; }
+.sc-session-correction-row input[type="number"] { min-width: 0; text-align: right; }
 .tovf-gm-milestone-summary { margin-bottom: 1rem; padding: .6rem; border: 1px solid var(--tovf-color-bronze, #75401f); border-radius: 6px; }
 .tovf-gm-tools-section pre { max-height: 360px; overflow: auto; padding: .65rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; white-space: pre-wrap; }
 .tovf-void-taint-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; margin-bottom: .75rem; }

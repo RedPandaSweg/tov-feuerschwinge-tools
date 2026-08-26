@@ -1,5 +1,5 @@
 <div class="sc-body sc-session-body">
-  <div class="sc-title-row"><h2>{{localize "DOWNTIME_MANAGER.Session.Title"}}</h2>{{#if isPrimaryWorld}}<div class="sc-section-actions"><button type="button" data-action="configureRewards"><i class="fa-solid fa-gift"></i> {{localize "DOWNTIME_MANAGER.Session.ConfigureRewards"}}</button><button type="button" data-action="history"><i class="fa-solid fa-book"></i> {{localize "DOWNTIME_MANAGER.Session.History"}}</button></div>{{/if}}</div>
+  <div class="sc-title-row"><h2>{{localize "DOWNTIME_MANAGER.Session.Title"}}</h2>{{#if isPrimaryWorld}}<div class="sc-section-actions"><button type="button" data-action="configureRewards"><i class="fa-solid fa-gift"></i> {{localize "DOWNTIME_MANAGER.Session.ConfigureRewards"}}</button><button type="button" data-action="correctSession"><i class="fa-solid fa-pen-to-square"></i> {{localize "DOWNTIME_MANAGER.Session.Correction.Action"}}</button><button type="button" data-action="history"><i class="fa-solid fa-book"></i> {{localize "DOWNTIME_MANAGER.Session.History"}}</button></div>{{/if}}</div>
   <section class="sc-session-workflow {{#if isSessionWorld}}session-world{{/if}}">
     <header><strong>{{localize "DOWNTIME_MANAGER.Session.Workflow.Title"}}</strong><span>{{localize "DOWNTIME_MANAGER.Session.Workflow.Status"}}: {{workflowStatus}}</span></header>
     {{#if isPrimaryWorld}}

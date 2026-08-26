@@ -262,6 +262,15 @@ function actorIsWithinRoot(actor, rootId) {
   return false;
 }
 
+function participantForExportedActor(actor, participants, rootId) {
+  const direct = participants.find(participant => participant.id === actor.id);
+  if (direct) return direct;
+  return participants.find(participant => {
+    const personalFolder = personalFolderFor(participant, rootId);
+    return personalFolder && actorIsWithinRoot(actor, personalFolder.id);
+  }) ?? null;
+}
+
 function resolveActorScope(selectedActors, rootId, {
   includeFolders = true,
   includeFolderActors = true,
@@ -484,6 +493,7 @@ export async function exportSession(actorIds, {
   const definitions = foundry.utils.deepClone(game.settings.get(MODULE_ID, WEAPON_SETTING));
   const actorEntries = [];
   for (const actor of actors) {
+    const participant = participantForExportedActor(actor, chosenActors, actorRootId);
     const data = actor.toObject();
     const baselineHash = await hashDocument(data);
     foundry.utils.setProperty(data, `flags.${MODULE_ID}.${TRANSFER_FLAG}`, {
@@ -495,6 +505,8 @@ export async function exportSession(actorIds, {
       transferId: actorTransferId(actor),
       baselineHash,
       sourceFolderId: folderIds.has(actor.folder?.id) ? actor.folder.id : null,
+      participantTransferId: participant ? actorTransferId(participant) : null,
+      sessionParticipant: chosenActors.some(chosen => chosen.id === actor.id),
       selected: true,
       data
     });
@@ -560,11 +572,44 @@ async function synchronizeActorFolders(entries = [], sessionRootId = null) {
   return { mapping, createdIds };
 }
 
-async function updateOrCreateActor(entry, replacements, folderMapping = new Map(), sessionRootId = null) {
+async function createSessionParticipantFolders(bundle, sessionRootId) {
+  const participantIds = new Set(bundle.session?.participantTransferIds ?? []);
+  const participantFolders = new Map();
+  const extrasFolders = new Map();
+  const createdIds = [];
+  for (const transferId of participantIds) {
+    const entry = bundle.actors.find(actor => actor.transferId === transferId);
+    if (!entry) continue;
+    const participantFolder = await foundry.documents.Folder.implementation.create({
+      name: String(entry.data?.name || game.i18n.localize("DOWNTIME_MANAGER.Session.Untitled")),
+      type: "Actor",
+      folder: sessionRootId,
+      flags: { [MODULE_ID]: { sessionImport: { participantTransferId: transferId } } }
+    });
+    participantFolders.set(transferId, participantFolder.id);
+    createdIds.push(participantFolder.id);
+
+    const hasExtras = bundle.actors.some(actor => (
+      actor.participantTransferId === transferId && actor.transferId !== transferId
+    ));
+    if (!hasExtras) continue;
+    const extrasFolder = await foundry.documents.Folder.implementation.create({
+      name: "Extras",
+      type: "Actor",
+      folder: participantFolder.id,
+      flags: { [MODULE_ID]: { sessionImport: { participantTransferId: transferId, extras: true } } }
+    });
+    extrasFolders.set(transferId, extrasFolder.id);
+    createdIds.push(extrasFolder.id);
+  }
+  return { participantFolders, extrasFolders, createdIds };
+}
+
+async function updateOrCreateActor(entry, replacements, folderMapping = new Map(), sessionRootId = null, targetFolderId = undefined) {
   const data = normalizeLegacyActiveEffects(
     replaceReferences(foundry.utils.deepClone(entry.data), replacements)
   );
-  data.folder = folderMapping.get(entry.sourceFolderId) ?? sessionRootId;
+  data.folder = targetFolderId ?? folderMapping.get(entry.sourceFolderId) ?? sessionRootId;
   foundry.utils.setProperty(data, `flags.${MODULE_ID}.${TRANSFER_FLAG}.baselineHash`, entry.baselineHash);
   const target = game.actors.find(actor =>
     actor.getFlag(MODULE_ID, TRANSFER_FLAG)?.id === entry.transferId
@@ -608,10 +653,26 @@ export async function importSession(file) {
     flags: { [MODULE_ID]: { sessionImport: { id: bundle.session?.id ?? foundry.utils.randomID() } } }
   });
   const { replacements } = await importMacros(bundle.macros);
-  const { mapping: folderMapping, createdIds: actorFolderIds } = await synchronizeActorFolders(bundle.actorFolders, sessionRoot.id);
+  const hasParticipantAssignments = bundle.actors.some(entry => entry.participantTransferId);
+  let folderMapping = new Map();
+  let actorFolderIds = [];
+  let participantFolders = new Map();
+  let extrasFolders = new Map();
+  if (hasParticipantAssignments) {
+    ({ participantFolders, extrasFolders, createdIds: actorFolderIds } = await createSessionParticipantFolders(bundle, sessionRoot.id));
+  } else {
+    ({ mapping: folderMapping, createdIds: actorFolderIds } = await synchronizeActorFolders(bundle.actorFolders, sessionRoot.id));
+  }
   actorFolderIds.push(sessionRoot.id);
   const counts = { create: 0, update: 0 };
-  for (const entry of bundle.actors) counts[await updateOrCreateActor(entry, replacements, folderMapping, sessionRoot.id)]++;
+  for (const entry of bundle.actors) {
+    const targetFolderId = hasParticipantAssignments
+      ? (entry.sessionParticipant
+          ? participantFolders.get(entry.transferId)
+          : extrasFolders.get(entry.participantTransferId) ?? participantFolders.get(entry.participantTransferId))
+      : undefined;
+    counts[await updateOrCreateActor(entry, replacements, folderMapping, sessionRoot.id, targetFolderId)]++;
+  }
   if (bundle.compendiums) await importCompendiumBundle(bundle.compendiums, null, { confirm: false });
   const importedActorUuids = game.actors
     .filter(actor => bundle.actors.some(entry => entry.transferId === actor.getFlag(MODULE_ID, TRANSFER_FLAG)?.id))

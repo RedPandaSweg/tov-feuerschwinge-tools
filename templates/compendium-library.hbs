@@ -103,6 +103,15 @@
       {{/if}}
     </nav>
     {{/if}}
+    {{#if showMagicItemFilters}}
+    <nav class="tovf-library-filters secondary" aria-label="{{localize 'TOVF.Library.Attunement.Label'}}">
+      <strong class="filter-label">{{localize "TOVF.Library.Attunement.Label"}}</strong>
+      <select data-library-filter="magicAttunement">
+        <option value="">{{localize "TOVF.Library.Attunement.All"}}</option>
+        {{selectOptions magicAttunementOptions selected=selectedMagicAttunement valueAttr="value" labelAttr="label"}}
+      </select>
+    </nav>
+    {{/if}}
     {{#if showSpellFilters}}
     <nav class="tovf-library-filters secondary" aria-label="{{localize 'TOVF.Library.SpellCastingTime.Label'}}">
       <strong class="filter-label">{{localize "TOVF.Library.SpellCastingTime.Label"}}</strong>
@@ -123,7 +132,7 @@
 
     <ol class="tovf-library-results {{#if gridLayout}}grid{{/if}}">
       {{#each entries}}
-      <li class="{{#if @root.tableBuilder}}table-builder{{/if}}" draggable="true" data-library-entry data-uuid="{{uuid}}" data-document-type="{{documentType}}"
+      <li class="{{#if @root.tableBuilder}}table-builder{{/if}} {{#if showPrice}}has-price{{/if}}" draggable="true" data-library-entry data-uuid="{{uuid}}" data-document-type="{{documentType}}"
           data-name="{{lowerName}}">
         {{#if @root.tableBuilder}}<span class="tovf-library-table-select-slot"><input class="tovf-library-table-select" type="checkbox"
           data-table-entry-select aria-label="{{name}} für Rolltable auswählen" {{checked tableSelected}}></span>{{/if}}
@@ -132,6 +141,7 @@
           <strong>{{name}}</strong>
           <span title="{{packLabel}}">{{packLabel}}</span>
         </button>
+        {{#if showPrice}}<span class="tovf-library-price"><i class="fa-solid fa-coins"></i> {{priceValue}} {{priceDenomination}}</span>{{/if}}
         <button type="button" class="source" data-action="openPack" data-pack="{{pack}}"
                 title="{{sourceSummary}} · {{packLabel}}">
           {{shortSourceLabel}}{{#if hasDuplicates}} · {{duplicateCount}}{{/if}}

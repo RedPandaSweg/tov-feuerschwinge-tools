@@ -207,6 +207,38 @@ function installEquipmentUuidResolver() {
   prototype.findSelection = findSelection;
 }
 
+function installEquipmentDialogGuard() {
+  const EquipmentDialog = BlackFlag?.applications?.advancement?.EquipmentDialog;
+  const prototype = EquipmentDialog?.prototype;
+  const original = prototype?._prepareEquipmentEntry;
+  if (typeof original !== "function" || original.__tovfMissingEquipmentGuard) return;
+
+  async function prepareEquipmentEntry(entry) {
+    if (entry?.type === "linked" && entry.requiresProficiency) {
+      const item = await fromUuid(entry.key).catch(() => null);
+      if (!item) {
+        console.warn(
+          `${MODULE_ID} | Disabled unresolved equipment advancement entry instead of aborting the equipment dialog.`,
+          { uuid: entry.key, entry }
+        );
+        return {
+          count: entry.type in entry.constructor.OPTION_TYPES ? entry.count ?? 1 : null,
+          disabled: true,
+          entry,
+          entries: await Promise.all(entry.children.map(child => this._prepareEquipmentEntry(child))),
+          label: entry.type === "currency"
+            ? CONFIG.BlackFlag.currencies.localizedAbbreviation[entry.key]?.toUpperCase()
+            : entry.label,
+          options: entry.optionsWithProficiency(this.actor)
+        };
+      }
+    }
+    return original.call(this, entry);
+  }
+  Object.defineProperty(prepareEquipmentEntry, "__tovfMissingEquipmentGuard", { value: true });
+  prototype._prepareEquipmentEntry = prepareEquipmentEntry;
+}
+
 /**
  * Prefer Feuerschwinge classes and standard weapons in Black Flag's existing
  * Character Creation without replacing its selection flow.
@@ -216,6 +248,7 @@ export function installCharacterCreationOverrides() {
   installed = true;
 
   installEquipmentUuidResolver();
+  installEquipmentDialogGuard();
   if (CONFIG.BlackFlag.registration.ready) void synchronizeCharacterCreationOverrides();
   else Hooks.once("blackFlag.registrationComplete", synchronizeCharacterCreationOverrides);
 

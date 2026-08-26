@@ -20,7 +20,17 @@ export function getQuantity(item) { return getSystemAdapter().getQuantity(item);
 export function quantityUpdate(item, quantity) { return getSystemAdapter().quantityUpdate(item, quantity); }
 export function toolMatches(item, requiredTool) {
   if (!requiredTool?.uuid && !requiredTool?.identifier && !requiredTool?.name) return false;
-  return Boolean((requiredTool.uuid && String(sourceUuid(item)).toLowerCase() === String(requiredTool.uuid).toLowerCase()) || (requiredTool.identifier && itemIdentifier(item) === String(requiredTool.identifier).toLowerCase()) || (requiredTool.name && String(item.name ?? "").trim().toLowerCase() === String(requiredTool.name).trim().toLowerCase()));
+  const itemName = String(item.name ?? "").trim().toLocaleLowerCase();
+  const storedName = String(requiredTool.name ?? "").trim().toLocaleLowerCase();
+  const configuredName = requiredTool.identifier
+    ? (globalThis.CONFIG?.BlackFlag?.tools?.localizedOptions ?? []).find(option => option.value === requiredTool.identifier)?.label
+    : "";
+  return Boolean(
+    (requiredTool.uuid && String(sourceUuid(item)).toLowerCase() === String(requiredTool.uuid).toLowerCase()) ||
+    (requiredTool.identifier && itemIdentifier(item) === String(requiredTool.identifier).toLowerCase()) ||
+    (storedName && itemName === storedName) ||
+    (configuredName && itemName === String(configuredName).trim().toLocaleLowerCase())
+  );
 }
 export function hasRequiredTool(actor, requiredTool) { if (!requiredTool?.uuid && !requiredTool?.identifier && !requiredTool?.name) return true; return actor.items.some(item => toolMatches(item, requiredTool) && getSystemAdapter().isItemProficient(item)); }
 export function actorKnowsSpell(actor, spell) {

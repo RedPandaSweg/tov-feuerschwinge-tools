@@ -199,12 +199,16 @@ async function historyJournal() {
 
 async function createHistoryPage(record, settlement = false) {
   const journal = await historyJournal();
+  const content = historyPageContent(record, settlement);
+  const [page] = await journal.createEmbeddedDocuments("JournalEntryPage", [{ name: record.title, type: "text", text: { content, format: CONST.JOURNAL_ENTRY_PAGE_FORMATS.HTML } }]);
+  return page;
+}
+
+function historyPageContent(record, settlement = false) {
   const rows = (settlement ? record.recipients : record.participants).map(entry =>
     `<li><strong>${foundry.utils.escapeHTML(entry.actorName)}</strong>: ${settlement ? entry.amount : `${entry.downtime} ${game.i18n.localize("DOWNTIME_MANAGER.Session.Downtime")}, ${entry.gold} ${game.i18n.localize("DOWNTIME_MANAGER.Currency.GP")}`}</li>`
   ).join("");
-  const content = `<h2>${foundry.utils.escapeHTML(record.title)}</h2>${record.summary ? `<p>${foundry.utils.escapeHTML(record.summary)}</p>` : ""}<ul>${rows}</ul>`;
-  const [page] = await journal.createEmbeddedDocuments("JournalEntryPage", [{ name: record.title, type: "text", text: { content, format: CONST.JOURNAL_ENTRY_PAGE_FORMATS.HTML } }]);
-  return page;
+  return `<h2>${foundry.utils.escapeHTML(record.title)}</h2>${record.summary ? `<p>${foundry.utils.escapeHTML(record.summary)}</p>` : ""}<ul>${rows}</ul>`;
 }
 
 function structuredHistory() {
@@ -291,7 +295,7 @@ export class SessionService {
         }
       }
 
-      const record = { title: active.title, summary: active.summary, id: active.id, week, periodKey, passivePeriod: passiveConfig.period, multiplier, participants, passiveRecipients, awardedAt: Date.now() };
+      const record = { title: active.title, summary: active.summary, id: active.id, week, periodKey, passivePeriod: passiveConfig.period, multiplier, rewardColumns: Array.isArray(rewardColumns) ? rewardColumns.map(Number) : null, awardMilestones: Boolean(awardMilestones), participants, passiveRecipients, awardedAt: Date.now() };
       const page = game.settings.get(MODULE_ID, SETTINGS.SESSION_HISTORY_ENABLED) ? await createHistoryPage(record) : null;
       await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, { ...active, status: "awarded", awardedAt: record.awardedAt, historyPageUuid: page?.uuid ?? null });
       await storeHistoryRecord(record, page?.uuid ?? null);
@@ -357,6 +361,131 @@ export class SessionService {
       });
     }
     return { amount: value, recipients };
+  }
+
+  static historyEntries() {
+    return structuredHistory().entries;
+  }
+
+  static async correctionDefaults(recordId) {
+    const record = structuredHistory().entries.find(entry => String(entry.id) === String(recordId));
+    if (!record) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Session.Errors.HistoryMissing"));
+    const participants = new Map((record.participants ?? []).map(entry => [entry.actorUuid, entry]));
+    const passive = new Map((record.passiveRecipients ?? []).map(entry => [entry.actorUuid, entry]));
+    const actors = [];
+    for (const actor of playerCharacters()) {
+      const existing = participants.get(actor.uuid);
+      const historicalMilestones = existing
+        ? Math.max(0, Number(sessionProgress(actor).milestones) - Number(existing.milestone ?? 0))
+        : Number(passive.get(actor.uuid)?.milestones ?? sessionProgress(actor).milestones);
+      const reward = selectedReward(rewardForLevel(levelFromMilestones(historicalMilestones)), record.rewardColumns);
+      const details = await sessionRewardDetails(reward, Number(record.multiplier) || 1);
+      actors.push({ actorUuid: actor.uuid, actorName: actor.name, selected: Boolean(existing), gold: Number(existing?.gold ?? details.gold), downtime: details.downtime, defaultRewards: details.items });
+    }
+    return { record, actors };
+  }
+
+  static async correctSession({ recordId, actorUuids, goldByActor = {} }) {
+    if (!game.user.isGM) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Session.Errors.GMOnly"));
+    if (this.busy) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Session.Errors.Busy"));
+    this.busy = true;
+    try {
+      const history = structuredHistory();
+      const index = history.entries.findIndex(entry => String(entry.id) === String(recordId));
+      if (index < 0) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Session.Errors.HistoryMissing"));
+      const record = history.entries[index];
+      const defaults = await this.correctionDefaults(recordId);
+      const defaultsByUuid = new Map(defaults.actors.map(entry => [entry.actorUuid, entry]));
+      const previous = new Map((record.participants ?? []).map(entry => [entry.actorUuid, entry]));
+      const passive = new Map((record.passiveRecipients ?? []).map(entry => [entry.actorUuid, entry]));
+      const selected = new Set(actorUuids);
+      const participants = [];
+      const otherMilestoneWeeks = actorUuid => history.entries
+        .filter(entry => String(entry.id) !== String(record.id))
+        .flatMap(entry => (entry.participants ?? [])
+          .filter(participant => participant.actorUuid === actorUuid && Number(participant.milestone ?? 0) > 0)
+          .map(() => entry.week))
+        .filter(Boolean)
+        .sort()
+        .reverse();
+
+      for (const actor of playerCharacters()) {
+        const oldEntry = previous.get(actor.uuid);
+        const shouldParticipate = selected.has(actor.uuid);
+        if (!oldEntry && !shouldParticipate) continue;
+        const progress = sessionProgress(actor);
+        if (oldEntry && !shouldParticipate) {
+          await RewardService.adjustItems(actor, (oldEntry.rewards ?? []).map(reward => ({ ...reward, quantity: -Number(reward.quantity ?? 0) })));
+          await setProgress(actor, {
+            ...progress,
+            milestones: Math.max(0, Number(progress.milestones) - Number(oldEntry.milestone ?? 0)),
+            sessionsPlayed: Math.max(0, Number(progress.sessionsPlayed) - 1),
+            lastMilestoneWeek: Number(oldEntry.milestone ?? 0) > 0 && progress.lastMilestoneWeek === record.week
+              ? (otherMilestoneWeeks(actor.uuid)[0] ?? null)
+              : progress.lastMilestoneWeek
+          });
+          continue;
+        }
+
+        let nextEntry;
+        if (!oldEntry) {
+          const rewards = foundry.utils.deepClone(defaultsByUuid.get(actor.uuid)?.defaultRewards ?? []);
+          const desiredGold = Math.max(0, Number(goldByActor[actor.uuid] ?? defaultsByUuid.get(actor.uuid)?.gold ?? 0));
+          let remainingGold = desiredGold;
+          for (const reward of rewards) {
+            const source = await fromUuid(reward.uuid).catch(() => null);
+            if (!getSystemAdapter().isGoldItem(source)) continue;
+            reward.quantity = remainingGold;
+            remainingGold = 0;
+          }
+          await RewardService.grantItems(actor, rewards);
+          const passiveEntry = passive.get(actor.uuid);
+          const passiveAward = Number(passiveEntry?.awarded ?? 0);
+          const passiveDowntime = { ...progress.passiveDowntime };
+          const storedPassive = Number(passiveDowntime[record.periodKey] ?? 0);
+          const unsettledDeduction = Math.min(storedPassive, passiveAward);
+          passiveDowntime[record.periodKey] = round(storedPassive - unsettledDeduction, 6);
+          const settledDeduction = round(passiveAward - unsettledDeduction, 6);
+          if (settledDeduction > 0 && !await DowntimeService.spend(actor, settledDeduction)) {
+            throw new Error(game.i18n.format("DOWNTIME_MANAGER.Session.Errors.PassiveCorrectionInsufficient", { actor: actor.name, amount: settledDeduction }));
+          }
+          const milestone = record.awardMilestones !== false && !otherMilestoneWeeks(actor.uuid).includes(record.week) ? 1 : 0;
+          const lastMilestoneWeek = milestone && (!progress.lastMilestoneWeek || record.week > progress.lastMilestoneWeek)
+            ? record.week
+            : progress.lastMilestoneWeek;
+          await setProgress(actor, { ...progress, passiveDowntime, milestones: Number(progress.milestones) + milestone, sessionsPlayed: Number(progress.sessionsPlayed) + 1, lastMilestoneWeek });
+          nextEntry = { actorUuid: actor.uuid, actorName: actor.name, gold: desiredGold, downtime: Number(defaultsByUuid.get(actor.uuid)?.downtime ?? 0), rewards, milestone };
+          passive.delete(actor.uuid);
+        } else {
+          const desiredGold = Math.max(0, Number(goldByActor[actor.uuid] ?? oldEntry.gold ?? 0));
+          const rewards = foundry.utils.deepClone(oldEntry.rewards ?? []);
+          let oldGold = 0;
+          let goldReward = null;
+          for (const reward of rewards) {
+            const source = await fromUuid(reward.uuid).catch(() => null);
+            if (!getSystemAdapter().isGoldItem(source)) continue;
+            oldGold += Number(reward.quantity ?? 0);
+            if (!goldReward) {
+              goldReward = reward;
+              reward.quantity = desiredGold;
+            } else reward.quantity = 0;
+          }
+          if (desiredGold !== oldGold && goldReward) await RewardService.adjustItems(actor, [{ ...goldReward, quantity: desiredGold - oldGold }]);
+          nextEntry = { ...oldEntry, actorName: actor.name, gold: desiredGold, rewards };
+        }
+        participants.push(nextEntry);
+      }
+
+      const corrected = { ...record, participants, passiveRecipients: [...passive.values()], correctedAt: Date.now() };
+      history.entries[index] = corrected;
+      await game.settings.set(MODULE_ID, SETTINGS.SESSION_HISTORY, history);
+      await game.settings.set(MODULE_ID, SETTINGS.LAST_SESSION_RESULT, foundry.utils.deepClone(corrected));
+      const page = corrected.historyPageUuid ? await fromUuid(corrected.historyPageUuid).catch(() => null) : null;
+      if (page) await page.update({ name: corrected.title, "text.content": historyPageContent(corrected) });
+      return corrected;
+    } finally {
+      this.busy = false;
+    }
   }
 
   static async openHistory() {

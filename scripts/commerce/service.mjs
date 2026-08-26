@@ -28,6 +28,11 @@ function purchaseCardContent(data) {
   return `<div class="tovf-merchant-chat-card"><header><img src="${esc(data.merchantImg)}" alt=""><span><strong>${esc(data.merchantName)}</strong><small>Einkauf von ${esc(data.buyerName)}</small></span></header><ul>${rows}</ul><footer><span>Gesamt</span><strong>${formatCopper(data.totalCopper)}</strong></footer></div>`;
 }
 
+function saleCardContent(data) {
+  const esc = foundry.utils.escapeHTML;
+  return `<div class="tovf-merchant-chat-card"><header><img src="${esc(data.merchantImg)}" alt=""><span><strong>${esc(data.merchantName)}</strong><small>Verkauf durch ${esc(data.sellerName)}</small></span></header><ul><li><img src="${esc(data.itemImg)}" alt=""><span><strong>${data.quantity}× ${esc(data.itemName)}</strong><small>${formatCopper(data.totalCopper)}</small></span></li></ul><footer><span>Ausgezahlt</span><strong>${formatCopper(data.totalCopper)}</strong></footer></div>`;
+}
+
 async function recordMerchantPurchase({ sessionId, shop, buyer, item, quantity, copper, userId }) {
   if (!sessionId) return;
   const existing = game.messages.find(message => {
@@ -47,6 +52,29 @@ async function recordMerchantPurchase({ sessionId, shop, buyer, item, quantity, 
   if (existing) await existing.update({ content, [`flags.${MODULE_ID}.merchantPurchase`]: stored });
   else await ChatMessage.create({ user: userId, speaker: ChatMessage.getSpeaker({ actor: buyer }), content,
     flags: { [MODULE_ID]: { merchantPurchase: stored } } });
+}
+
+async function recordMerchantSale({ shop, seller, item, quantity, copper, userId }) {
+  const stored = {
+    merchantId: shop.id,
+    merchantName: shop.name,
+    merchantImg: shop.img,
+    sellerId: seller.id,
+    sellerName: seller.name,
+    itemId: item.id,
+    itemName: item.name,
+    itemImg: item.img,
+    quantity,
+    totalCopper: copper,
+    userId,
+    createdAt: Date.now()
+  };
+  await ChatMessage.create({
+    user: userId,
+    speaker: ChatMessage.getSpeaker({ actor: seller }),
+    content: saleCardContent(stored),
+    flags: { [MODULE_ID]: { merchantSale: stored } }
+  });
 }
 
 function descriptionValue(value) {
@@ -288,6 +316,8 @@ async function merchantSell(payload, userId) {
     await changeCurrency(seller, -copper).catch(() => {});
     throw error;
   }
+  await recordMerchantSale({ shop, seller, item, quantity, copper, userId })
+    .catch(error => console.error(`${MODULE_ID} | Merchant sale chat card failed`, error));
   return { message: `${seller.name} verkauft ${quantity}× ${item.name} für ${formatCopper(copper)}.` };
 }
 
