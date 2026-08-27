@@ -560,7 +560,8 @@ export function initConfig() {
             action: ["action"],
             bonus: ["bonus"],
             reaction: ["reaction", "reactiondamage", "reactionmanual"],
-            free: ["special"],
+            // Black Flag uses `free`; keep `special` for actors created with the legacy schema.
+            free: ["free", "special"],
         };
 
         const itemTypes = {
@@ -1133,16 +1134,16 @@ export function initConfig() {
                 const featureItems = expandActivities(this.actor.items.filter((item) => itemTypes.feature.includes(item.type) && checkActivationType(item, actionTypes.action) && !CoreHUD.BlackFlag.mainBarFeatures.includes(item.system.type?.value)), actionTypes.action);
                 const consumableItems = expandActivities(this.actor.items.filter((item) => itemTypes.consumable.includes(item.type) && checkActivationType(item, actionTypes.action) && !CoreHUD.BlackFlag.mainBarFeatures.includes(item.system.type?.value)), actionTypes.action);
 
-                const spellButton = !spellItems.length ? [] : [new DND5eButtonPanelButton({ type: "spell", items: spellItems, color: 0 })].filter((button) => button.hasContents);
+                const spellButton = !spellItems.length ? [] : [new DND5eButtonPanelButton({ type: "spell", items: spellItems, color: 0, actionType: "action" })].filter((button) => button.hasContents);
 
                 const specialActions = Object.values(ECHItems);
 
                 const showSpecialActions = game.settings.get(MODULE_ID, "showSpecialActions");
                 const buttons = [];
                 if (showSpecialActions) {
-                    buttons.push(...[new DND5eItemButton({ item: null, isWeaponSet: true, isPrimary: true }), new ARGON.MAIN.BUTTONS.SplitButton(new DND5eSpecialActionButton(specialActions[0]), new DND5eSpecialActionButton(specialActions[1])), ...spellButton, new DND5eButtonPanelButton({ type: "feature", items: featureItems, color: 0 }), new ARGON.MAIN.BUTTONS.SplitButton(new DND5eSpecialActionButton(specialActions[2]), new DND5eSpecialActionButton(specialActions[3])), new ARGON.MAIN.BUTTONS.SplitButton(new DND5eSpecialActionButton(specialActions[4]), new DND5eSpecialActionButton(specialActions[5])), new DND5eButtonPanelButton({ type: "consumable", items: consumableItems, color: 0 })]);
+                    buttons.push(...[new DND5eItemButton({ item: null, isWeaponSet: true, isPrimary: true }), new ARGON.MAIN.BUTTONS.SplitButton(new DND5eSpecialActionButton(specialActions[0]), new DND5eSpecialActionButton(specialActions[1])), ...spellButton, new DND5eButtonPanelButton({ type: "feature", items: featureItems, color: 0, actionType: "action" }), new ARGON.MAIN.BUTTONS.SplitButton(new DND5eSpecialActionButton(specialActions[2]), new DND5eSpecialActionButton(specialActions[3])), new ARGON.MAIN.BUTTONS.SplitButton(new DND5eSpecialActionButton(specialActions[4]), new DND5eSpecialActionButton(specialActions[5])), new DND5eButtonPanelButton({ type: "consumable", items: consumableItems, color: 0, actionType: "action" })]);
                 } else {
-                    buttons.push(...[new DND5eItemButton({ item: null, isWeaponSet: true, isPrimary: true }), ...spellButton, new DND5eButtonPanelButton({ type: "feature", items: featureItems, color: 0 }), new DND5eButtonPanelButton({ type: "consumable", items: consumableItems, color: 0 })]);
+                    buttons.push(...[new DND5eItemButton({ item: null, isWeaponSet: true, isPrimary: true }), ...spellButton, new DND5eButtonPanelButton({ type: "feature", items: featureItems, color: 0, actionType: "action" }), new DND5eButtonPanelButton({ type: "consumable", items: consumableItems, color: 0, actionType: "action" })]);
                 }
 
                 const barItems = this.actor.items.filter((item) => CoreHUD.BlackFlag.mainBarFeatures.includes(item.system.type?.value) && checkActivationType(item, actionTypes.action));
@@ -1186,14 +1187,14 @@ export function initConfig() {
                     if (!items.length) continue;
                     if (type === "spell") {
                         const itemsWithCorrectActionTypeAsMainActivity = items.filter(item => actionTypes.bonus.includes(getActivationType(item)));
-                        const button = new DND5eButtonPanelButton({ type, items: itemsWithCorrectActionTypeAsMainActivity, color: 1 });
+                        const button = new DND5eButtonPanelButton({ type, items: itemsWithCorrectActionTypeAsMainActivity, color: 1, actionType: "bonus" });
                         if (button.hasContents) buttons.push(button);
                         continue;
                     }
                     // const activities = items.map(item => Array.from(item.system.activities)).flat().filter(activity => checkActivationType(activity, actionTypes.bonus));
                     const itemsAndActivities = expandActivities(items, actionTypes.bonus);
                     if (!itemsAndActivities.length) continue;
-                    const button = new DND5eButtonPanelButton({ type, items: itemsAndActivities, color: 1 });
+                    const button = new DND5eButtonPanelButton({ type, items: itemsAndActivities, color: 1, actionType: "bonus" });
                     if (button.hasContents) buttons.push(button);
                 }
 
@@ -1239,14 +1240,14 @@ export function initConfig() {
                     if (!items.length) continue;
                     if (type === "spell") {
                         const itemsWithCorrectActionTypeAsMainActivity = items.filter(item => actionTypes.reaction.includes(getActivationType(item)));
-                        const button = new DND5eButtonPanelButton({ type, items: itemsWithCorrectActionTypeAsMainActivity, color: 1 });
+                        const button = new DND5eButtonPanelButton({ type, items: itemsWithCorrectActionTypeAsMainActivity, color: 1, actionType: "reaction" });
                         if (button.hasContents) buttons.push(button);
                         continue;
                     }
                     // const activities = items.map(item => Array.from(item.system.activities)).flat().filter(activity => checkActivationType(activity, actionTypes.reaction));
                     const itemsAndActivities = expandActivities(items, actionTypes.reaction);
                     if (!itemsAndActivities.length) continue;
-                    const button = new DND5eButtonPanelButton({ type, items: itemsAndActivities, color: 3 });
+                    const button = new DND5eButtonPanelButton({ type, items: itemsAndActivities, color: 3, actionType: "reaction" });
                     if (button.hasContents) buttons.push(button);
                 }
 
@@ -1287,14 +1288,14 @@ export function initConfig() {
                     if (!items.length) continue;
                     if (type === "spell") {
                         const itemsWithCorrectActionTypeAsMainActivity = items.filter(item => actionTypes.free.includes(getActivationType(item)));
-                        const button = new DND5eButtonPanelButton({ type, items: itemsWithCorrectActionTypeAsMainActivity, color: 1 });
+                        const button = new DND5eButtonPanelButton({ type, items: itemsWithCorrectActionTypeAsMainActivity, color: 1, actionType: "free" });
                         if (button.hasContents) buttons.push(button);
                         continue;
                     }
                     // const activities = items.map(item => Array.from(item.system.activities)).flat().filter(activity => checkActivationType(activity, actionTypes.free));
                     const itemsAndActivities = expandActivities(items, actionTypes.free);
                     if (!itemsAndActivities.length) continue;
-                    const button = new DND5eButtonPanelButton({ type, items: itemsAndActivities, color: 2 });
+                    const button = new DND5eButtonPanelButton({ type, items: itemsAndActivities, color: 2, actionType: "free" });
                     if (button.hasContents) buttons.push(button);
                 }
 
@@ -1624,11 +1625,12 @@ export function initConfig() {
         }
 
         class DND5eButtonPanelButton extends ARGON.MAIN.BUTTONS.ButtonPanelButton {
-            constructor({ type, items, color }) {
+            constructor({ type, items, color, actionType = null }) {
                 super();
                 this.type = type;
                 this.items = items;
                 this.color = color;
+                this.actionType = actionType;
                 this.itemsWithSpells = [];
                 this._spells = this.prePrepareSpells();
             }
@@ -1663,7 +1665,12 @@ export function initConfig() {
                     case "spell":
                         return "modules/enhancedcombathud/icons/spell-book.webp";
                     case "feature":
-                        return "modules/enhancedcombathud/icons/mighty-force.webp";
+                        return {
+                            action: `modules/${MODULE_ID}/assets/HUD/Action.svg`,
+                            bonus: `modules/${MODULE_ID}/assets/HUD/Bonus Action.svg`,
+                            reaction: `modules/${MODULE_ID}/assets/HUD/Reaction.svg`,
+                            free: `modules/${MODULE_ID}/assets/HUD/Free Action.svg`
+                        }[this.actionType] ?? `modules/${MODULE_ID}/assets/HUD/Action.svg`;
                     case "consumable":
                         return "modules/enhancedcombathud/icons/drink-me.webp";
                     case "weapon":
