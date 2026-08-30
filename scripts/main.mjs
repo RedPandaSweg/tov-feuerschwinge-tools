@@ -7,7 +7,7 @@ import {
 } from "./core/namespace-migration.mjs";
 import { exposeTransferApi } from "./transfer/compendium-transfer.mjs?v=3.1.2";
 import { registerSessionTransfer, sessionTransferApi } from "./transfer/session-transfer.mjs";
-import { installBlackFlagCompatibility } from "./integrations/black-flag-compatibility.mjs?v=3.3.1-spell-manager-tooltips-3";
+import { installBlackFlagCompatibility } from "./integrations/black-flag-compatibility.mjs?v=3.4.2-other-inventory-2";
 import {
   characterCreationOverridesApi,
   installCharacterCreationOverrides
@@ -16,9 +16,9 @@ import {
   installWeaponOptionActivities,
   weaponOptionActivitiesApi
 } from "./integrations/weapon-option-activities.mjs?v=3.2.4-tooltip-links-2";
-import { installArgonBlackFlagCompatibility } from "./integrations/argon-black-flag-compatibility.mjs?v=3.3.1-explode-activities-default-1";
+import { installArgonBlackFlagCompatibility } from "./integrations/argon-black-flag-compatibility.mjs?v=3.4.2-argon-settings-popup-1";
 import { activatePlayerUnpause, registerPlayerUnpause } from "./player-unpause.mjs";
-import { registerCompendiumLibrary } from "./compendium-library.mjs?v=3.2.7-void-spells-1";
+import { registerCompendiumLibrary } from "./compendium-library.mjs?v=3.4.2-standard-spell-durations-1";
 import { activateChallengeManager, registerChallengeManager } from "./challenge-manager.mjs";
 import { registerLinkTools } from "./link-tools-config.mjs";
 import {
@@ -28,6 +28,7 @@ import {
 import { registerTokenSizeSync } from "./token-size-sync.mjs";
 import { creatureBuilderApi, registerCreatureBuilder } from "./creature-builder.mjs";
 import { registerSettingsCategories } from "./settings-categories.mjs";
+import { registerHelp } from "./help-config.mjs";
 import { activityChainingApi, installActivityChaining } from "./activity-chaining.mjs?v=3.3.1-follow-up-filter-2";
 import { installToolAbilitySelection } from "./integrations/tool-ability.mjs";
 import { installTheurgeSpellcasting } from "./integrations/theurge-spellcasting.mjs?v=3.3.0-manual-theurge-mode-1";
@@ -39,7 +40,7 @@ import { activateTokenPresetSocket, registerTokenPresets } from "./token-presets
 import { activateTokenLightAuraSocket, toggleTokenLightAura } from "./token-light-aura.mjs";
 import { activateSimpleTileTriggers, registerSimpleTileTriggers } from "./simple-tile-triggers.mjs?v=3.2.2";
 import { activateCommerce, registerCommerce } from "./commerce/main.mjs?v=3.2.7-rolltable-stock-2";
-import "./downtime/main.mjs?v=3.3.0-void-taint-1";
+import "./downtime/main.mjs?v=3.4.2-roll-result-only-1";
 import "./contested-activity.mjs";
 import "./void-taint/main.mjs?v=3.3.0-void-taint-1";
 import { registerTalentBackgrounds } from "./talent-backgrounds.mjs?v=3.3.1-talent-backgrounds-6";
@@ -54,10 +55,12 @@ registerCommerce();
 Hooks.once("ready", activateCommerce);
 
 const MODULE_MENU_ORDER = new Map([
+  ["help", 0],
   ["creatureBuilder", 10],
   ["compendiumTransfer", 20],
   ["characterLinkTools", 40],
   ["weaponCustomization", 50],
+  ["argonCombatHud", 55],
   ["itemDefaults", 60],
   ["playerActorFolders", 70],
   ["sessionRewards", 80]
@@ -134,6 +137,7 @@ Hooks.once("init", () => {
   registerFeaturePoolIntegration();
   registerTokenSizeSync();
   registerCreatureBuilder();
+  registerHelp();
   registerSettingsCategories();
   registerNamespaceMigration();
   registerMigrationSettings();

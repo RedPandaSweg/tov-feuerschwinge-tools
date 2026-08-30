@@ -1,0 +1,14 @@
+<div class="standard-form tovf-argon-settings-body">
+  <p class="hint">{{localize "TOVF.Argon.Settings.Menu.Description"}}</p>
+  {{#each settings}}
+    <div class="form-group">
+      <label for="argon-setting-{{key}}">{{name}}</label>
+      <div class="form-fields">
+        {{#if (eq type "boolean")}}<input id="argon-setting-{{key}}" type="checkbox" name="{{key}}" {{checked value}}>
+        {{else}}<select id="argon-setting-{{key}}" name="{{key}}">{{#each choices}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select>{{/if}}
+      </div>
+      <p class="hint">{{hint}}{{#if reload}} {{localize "TOVF.Argon.Settings.Menu.ReloadHint"}}{{/if}}</p>
+    </div>
+  {{/each}}
+  <footer class="form-footer"><button type="submit"><i class="fa-solid fa-floppy-disk"></i> {{localize "DOWNTIME_MANAGER.Actions.Save"}}</button></footer>
+</div>

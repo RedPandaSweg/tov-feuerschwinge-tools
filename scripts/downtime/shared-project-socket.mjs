@@ -1,5 +1,5 @@
 import { MODULE_ID } from "./constants.mjs";
-import { SharedProjectService } from "./shared-project-service.mjs";
+import { SharedProjectService } from "./shared-project-service.mjs?v=3.4.2-roll-result-only-1";
 
 const pending = new Map();
 let requestQueue = Promise.resolve();
@@ -9,6 +9,7 @@ const actions = {
   leave: payload => SharedProjectService.leave(payload),
   cancel: payload => SharedProjectService.cancel(payload),
   invest: payload => SharedProjectService.invest(payload),
+  useProgressItem: payload => SharedProjectService.useProgressItem(payload),
   resolveRoll: payload => SharedProjectService.resolveRoll(payload),
   completionRoll: payload => SharedProjectService.completionRoll(payload)
 };

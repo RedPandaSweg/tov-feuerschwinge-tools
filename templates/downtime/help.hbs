@@ -4,14 +4,9 @@
     <div><h1>{{localize "DOWNTIME_MANAGER.Help.Heading"}}</h1><p>{{introduction}}</p></div>
   </header>
   <nav class="sc-help-nav" aria-label="{{localize 'DOWNTIME_MANAGER.Help.Navigation'}}">
-    {{#each sections}}<button type="button" data-action="scrollToSection" data-section="{{key}}"><i class="{{icon}}"></i> {{title}}</button>{{/each}}
+    {{#each groups}}<section class="sc-help-nav-group"><h2><i class="{{icon}}"></i> {{label}}</h2><div>{{#each sections}}<button type="button" data-action="scrollToSection" data-section="{{key}}"><i class="{{icon}}"></i> {{title}}</button>{{/each}}</div></section>{{/each}}
   </nav>
   <div class="sc-help-sections">
-    {{#each sections}}
-      <details id="help-{{key}}" class="sc-config-section" {{#if open}}open{{/if}}>
-        <summary><i class="{{icon}}"></i> {{title}}</summary>
-        <div class="sc-help-content"><p>{{text}}</p><ol>{{#each points}}<li>{{this}}</li>{{/each}}</ol></div>
-      </details>
-    {{/each}}
+    {{#each groups}}<section class="sc-help-section-group"><h2><i class="{{icon}}"></i> {{label}}</h2>{{#each sections}}<details id="help-{{key}}" class="sc-config-section" {{#if open}}open{{/if}}><summary><i class="{{icon}}"></i> {{title}}</summary><div class="sc-help-content"><p>{{text}}</p><ol>{{#each points}}<li>{{this}}</li>{{/each}}</ol></div></details>{{/each}}</section>{{/each}}
   </div>
 </div>

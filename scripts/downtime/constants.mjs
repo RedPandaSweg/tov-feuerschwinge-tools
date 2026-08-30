@@ -267,20 +267,13 @@ export const CHECK_DEFINITIONS = [
 
 export const DEFAULT_VALUE_TIERS = Object.freeze([
   { id: "default-value-0", minimum: 0, maximum: 9, addition: 0, multiplier: 1, rewardAddition: 0, rewardMultiplier: 1 },
-  { id: "default-value-10", minimum: 10, maximum: 19, addition: 0, multiplier: 1, rewardAddition: 0, rewardMultiplier: 1.1 },
-  { id: "default-value-20", minimum: 20, maximum: 29, addition: 0, multiplier: 1, rewardAddition: 0, rewardMultiplier: 1.2 },
-  { id: "default-value-30", minimum: 30, maximum: 39, addition: 0, multiplier: 1, rewardAddition: 0, rewardMultiplier: 1.3 },
-  { id: "default-value-40", minimum: 40, maximum: 49, addition: 0, multiplier: 1, rewardAddition: 0, rewardMultiplier: 1.4 },
-  { id: "default-value-50", minimum: 50, maximum: 59, addition: 0, multiplier: 1, rewardAddition: 0, rewardMultiplier: 1.5 },
-  { id: "default-value-60", minimum: 60, maximum: 69, addition: 0, multiplier: 1, rewardAddition: 0, rewardMultiplier: 1.6 },
-  { id: "default-value-70", minimum: 70, maximum: 79, addition: 0, multiplier: 1, rewardAddition: 0, rewardMultiplier: 1.7 },
-  { id: "default-value-80", minimum: 80, maximum: 89, addition: 0, multiplier: 1, rewardAddition: 0, rewardMultiplier: 1.8 },
-  { id: "default-value-90", minimum: 90, maximum: 99, addition: 0, multiplier: 1, rewardAddition: 0, rewardMultiplier: 1.9 },
-  { id: "default-value-100", minimum: 100, maximum: 119, addition: 0, multiplier: 1, rewardAddition: 0, rewardMultiplier: 2 },
-  { id: "default-value-120", minimum: 120, maximum: 149, addition: 0, multiplier: 1, rewardAddition: 0, rewardMultiplier: 2.2 },
-  { id: "default-value-150", minimum: 150, maximum: 199, addition: 0, multiplier: 1, rewardAddition: 0, rewardMultiplier: 2.5 },
-  { id: "default-value-200", minimum: 200, maximum: 249, addition: 0, multiplier: 1, rewardAddition: 0, rewardMultiplier: 3 },
-  { id: "default-value-250", minimum: 250, maximum: null, addition: 0, multiplier: 1, rewardAddition: 0, rewardMultiplier: 4 }
+  ...[[10,1.05],[20,1.1],[30,1.15],[40,1.2],[50,1.25],[60,1.3],[70,1.35],[80,1.4],[90,1.45],[100,1.5],[120,1.55],[150,1.65],[200,1.75],[250,1.85],[350,1.95],[450,2.05],[550,2.15],[650,2.25],[750,2.35],[900,2.5]]
+    .map(([minimum, rewardMultiplier]) => ({ id: `default-value-${minimum}`, minimum, maximum: null, addition: 0, multiplier: 1, rewardAddition: 0, rewardMultiplier }))
+]);
+
+export const CRAFTING_EXPERIENCE_TIERS = Object.freeze([
+  ...[[0,1],[50,1.25],[150,1.5],[300,1.75],[500,2],[750,2.25],[1000,2.5],[1250,2.75],[1500,3]]
+    .map(([minimum, multiplier]) => ({ id: `crafting-experience-${minimum}`, minimum, maximum: null, addition: 0, multiplier, rewardAddition: 0, rewardMultiplier: 1 }))
 ]);
 
 export const CRAFTING_ROLL_TABLE = Object.freeze([
@@ -328,6 +321,7 @@ export const DEFAULT_STATION_CONFIG = Object.freeze({
   },
   evaluationMode: "total",
   requiredTool: null,
+  progressItems: [],
   recipes: [],
   modifiers: [],
   rollTable: [],
@@ -365,8 +359,8 @@ export const DEFAULT_PROJECT_CONFIG = Object.freeze({
 });
 
 export const PROJECT_TEMPLATES = Object.freeze([
-  { id: "crafting", nameKey: "DOWNTIME_MANAGER.Project.Templates.Crafting.Name", descriptionKey: "DOWNTIME_MANAGER.Project.Templates.Crafting.Description", img: "icons/tools/smithing/hammer-sledge-steel-grey.webp", config: { categories: [], requiredProgress: 10, repeatable: false, collaborative: true } },
-  { id: "research", nameKey: "DOWNTIME_MANAGER.Project.Templates.Research.Name", descriptionKey: "DOWNTIME_MANAGER.Project.Templates.Research.Description", img: "icons/sundries/books/book-open-purple.webp", config: { categories: ["research"], requiredProgress: 100, repeatable: false, collaborative: true, completionCheck: { enabled: false, dc: 15, retryDowntime: 1 } } },
+  { id: "crafting", nameKey: "DOWNTIME_MANAGER.Project.Templates.Crafting.Name", descriptionKey: "DOWNTIME_MANAGER.Project.Templates.Crafting.Description", img: "icons/tools/smithing/hammer-sledge-steel-grey.webp", config: { categories: [], requiredProgress: 10, repeatable: false, collaborative: false } },
+  { id: "research", nameKey: "DOWNTIME_MANAGER.Project.Templates.Research.Name", descriptionKey: "DOWNTIME_MANAGER.Project.Templates.Research.Description", img: "icons/sundries/books/book-open-purple.webp", config: { categories: ["research"], requiredProgress: 100, repeatable: false, collaborative: false, completionCheck: { enabled: false, dc: 15, retryDowntime: 1 } } },
   { id: "work", nameKey: "DOWNTIME_MANAGER.Project.Templates.Work.Name", descriptionKey: "DOWNTIME_MANAGER.Project.Templates.Work.Description", img: "icons/skills/trades/construction-carpentry-hammer.webp", config: { categories: ["working"], requiredProgress: 5, repeatable: true } },
   { id: "training", nameKey: "DOWNTIME_MANAGER.Project.Templates.Training.Name", descriptionKey: "DOWNTIME_MANAGER.Project.Templates.Training.Description", img: "icons/skills/trades/academics-study-reading-book.webp", config: { categories: ["training"], requiredProgress: 600, repeatable: false, completionCheck: { enabled: true, dc: 15, retryDowntime: 1 } } },
   { id: "carousing", nameKey: "DOWNTIME_MANAGER.Project.Templates.Carousing.Name", descriptionKey: "DOWNTIME_MANAGER.Project.Templates.Carousing.Description", img: "icons/environment/settlement/tavern.webp", config: { categories: ["carousing"], requiredProgress: 5, repeatable: true } },

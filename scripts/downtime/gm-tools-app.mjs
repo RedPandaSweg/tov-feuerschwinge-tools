@@ -1,6 +1,6 @@
 import { MODULE_ID } from "./constants.mjs";
 import { GMToolsService } from "./gm-tools-service.mjs?v=3.2.7-flag-database-2";
-import { highestMilestoneProgress } from "./session-service.mjs";
+import { actorLevel, highestMilestoneProgress, levelFromMilestones, sessionProgress } from "./session-service.mjs";
 import { openVoidTaintConfig } from "../void-taint/config-app.mjs";
 import {
   addVoidTaint,
@@ -61,6 +61,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this.databaseDocumentUuid = null;
     this.databaseFlagAddress = "";
     this.databaseSelectedUuids = new Set();
+    this._milestoneAuditInitialized = false;
     this._updateHook = Hooks.on("updateActor", actor => {
       if (this.rendered && (!this.actorUuid || actor.uuid === this.actorUuid)) this.render();
     });
@@ -73,6 +74,13 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   _onRender(context, options) {
     super._onRender(context, options);
+    if (!this._milestoneAuditInitialized) {
+      const audit = this.element.querySelector(".tovf-gm-milestone-audit");
+      if (audit) {
+        audit.open = false;
+        this._milestoneAuditInitialized = true;
+      }
+    }
     this.element.querySelectorAll("select[data-character-select]").forEach(select => {
       select.addEventListener("change", event => {
         this.actorUuid = String(event.currentTarget.value ?? "");
@@ -164,6 +172,12 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     const activeSession = GMToolsService.activeSession();
     const highestProgress = highestMilestoneProgress();
+    const milestoneMismatches = actors.map(actor => {
+      const milestones = Math.max(0, Math.floor(Number(sessionProgress(actor).milestones) || 0));
+      const actualLevel = actorLevel(actor);
+      const expectedLevel = levelFromMilestones(milestones);
+      return { uuid: actor.uuid, name: actor.name, img: actor.img, milestones, actualLevel, expectedLevel };
+    }).filter(entry => entry.actualLevel !== entry.expectedLevel);
     const undo = GMToolsService.undoData();
     return {
       ...context,
@@ -204,6 +218,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
         ...highestProgress,
         names: highestProgress.leaders.map(entry => entry.actor.name).join(", ") || game.i18n.localize("DOWNTIME_MANAGER.Common.None")
       },
+      milestoneMismatches,
       diagnostics,
       voidTaintEnabled: voidTaintEnabled(),
       voidTaint: this.tab === "voidTaint" ? game.actors.filter(actor => actor.type === "pc").map(actor => ({

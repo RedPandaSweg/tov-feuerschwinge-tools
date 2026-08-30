@@ -19,6 +19,11 @@
 .downtime-manager .sc-recipe label { display:flex; align-items:center; gap:.35rem; }
 .downtime-manager .sc-recipe label input { width:60px; }
 .downtime-manager .sc-row input { width:80px; }
+.downtime-manager .sc-progress-items { display: grid; gap: .4rem; margin-top: .65rem; }
+.downtime-manager .sc-progress-items > strong { font-size: .9em; }
+.downtime-manager .sc-progress-items .sc-row { padding: .4rem .55rem; }
+.downtime-manager .sc-progress-items .sc-row img { width: 30px; height: 30px; object-fit: cover; border: 0; }
+.downtime-manager .sc-progress-items input { width: 58px; }
 
 /* Formula Styles for Crafting Station */
 
@@ -137,6 +142,13 @@
 .downtime-manager .sc-project-description { width: 100%; }
 .downtime-manager .sc-project-cost { margin-top: .2rem; font-size: .85rem; }
 .downtime-manager .sc-project-progress-actions { display: flex; align-items: center; gap: .55rem; width: 100%; padding-top: .55rem; border-top: 1px solid color-mix(in srgb, var(--color-border-light-2) 65%, transparent); }
+.downtime-manager .sc-project-progress-actions:has(.sc-shared-participants) { flex-wrap: wrap; }
+.downtime-manager .sc-shared-participants { display: grid; flex: 1 0 100%; gap: .35rem; width: 100%; padding: .45rem 0; border-block: 1px solid color-mix(in srgb, var(--color-border-light-2) 45%, transparent); }
+.downtime-manager .sc-shared-participants > div { display: flex; flex-wrap: wrap; gap: .4rem; }
+.downtime-manager .sc-shared-participant { display: flex; align-items: center; gap: .4rem; min-width: 175px; padding: .35rem .5rem; border: 1px solid var(--color-border-light-2); border-radius: 5px; background: color-mix(in srgb, var(--color-bg-option, transparent) 35%, transparent); }
+.downtime-manager .sc-shared-participant > span,
+.downtime-manager .sc-shared-participant small { display: block; }
+.downtime-manager .sc-shared-participant small { margin-top: .1rem; opacity: .78; }
 .downtime-manager .sc-project-progress { flex: 1 1 260px; min-width: 180px; text-align: center; }
 .downtime-manager .sc-project-progress progress { display: block; width: 100%; margin: .2rem 0; }
 .downtime-manager .sc-project-progress small { display: block; text-align: center; }
@@ -276,6 +288,15 @@
 .downtime-manager .sc-source-row > input { width: 100%; text-align: center; }
 .downtime-manager .sc-source-row > .sc-checkbox-control { justify-self: center; }
 .downtime-manager .sc-source-row > .notes { text-align: center; }
+.downtime-manager .sc-progress-item-sources { border-bottom: 1px solid color-mix(in srgb, var(--color-border-light-2) 55%, transparent); }
+.downtime-manager .sc-progress-item-sources .sc-source-row:last-child { border-bottom: 0; }
+.downtime-manager .sc-progress-item-drop-row .progress-item-drop-zone { grid-column: 2 / 4; padding: .4rem .55rem; border: 1px dashed var(--color-border-light-2); border-radius: 4px; text-align: center; cursor: copy; }
+.downtime-manager .sc-progress-item-drop-row .progress-item-drop-zone:hover { border-color: var(--color-border-highlight, var(--color-border-light-1)); background: color-mix(in srgb, var(--color-bg-option, transparent) 55%, transparent); }
+.downtime-manager .sc-progress-item-name { display: flex; align-items: center; gap: .5rem; min-width: 0; }
+.downtime-manager .sc-progress-item-row { padding-left: 1.35rem; }
+.downtime-manager .sc-progress-item-name img { width: 28px; height: 28px; flex: 0 0 28px; border: 0; border-radius: 3px; object-fit: cover; }
+.downtime-manager .sc-progress-item-controls { display: flex; justify-self: center; gap: .3rem; }
+.downtime-manager .sc-progress-item-controls button { width: auto; min-width: 34px; }
 .downtime-manager .sc-source-modifiers { margin-top: .75rem; padding-top: .65rem; border-top: 1px solid var(--color-border-light-2); }
 .downtime-manager .sc-source-modifier-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: .45rem; }
 .downtime-manager .sc-source-modifier-title h4 { margin: 0; }
@@ -373,9 +394,14 @@
 .downtime-manager .sc-help-header > i { font-size: 2.8rem; color: var(--color-warm-1); }
 .downtime-manager .sc-help-header h1 { margin: 0 0 .3rem; }
 .downtime-manager .sc-help-header p { margin: 0; }
-.downtime-manager .sc-help-nav { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: 1rem; }
+.downtime-manager .sc-help-nav { display: grid; grid-template-columns: 1fr; gap: .45rem; margin-bottom: 1rem; }
+.downtime-manager .sc-help-nav-group { display: block; padding: .55rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.downtime-manager .sc-help-nav-group h2,
+.downtime-manager .sc-help-section-group > h2 { margin: 0 0 .45rem; font-size: 1rem; }
+.downtime-manager .sc-help-nav-group > div { display: flex; flex-wrap: wrap; gap: .35rem; }
 .downtime-manager .sc-help-nav button { width: auto; padding: .3rem .55rem; border: 1px solid var(--color-border-light-2); border-radius: 5px; }
 .downtime-manager .sc-help-sections { display: grid; gap: .55rem; }
+.downtime-manager .sc-help-section-group { display: grid; gap: .45rem; padding-top: .35rem; }
 .downtime-manager .sc-help-content { padding: .4rem .75rem .75rem; }
 .downtime-manager .sc-help-content p { margin-top: .25rem; }
 .downtime-manager .sc-help-content ol { margin: .5rem 0 0; padding-left: 1.5rem; }

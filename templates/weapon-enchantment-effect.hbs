@@ -1,6 +1,9 @@
 <section class="tab activity-{{ tab.id }} {{ tab.cssClass }}" data-tab="{{ tab.id }}" data-group="{{ tab.group }}">
   <fieldset>
     <legend>{{ localize "BFI.Enchantment.Title" }}</legend>
+    {{ formField systemFields.targetMode value=source.system.targetMode options=targetModes localize=true rootId=partId }}
+    {{ formField systemFields.applicationMode value=source.system.applicationMode options=applicationModes localize=true rootId=partId }}
+    <p class="hint">{{ localize "BFI.Enchantment.ApplicationModeHint" }}</p>
     {{ formField systemFields.abilityOverride value=source.system.abilityOverride options=abilityOptions localize=true rootId=partId }}
     {{ formField systemFields.abilityMode value=source.system.abilityMode options=abilityModes localize=true rootId=partId }}
     {{ formField systemFields.damageMode value=source.system.damageMode options=damageModes localize=true rootId=partId }}

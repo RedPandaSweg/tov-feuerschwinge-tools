@@ -1,4 +1,4 @@
-import { FLAGS, MODULE_ID, PROJECT_TEMPLATES, SETTINGS } from "./constants.mjs";
+import { FLAGS, MODULE_ID, PROJECT_TEMPLATES, SETTINGS } from "./constants.mjs?v=3.4.2-project-collaborative-default-1";
 import { ProjectSheet } from "./recipe-sheet.mjs";
 import { defaultRecipeData, isRecipeItem } from "./utils.mjs";
 

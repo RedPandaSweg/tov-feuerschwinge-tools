@@ -35,6 +35,8 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
       createRecipe: StationConfigApp.#createRecipe,
       createRecipeTemplate: StationConfigApp.#createRecipeTemplate,
       removeStationTool: StationConfigApp.#removeStationTool,
+      removeProgressItem: StationConfigApp.#removeProgressItem,
+      saveProgressItem: StationConfigApp.#saveProgressItem,
       removeRecipe: StationConfigApp.#removeRecipe,
       removeStation: StationConfigApp.#removeStation,
       addModifier: StationConfigApp.#addModifier,
@@ -108,6 +110,10 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
       name: storedTool.name ?? toolDocument?.name ?? storedTool.identifier ?? storedTool.uuid,
       img: storedTool.img ?? toolDocument?.img ?? "icons/svg/item-bag.svg"
     } : null;
+    const progressItems = await Promise.all(station.progressItems.map(async entry => {
+      const document = await fromUuid(entry.uuid).catch(() => null);
+      return { ...entry, name: entry.name || document?.name || entry.uuid, img: entry.img || document?.img || "icons/svg/item-bag.svg" };
+    }));
     return {
       actorName: this.actor.name,
       station,
@@ -116,6 +122,7 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
       recipes,
       checkGroups,
       tool,
+      progressItems,
       exampleSources: StationEngine.actorProgressSources(exampleActor, exampleCheck),
       formulaExampleLabel: exampleActor
         ? game.i18n.format("DOWNTIME_MANAGER.Station.FormulaExampleActor", { actor: exampleActor.name })
@@ -138,6 +145,7 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
     super._onRender(context, options);
     this.#bindDrop(".project-drop-zone", event => this.#dropProject(event));
     this.#bindDrop(".tool-drop-zone", event => this.#dropTool(event));
+    this.#bindDrop(".progress-item-drop-zone", event => this.#dropProgressItem(event));
     this.element.querySelector('[name="actorValue.enabled"]')
       ?.addEventListener("change", event => {
         const options = this.element.querySelector("[data-actor-value-options]");
@@ -257,6 +265,10 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
       proficiency: { enabled: checked("progressSources.proficiency.enabled"), multiplier: numberOr(value("progressSources.proficiency.multiplier"), 1) },
       checkProficiency: { enabled: checked("progressSources.checkProficiency.enabled"), multiplier: numberOr(value("progressSources.checkProficiency.multiplier"), 1) }
     };
+    station.progressItems = station.progressItems.map((entry, index) => ({
+      ...entry,
+      progress: Math.max(0.000001, numberOr(value(`progressItems.${index}.progress`), 1))
+    }));
     station.rollInterval = Math.max(0.000001, numberOr(value("rollInterval"), 1));
     station.evaluationMode = value("evaluationMode") === "natural" ? "natural" : "total";
     station.allowedChecks = Array.from(
@@ -355,6 +367,17 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
     });
   }
 
+  async #dropProgressItem(event) {
+    event.preventDefault();
+    const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
+    const item = data.type === "Item" ? await Item.implementation.fromDropData(data) : null;
+    if (!item?.uuid) return ui.notifications.warn(game.i18n.localize("DOWNTIME_MANAGER.Errors.DropItem"));
+    await this.#persistDraft(station => {
+      if (station.progressItems.some(entry => entry.uuid === item.uuid)) return;
+      station.progressItems.push({ uuid: item.uuid, name: item.name, img: item.img, identifier: itemIdentifier(item), progress: 1 });
+    });
+  }
+
   static async #createRecipe() {
     try {
       await createRecipeFromBaseItem("", { onCreate: recipe => this.#persistDraft(station => {
@@ -393,6 +416,16 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
 
   static async #removeStationTool() {
     await this.#persistDraft(station => { station.requiredTool = null; });
+  }
+
+  static async #removeProgressItem(event, target) {
+    await this.#persistDraft(station => station.progressItems.splice(Number(target.dataset.index), 1));
+  }
+
+  static async #saveProgressItem(event, target) {
+    event.preventDefault();
+    await this.#persistDraft(() => {});
+    ui.notifications.info(game.i18n.localize("DOWNTIME_MANAGER.Notifications.StationSaved"));
   }
 
   static async #addModifier() {

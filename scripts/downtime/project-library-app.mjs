@@ -1,5 +1,5 @@
 import { FLAGS, MODULE_ID, PROJECT_TEMPLATES } from "./constants.mjs";
-import { createRecipeFromBaseItem, openRecipeEditor } from "./recipe-service.mjs";
+import { createRecipeFromBaseItem, openRecipeEditor } from "./recipe-service.mjs?v=3.4.2-project-collaborative-default-1";
 import { getStationData, isRecipeItem, isStation, recipeData } from "./utils.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;

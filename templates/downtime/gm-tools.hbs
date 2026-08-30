@@ -14,15 +14,14 @@
 
   {{#if (eq tab "characters")}}
   <section class="tovf-gm-tools-section">
-    <div class="form-group">
-      <label>{{localize "DOWNTIME_MANAGER.GMTools.Character"}}</label>
-      <select data-character-select>
-        {{#each actors}}<option value="{{uuid}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}
-      </select>
-    </div>
+    <details class="tovf-gm-milestone-audit">
+      <summary><i class="fa-solid fa-scale-unbalanced"></i> {{localize "DOWNTIME_MANAGER.GMTools.MilestoneAudit.Title"}} <small>({{milestoneMismatches.length}})</small></summary>
+      <p class="notes">{{localize "DOWNTIME_MANAGER.GMTools.MilestoneAudit.Hint"}}</p>
+      <div class="tovf-gm-milestone-audit-list">{{#each milestoneMismatches}}<article><img src="{{img}}" alt=""><span><strong>{{name}}</strong><small>{{localize "DOWNTIME_MANAGER.GMTools.MilestoneAudit.Values" milestones=milestones actual=actualLevel expected=expectedLevel}}</small></span><button type="button" data-action="openDocument" data-uuid="{{uuid}}" title="{{localize 'DOWNTIME_MANAGER.GMTools.OpenSheet'}}"><i class="fa-solid fa-arrow-up-right-from-square"></i></button></article>{{else}}<p class="tovf-gm-ok"><i class="fa-solid fa-circle-check"></i> {{localize "DOWNTIME_MANAGER.GMTools.MilestoneAudit.NoMismatches"}}</p>{{/each}}</div>
+    </details>
     {{#if selected}}
     <div data-character-editor>
-      <div class="tovf-gm-character-title"><img src="{{selected.img}}" alt=""><h2>{{selected.name}}</h2><button type="button" data-action="openDocument" data-uuid="{{selected.uuid}}"><i class="fa-solid fa-user"></i> {{localize "DOWNTIME_MANAGER.GMTools.OpenSheet"}}</button></div>
+      <div class="tovf-gm-character-title"><img src="{{selected.img}}" alt=""><select data-character-select aria-label="{{localize 'DOWNTIME_MANAGER.GMTools.Character'}}">{{#each actors}}<option value="{{uuid}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select><button type="button" data-action="openDocument" data-uuid="{{selected.uuid}}"><i class="fa-solid fa-user"></i> {{localize "DOWNTIME_MANAGER.GMTools.OpenSheet"}}</button></div>
       <fieldset>
         <legend>{{localize "DOWNTIME_MANAGER.GMTools.CharacterValues"}}</legend>
         <div class="tovf-gm-field-grid">

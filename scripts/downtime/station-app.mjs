@@ -1,12 +1,12 @@
 import { DowntimeService } from "./downtime-service.mjs";
 import { GoldService } from "./gold-service.mjs";
-import { ProjectService } from "./project-service.mjs";
+import { ProjectService } from "./project-service.mjs?v=3.4.2-roll-result-only-1";
 import { ResourceService } from "./resource-service.mjs";
 import { RewardService } from "./reward-service.mjs";
-import { StationConfigApp } from "./station-config-app.mjs";
+import { StationConfigApp } from "./station-config-app.mjs?v=3.4.2-progress-item-controls-1";
 import { StationEngine } from "./station-engine.mjs";
-import { SharedProjectService } from "./shared-project-service.mjs";
-import { sharedProjectAction } from "./shared-project-socket.mjs";
+import { SharedProjectService } from "./shared-project-service.mjs?v=3.4.2-roll-result-only-1";
+import { sharedProjectAction } from "./shared-project-socket.mjs?v=3.4.2-roll-result-only-1";
 import { getSystemAdapter } from "./system-adapter.mjs";
 import {
   actorKnowsSpell,
@@ -153,6 +153,7 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
       start: StationApp.#start,
       cancel: StationApp.#cancel,
       invest: StationApp.#invest,
+      useProgressItem: StationApp.#useProgressItem,
       roll: StationApp.#roll,
       completionRoll: StationApp.#completionRoll,
       configure: StationApp.#configure,
@@ -161,6 +162,7 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
       sharedLeave: StationApp.#sharedLeave,
       sharedCancel: StationApp.#sharedCancel,
       sharedInvest: StationApp.#sharedInvest,
+      sharedUseProgressItem: StationApp.#sharedUseProgressItem,
       sharedRoll: StationApp.#sharedRoll,
       sharedCompletionRoll: StationApp.#sharedCompletionRoll
     }
@@ -174,6 +176,7 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
     super({ ...options, id: `downtime-manager-station-${stationActor.id}` });
     this.stationActor = stationActor;
     this._catalogState = { search: "", type: "", subtype: "", status: "all" };
+    this._viewState = null;
     this._documentUpdateHooks = [
       ["updateActor", Hooks.on("updateActor", actor => {
         const crafter = getActiveCrafter();
@@ -189,6 +192,17 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
         })
       ])
     ];
+  }
+
+  render(options = {}) {
+    if (this.rendered && this.element) {
+      const body = this.element.querySelector(".sc-body");
+      this._viewState = {
+        scrollTop: body?.scrollTop ?? 0,
+        openProjects: new Set(Array.from(this.element.querySelectorAll("[data-project-entry][open]"), entry => entry.dataset.projectSearch))
+      };
+    }
+    return super.render(options);
   }
 
   _onRender(context, options) {
@@ -246,6 +260,17 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
     subtype.addEventListener("change", apply);
     status.addEventListener("change", apply);
     apply({ rebuildSubtypes: true, selectedSubtype: this._catalogState.subtype });
+    if (this._viewState) {
+      const view = this._viewState;
+      this._viewState = null;
+      for (const project of catalog.querySelectorAll("[data-project-entry]")) {
+        project.open = view.openProjects.has(project.dataset.projectSearch);
+      }
+      requestAnimationFrame(() => {
+        const body = this.element?.querySelector(".sc-body");
+        if (body) body.scrollTop = view.scrollTop;
+      });
+    }
   }
 
   async close(options = {}) {
@@ -268,6 +293,11 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
       disabled: !station.enabled
     };
     if (!actor) return { ...base, noActor: true };
+
+    const progressItems = (await Promise.all(station.progressItems.map(async entry => {
+      const document = await fromUuid(entry.uuid).catch(() => null);
+      return { ...entry, name: entry.name || document?.name || entry.uuid, img: entry.img || document?.img || "icons/svg/item-bag.svg", available: round(ResourceService.available(actor, entry), 6) };
+    }))).filter(entry => entry.available > 0);
 
     const sources = new Map();
     for (const uuid of station.recipes) sources.set(uuid, { uuid, personal: false });
@@ -302,7 +332,13 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const sharedParticipants = [];
       for (const uuid of sharedState?.participantUuids ?? []) {
         const participant = await fromUuid(uuid);
-        sharedParticipants.push({ uuid, name: participant?.name ?? uuid, leader: uuid === sharedState.leaderUuid, contribution: sharedState.contributions?.[uuid] ?? { downtime: 0, progress: 0 } });
+        const contribution = Array.isArray(sharedState.contributions)
+          ? sharedState.contributions.find(entry => entry.actorUuid === uuid) ?? {}
+          : sharedState.contributions?.[uuid] ?? {};
+        sharedParticipants.push({ uuid, name: participant?.name ?? uuid, leader: uuid === sharedState.leaderUuid, contribution: {
+          downtime: round(Math.max(0, Number(contribution.downtime) || 0), 6),
+          progress: round(Math.max(0, Number(contribution.progress) || 0), 6)
+        } });
       }
       const checks = StationEngine.checkDefinitions(
         StationEngine.availableChecks(station, definition)
@@ -324,6 +360,7 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const sharedMaxInvestment = sharedState && sharedJoined
         ? StationEngine.maxInvestment(station, sharedState, DowntimeService.get(actor))
         : 0;
+      const sharedEligible = station.enabled && stationToolOk && projectToolsOk && !knownSpell;
       const active = Boolean(state && !state.completed && state.active !== false);
       const paused = Boolean(state && !state.completed && state.active === false);
       const projectStatus = active || paused || sharedState
@@ -347,6 +384,8 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
         sharedState,
         sharedJoined,
         sharedLeader: sharedState?.leaderUuid === actor.uuid,
+        sharedEligible,
+        sharedCanInvest: sharedEligible && sharedMaxInvestment > 0,
         sharedCanRoll: sharedState?.lastContributorUuid === actor.uuid,
         sharedParticipants,
         sharedMaxInvestment,
@@ -354,6 +393,7 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
         sharedProgress: round(Number(sharedState?.progress ?? 0), 6),
         sharedRequiredProgress: round(Number(sharedState?.requiredProgress ?? definition.requiredProgress), 6),
         sharedPercent: Math.max(0, Math.min(100, Math.floor(Number(sharedState?.progress ?? 0) / Number(sharedState?.requiredProgress ?? definition.requiredProgress) * 100))),
+        progressItems,
         state,
         lastResult: lastResultView(
           state?.lastResult,
@@ -388,7 +428,7 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
         canCompletionRoll: station.enabled && Boolean(active && state.awaitingCompletionCheck && checks.length && DowntimeService.get(actor) + 1e-9 >= (state.completionCheckFailed ? Number(definition.completionCheck?.retryDowntime ?? 1) : 0))
       });
     }
-    projects.sort((a, b) => Number(b.active) - Number(a.active) || a.name.localeCompare(b.name));
+    projects.sort((a, b) => Number(b.projectStatus === "active") - Number(a.projectStatus === "active") || a.name.localeCompare(b.name));
     const projectTypes = [...new Map(projects.map(project => [
       project.classification.type,
       project.classification.typeLabel
@@ -436,6 +476,16 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
         { amount: result.used }
       ));
       this.render();
+    } catch (error) { ui.notifications.error(error.message); }
+  }
+
+  static async #useProgressItem(event, target) {
+    const actor = getActiveCrafter();
+    if (!actor) return ui.notifications.error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ActorMissing"));
+    try {
+      const quantity = target.closest("[data-progress-item]")?.querySelector("[data-progress-item-quantity]")?.value ?? 1;
+      const result = await ProjectService.useProgressItem(actor, this.stationActor, target.dataset.uuid, target.dataset.itemUuid, quantity);
+      ui.notifications.info(game.i18n.format("DOWNTIME_MANAGER.Notifications.ProgressItemUsed", result)); this.render();
     } catch (error) { ui.notifications.error(error.message); }
   }
 
@@ -528,6 +578,14 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const amount = this.element.querySelector(`[data-shared-downtime-for="${CSS.escape(target.dataset.uuid)}"]`)?.value;
       const select = this.element.querySelector(`[data-shared-check-for="${CSS.escape(target.dataset.uuid)}"]`); const [type, key] = String(select?.value ?? "").split(":");
       await sharedProjectAction("invest", { ...sharedPayload(this, target, actor), amount, check: { type, key } }); this.render();
+    } catch (error) { ui.notifications.error(error.message); }
+  }
+  static async #sharedUseProgressItem(event, target) {
+    const actor = getActiveCrafter();
+    try {
+      const quantity = target.closest("[data-progress-item]")?.querySelector("[data-progress-item-quantity]")?.value ?? 1;
+      const result = await sharedProjectAction("useProgressItem", { ...sharedPayload(this, target, actor), itemUuid: target.dataset.itemUuid, quantity });
+      ui.notifications.info(game.i18n.format("DOWNTIME_MANAGER.Notifications.ProgressItemUsed", result)); this.render();
     } catch (error) { ui.notifications.error(error.message); }
   }
   static async #sharedRoll(event, target) {

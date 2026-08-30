@@ -1,6 +1,7 @@
 import { LEGACY_MODULE_ID, MODULE_ID, modulePath } from "./core/constants.mjs";
 const ACTIVITY_TYPE = "weaponEnchantment";
 const FLAG = "weaponEnchantment";
+const EQUIPMENT_FLAG = "equipmentEnchantment";
 
 Hooks.once("init", () => {
   if (game.system.id !== "black-flag") return;
@@ -32,6 +33,16 @@ Hooks.once("init", () => {
           min: 0,
           label: "BFI.Enchantment.CriticalBonusDice",
           hint: "BFI.Enchantment.CriticalBonusDiceHint"
+        }),
+        targetMode: new StringField({
+          initial: "weapon",
+          choices: ["weapon", "armor", "equipment"],
+          label: "BFI.Enchantment.TargetMode"
+        }),
+        applicationMode: new StringField({
+          initial: "auto",
+          choices: ["auto", "activity", "template", "both"],
+          label: "BFI.Enchantment.ApplicationMode"
         }),
         manualChanges: new ArrayField(new SchemaField({
           key: new StringField({ initial: "" }),
@@ -67,30 +78,38 @@ Hooks.once("init", () => {
     }
 
     async _triggerSubsequentActions(config, results) {
-      const weapon = await this.chooseWeapon();
-      if (!weapon) return;
-      await this.applyToWeapon(weapon);
+      const equipment = await this.chooseEquipment();
+      if (!equipment) return;
+      await this.applyToEquipment(equipment);
     }
 
-    async chooseWeapon() {
-      const weapons = this.actor?.items.filter(item => item.type === "weapon") ?? [];
-      if (!weapons.length) {
-        ui.notifications.warn(game.i18n.localize("BFI.Enchantment.NoWeapons"));
+    validEquipment(item) {
+      switch (this.system.targetMode) {
+        case "armor": return item.type === "armor";
+        case "equipment": return item.system?.isPhysical === true && item.type !== "currency";
+        default: return item.type === "weapon";
+      }
+    }
+
+    async chooseEquipment() {
+      const equipment = this.actor?.items.filter(item => this.validEquipment(item)) ?? [];
+      if (!equipment.length) {
+        ui.notifications.warn(game.i18n.localize("BFI.Enchantment.NoEquipment"));
         return null;
       }
-      const options = weapons.map(weapon =>
-        `<option value="${weapon.id}">${foundry.utils.escapeHTML(weapon.name)}</option>`
+      const options = equipment.map(item =>
+        `<option value="${item.id}">${foundry.utils.escapeHTML(item.name)}</option>`
       ).join("");
       const id = await BlackFlag.applications.api.BFDialog.wait({
         window: { title: game.i18n.localize("BFI.Enchantment.ChooseTitle") },
-        content: `<div class="form-group"><label>${game.i18n.localize("BFI.Enchantment.Weapon")}</label><div class="form-fields"><select name="weaponId">${options}</select></div></div>`,
+        content: `<div class="form-group"><label>${game.i18n.localize("BFI.Enchantment.Equipment")}</label><div class="form-fields"><select name="equipmentId">${options}</select></div></div>`,
         buttons: [
           {
             action: "apply",
             label: game.i18n.localize("BFI.Enchantment.Apply"),
             icon: "<i class='fa-solid fa-wand-magic-sparkles'></i>",
             default: true,
-            callback: (_event, button) => new foundry.applications.ux.FormDataExtended(button.form).object.weaponId
+            callback: (_event, button) => new foundry.applications.ux.FormDataExtended(button.form).object.equipmentId
           },
           { action: "cancel", label: game.i18n.localize("Cancel"), callback: () => null }
         ],
@@ -99,8 +118,79 @@ Hooks.once("init", () => {
       return this.actor.items.get(id) ?? null;
     }
 
-    async applyToWeapon(weapon) {
+    get templateEnchantments() {
+      return this.item.effects.filter(effect => effect.type === "enchantment" && !effect.system.applied);
+    }
+
+    async chooseTemplateEnchantment(templates) {
+      if (templates.length < 2) return templates[0] ?? null;
+      const options = templates.map(effect =>
+        `<option value="${effect.id}">${foundry.utils.escapeHTML(effect.name)}</option>`
+      ).join("");
+      const id = await BlackFlag.applications.api.BFDialog.wait({
+        window: { title: game.i18n.localize("BFI.Enchantment.ChooseTemplateTitle") },
+        content: `<div class="form-group"><label>${game.i18n.localize("BFI.Enchantment.Template")}</label><div class="form-fields"><select name="effectId">${options}</select></div></div>`,
+        buttons: [
+          {
+            action: "apply",
+            label: game.i18n.localize("BFI.Enchantment.Apply"),
+            icon: "<i class='fa-solid fa-wand-magic-sparkles'></i>",
+            default: true,
+            callback: (_event, button) => new foundry.applications.ux.FormDataExtended(button.form).object.effectId
+          },
+          { action: "cancel", label: game.i18n.localize("Cancel"), callback: () => null }
+        ],
+        rejectClose: false
+      });
+      return templates.find(effect => effect.id === id) ?? null;
+    }
+
+    async applyToEquipment(equipment) {
+      const templates = this.templateEnchantments;
+      const mode = this.system.applicationMode;
+      const applyTemplate = mode === "template" || mode === "both" || (mode === "auto" && templates.length);
+      const applyActivity = mode === "activity" || mode === "both" || (mode === "auto" && !templates.length);
+      const effects = [];
+      let template = null;
+
+      if (applyTemplate) {
+        template = await this.chooseTemplateEnchantment(templates);
+        if (!template) {
+          if (!templates.length) ui.notifications.warn(game.i18n.localize("BFI.Enchantment.NoTemplates"));
+          return;
+        }
+      }
+
       await this.removeEnchantments({ notify: false });
+
+      if (template) {
+        const data = template.toObject();
+        delete data._id;
+        data.disabled = false;
+        data.origin ??= template.item?.uuid ?? this.item.uuid;
+        foundry.utils.setProperty(data, "system.applied", true);
+        foundry.utils.setProperty(data, `flags.${MODULE_ID}.${EQUIPMENT_FLAG}`, {
+          sourceActivity: this.uuid,
+          sourceItem: this.item.uuid,
+          templateEffect: template.uuid
+        });
+        const seconds = this.system.durationSeconds;
+        if (seconds) data.duration = {
+          seconds,
+          rounds: Math.ceil(seconds / (CONFIG.time.roundTime || 6)),
+          startTime: game.time.worldTime,
+          startRound: game.combat?.round,
+          startTurn: game.combat?.turn
+        };
+        effects.push(data);
+      }
+
+      if (applyActivity) effects.push(this.buildActivityEnchantment(equipment));
+      await equipment.createEmbeddedDocuments("ActiveEffect", effects);
+      ui.notifications.info(game.i18n.format("BFI.Enchantment.Applied", { equipment: equipment.name }));
+    }
+
+    buildActivityEnchantment(equipment) {
       const ability = this.resolveAbility();
       const manualChanges = Array.from(this.system.manualChanges ?? [])
         .filter(change => String(change.key ?? "").trim())
@@ -133,7 +223,7 @@ Hooks.once("init", () => {
       };
       const seconds = this.system.durationSeconds;
       const effect = {
-        name: `${this.name}: ${weapon.name}`,
+        name: `${this.name}: ${equipment.name}`,
         img: this.img,
         type: "enchantment",
         origin: this.uuid,
@@ -154,8 +244,7 @@ Hooks.once("init", () => {
           priority: 20
         }] : []), ...manualChanges]
       };
-      await weapon.createEmbeddedDocuments("ActiveEffect", [effect]);
-      ui.notifications.info(game.i18n.format("BFI.Enchantment.Applied", { weapon: weapon.name }));
+      return effect;
     }
 
     resolveAbility() {
@@ -177,14 +266,15 @@ Hooks.once("init", () => {
 
     async removeEnchantments({ notify = true } = {}) {
       const removals = [];
-      for (const weapon of this.actor?.items.filter(item => item.type === "weapon") ?? []) {
-        const ids = weapon.effects
+      for (const equipment of this.actor?.items.filter(item => item.system?.isPhysical === true) ?? []) {
+        const ids = equipment.effects
           .filter(effect => (
             effect.getFlag(MODULE_ID, FLAG)
             ?? effect.flags?.[LEGACY_MODULE_ID]?.[FLAG]
+            ?? effect.getFlag(MODULE_ID, EQUIPMENT_FLAG)
           )?.sourceActivity === this.uuid)
           .map(effect => effect.id);
-        if (ids.length) removals.push(weapon.deleteEmbeddedDocuments("ActiveEffect", ids));
+        if (ids.length) removals.push(equipment.deleteEmbeddedDocuments("ActiveEffect", ids));
       }
       await Promise.all(removals);
       if (notify) ui.notifications.info(game.i18n.localize(removals.length ? "BFI.Enchantment.Removed" : "BFI.Enchantment.NothingToRemove"));
@@ -219,6 +309,17 @@ Hooks.once("init", () => {
         { value: "replace", label: "BFI.Enchantment.DamageReplace" },
         { value: "formula", label: "BFI.Enchantment.DamageUseFormula" }
       ];
+      context.targetModes = [
+        { value: "weapon", label: "BFI.Enchantment.TargetWeapon" },
+        { value: "armor", label: "BFI.Enchantment.TargetArmor" },
+        { value: "equipment", label: "BFI.Enchantment.TargetEquipment" }
+      ].map(entry => ({ ...entry, label: game.i18n.localize(entry.label) }));
+      context.applicationModes = [
+        { value: "auto", label: "BFI.Enchantment.ApplicationAuto" },
+        { value: "activity", label: "BFI.Enchantment.ApplicationActivity" },
+        { value: "template", label: "BFI.Enchantment.ApplicationTemplate" },
+        { value: "both", label: "BFI.Enchantment.ApplicationBoth" }
+      ].map(entry => ({ ...entry, label: game.i18n.localize(entry.label) }));
       context.dieOptions = CONFIG.BlackFlag.dieSteps.map(value => ({ value, label: `d${value}` }));
       context.effectModes = [
         ["custom", "BFI.Enchantment.EffectMode.Custom"],
@@ -276,4 +377,5 @@ Hooks.once("init", () => {
   // Module activity types are registered after Black Flag's i18nInit localization pass.
   WeaponEnchantmentActivity.localize();
   BlackFlag.modules[MODULE_ID].WeaponEnchantmentActivity = WeaponEnchantmentActivity;
+  BlackFlag.modules[MODULE_ID].EquipmentEnchantmentActivity = WeaponEnchantmentActivity;
 });

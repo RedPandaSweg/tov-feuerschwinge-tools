@@ -9,8 +9,8 @@ import {
   MODULE_ID,
   SETTINGS
 } from "./constants.mjs";
-import { StationApp } from "./station-app.mjs";
-import { StationConfigApp } from "./station-config-app.mjs";
+import { StationApp } from "./station-app.mjs?v=3.4.2-roll-result-only-1";
+import { StationConfigApp } from "./station-config-app.mjs?v=3.4.2-progress-item-controls-1";
 import { ModuleItemSettingsApp } from "./module-item-settings-app.mjs";
 import { PlayerActorFolderSettingsApp } from "./player-actor-folder-settings-app.mjs";
 import { SessionRewardConfigApp } from "./session-reward-config-app.mjs";
@@ -22,18 +22,18 @@ import { SessionApp } from "./session-app.mjs";
 import { DowntimeItemApp } from "./downtime-item-app.mjs";
 import { StationPresetApp } from "./station-preset-app.mjs";
 import { playerCharacters, sessionProgress, SessionService } from "./session-service.mjs";
-import { registerSharedProjectSocket } from "./shared-project-socket.mjs";
+import { registerSharedProjectSocket } from "./shared-project-socket.mjs?v=3.4.2-roll-result-only-1";
 import { downtimeItemData, DowntimeItemService } from "./downtime-item-service.mjs";
 import { addHeaderControl, defaultStationData, isRecipeItem, isStation } from "./utils.mjs";
 import {
   configureAsRecipe,
   createRecipeFromBaseItem,
   openRecipeEditor
-} from "./recipe-service.mjs";
+} from "./recipe-service.mjs?v=3.4.2-project-collaborative-default-1";
 import { MIGRATION_SETTING, migrateIntegratedDowntime } from "./migration.mjs";
 import { openChallengeManager } from "../challenge-manager.mjs";
 import { openFeuerschwingeSettings } from "../settings-categories.mjs";
-import { GMToolsApp } from "./gm-tools-app.mjs?v=3.3.0-void-taint-1";
+import { GMToolsApp } from "./gm-tools-app.mjs?v=3.4.2-milestone-audit-2";
 import { isCompendiumItem, synchronizeCompendiumItem } from "../item-compendium-sync.mjs";
 
 function documentFromApp(app, documentName) {

@@ -4,7 +4,7 @@ import { GoldService } from "./gold-service.mjs";
 import { ResourceService } from "./resource-service.mjs";
 import { RewardService } from "./reward-service.mjs";
 import { StationEngine } from "./station-engine.mjs";
-import { actorKnowsSpell, categoriesMatch, getStationData, hasRequiredTool, recipeData, round } from "./utils.mjs";
+import { actorKnowsSpell, categoriesMatch, getStationData, recipeData, round, toolRequirementStatus } from "./utils.mjs?v=3.4.2-requirement-feedback-1";
 import { getSystemAdapter } from "./system-adapter.mjs";
 
 export class ProjectService {
@@ -34,12 +34,12 @@ export class ProjectService {
     if (!station.enabled) {
       throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.StationDisabled"));
     }
-    if (!hasRequiredTool(actor, station.requiredTool)) {
-      throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.StationToolMissing"));
-    }
-    if (!(definition.requiredTools ?? []).every(tool => hasRequiredTool(actor, tool))) {
-      throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ProjectToolMissing"));
-    }
+    const toolRequirements = [station.requiredTool, ...(definition.requiredTools ?? [])]
+      .map(tool => toolRequirementStatus(actor, tool)).filter(status => status.required);
+    const lackingProficiency = toolRequirements.filter(status => !status.proficient);
+    if (lackingProficiency.length) throw new Error(game.i18n.format("DOWNTIME_MANAGER.Errors.ToolProficiencyMissing", { tools: lackingProficiency.map(status => status.name).join(", ") }));
+    const missingTools = toolRequirements.filter(status => status.proficient && !status.present);
+    if (missingTools.length) throw new Error(game.i18n.format("DOWNTIME_MANAGER.Errors.RequiredToolMissing", { tools: missingTools.map(status => status.name).join(", ") }));
     const resultUuid = definition.resultUuid || definition.rewards?.[0]?.uuid || "";
     const resultItem = definition.isCustom && resultUuid
       ? await fromUuid(resultUuid).catch(() => null)
@@ -164,6 +164,36 @@ export class ProjectService {
     return { used: requested, pendingRoll: state.pendingRoll, state };
   }
 
+  static async useProgressItem(actor, stationActor, projectUuid, itemUuid, requestedQuantity = 1) {
+    const station = getStationData(stationActor);
+    const { definition } = await this.project(projectUuid);
+    const states = this.get(actor);
+    const state = states.find(entry => entry.stationUuid === stationActor.uuid && (entry.projectUuid === projectUuid || entry.recipeUuid === projectUuid));
+    if (!station.enabled) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.StationDisabled"));
+    if (!state || state.completed || state.active === false) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ProjectNotActive"));
+    if (state.pendingRoll || state.awaitingCompletionCheck) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.RollRequired"));
+    const progressItem = station.progressItems.find(entry => entry.uuid === itemUuid);
+    if (!progressItem) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ProgressItemUnavailable"));
+    const perItem = Math.max(0.000001, Number(progressItem.progress) || 1);
+    const quantity = Math.max(1, Math.floor(Number(requestedQuantity) || 1));
+    if (!(await ResourceService.has(actor, [{ ...progressItem, quantity }], 1))) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ProgressItemMissing"));
+    const reachesTarget = Number(state.progress) + perItem * quantity >= Number(state.requiredProgress) - 1e-9;
+    if (reachesTarget) {
+      const rewards = (definition.rewards ?? []).map(reward => ({ ...reward, quantity: StationEngine.calculateRewardQuantity(reward.quantity ?? 1, {}, state.batches) }));
+      await RewardService.validateItems(rewards);
+      RewardService.validateCharacterRewards(definition.characterRewards ?? []);
+      if (!(await ResourceService.has(actor, definition.completionCosts ?? [], state.batches))) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.CompletionCostsMissing"));
+    }
+    if (!(await ResourceService.spend(actor, [{ ...progressItem, quantity }], 1))) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ProgressItemMissing"));
+    const progress = round(perItem * quantity, 6);
+    const result = await this.#resolveInterval({
+      actor, stationActor, station, definition, states, state, check: null,
+      row: { label: progressItem.name, addition: progress, multiplier: 1, rewardAddition: 0, rewardMultiplier: 1, actorValueChange: 0 },
+      rolled: null, progressPrecalculated: true, resetInterval: false
+    });
+    return { ...result, quantity, progress, itemName: progressItem.name };
+  }
+
   static #validateCheck(station, definition, check) {
     const allowedIds = new Set(
       StationEngine.availableChecks(station, definition).map(entry => StationEngine.checkId(entry))
@@ -193,7 +223,7 @@ export class ProjectService {
     return this.#resolveInterval({ actor, stationActor, station, definition, states, state, check, row, rolled, progressPrecalculated: true });
   }
 
-  static async #resolveInterval({ actor, stationActor, station, definition, states, state, check, row, rolled, progressPrecalculated = false }) {
+  static async #resolveInterval({ actor, stationActor, station, definition, states, state, check, row, rolled, progressPrecalculated = false, resetInterval = true }) {
     const actorValue = RewardService.getStationValue(actor, stationActor, station);
     const calculation = StationEngine.calculateProgress({
       station,
@@ -213,9 +243,13 @@ export class ProjectService {
       ? round(Number(row?.addition ?? 0) + intervalBaseProgress * (Number(row?.multiplier ?? 1) - 1), 6)
       : calculation.progress;
     if (progressPrecalculated) {
-      calculation.progress = progressChange;
-      calculation.bonusOnly = true;
+      calculation.appliedProgress = progressChange;
       calculation.intervalBaseProgress = intervalBaseProgress;
+      if (!resetInterval) {
+        calculation.progress = progressChange;
+        calculation.bonusOnly = true;
+        calculation.downtime = 0;
+      }
     }
     const nextProgress = round(Math.max(0, Number(state.progress) + progressChange), 6);
     const reachedTarget = nextProgress >= state.requiredProgress - 1e-9;
@@ -243,16 +277,18 @@ export class ProjectService {
     }
 
     state.progress = requiresCompletionCheck ? state.requiredProgress : nextProgress;
-    state.intervalProgress = 0;
+    if (resetInterval) state.intervalProgress = 0;
     state.pendingRoll = false;
-    state.lastResult = {
-      total: rolled?.total,
-      natural: rolled?.natural,
-      label: row.label,
-      calculation,
-      rewardAddition,
-      rewardMultiplier
-    };
+    if (rolled) {
+      state.lastResult = {
+        total: rolled.total,
+        natural: rolled.natural,
+        label: row.label,
+        calculation,
+        rewardAddition,
+        rewardMultiplier
+      };
+    } else delete state.lastResult;
     if (requiresCompletionCheck) {
       state.awaitingCompletionCheck = true;
       state.completionCheckFailed = false;
@@ -302,10 +338,13 @@ export class ProjectService {
       }
     }
     const actorValueAfter = RewardService.getStationValue(actor, stationActor, station);
-    state.lastResult.actorValueBefore = actorValueBefore;
-    state.lastResult.actorValueAfter = actorValueAfter;
-    state.lastResult.actorValueChange = round(actorValueAfter - actorValueBefore, 6);
-    state.lastResult.rewards = rewardSummary;
+    const actorValueChange = round(actorValueAfter - actorValueBefore, 6);
+    if (state.lastResult) {
+      state.lastResult.actorValueBefore = actorValueBefore;
+      state.lastResult.actorValueAfter = actorValueAfter;
+      state.lastResult.actorValueChange = actorValueChange;
+      state.lastResult.rewards = rewardSummary;
+    }
     await actor.setFlag(MODULE_ID, FLAGS.PROJECTS, states);
     return {
       rolled,
@@ -315,7 +354,7 @@ export class ProjectService {
       rewardMultiplier,
       actorValueBefore,
       actorValueAfter,
-      actorValueChange: state.lastResult.actorValueChange,
+      actorValueChange,
       completed,
       rewards,
       state

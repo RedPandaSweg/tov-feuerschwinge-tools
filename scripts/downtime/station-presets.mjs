@@ -1,4 +1,4 @@
-import { CRAFTING_ROLL_TABLE, DEFAULT_VALUE_TIERS, STANDARD_ROLL_TABLE } from "./constants.mjs";
+import { CRAFTING_EXPERIENCE_TIERS, CRAFTING_ROLL_TABLE, DEFAULT_VALUE_TIERS, STANDARD_ROLL_TABLE } from "./constants.mjs";
 
 const STATION_PRESET_BASE_CONFIG = Object.freeze({
   baseProgress: 0,
@@ -12,6 +12,18 @@ const STATION_PRESET_BASE_CONFIG = Object.freeze({
   actorValue: { enabled: false },
   rollTable: CRAFTING_ROLL_TABLE,
   rollTablePreset: "crafting"
+});
+
+const CRAFTING_EXPERIENCE_CONFIG = Object.freeze({
+  enabled: true,
+  scope: "station",
+  key: "crafting-experience",
+  label: "Crafting-Erfahrung",
+  defaultValue: 0,
+  minimum: 0,
+  maximum: null,
+  completionChange: 0,
+  tiers: CRAFTING_EXPERIENCE_TIERS
 });
 
 function toolCheck(key) {
@@ -59,6 +71,7 @@ export const STATION_PRESETS = Object.freeze([
     projectTemplate: "crafting",
     stationConfig: {
       ...STATION_PRESET_BASE_CONFIG,
+      actorValue: CRAFTING_EXPERIENCE_CONFIG,
       requiredTool: { uuid: "Compendium.black-flag.items.Item.fKjUrqM49opM4ps5", identifier: "smithing" },
       allowedChecks: toolCheck("smithing"),
       rollTable: CRAFTING_ROLL_TABLE,
@@ -73,6 +86,7 @@ export const STATION_PRESETS = Object.freeze([
     projectTemplate: "crafting",
     stationConfig: {
       ...STATION_PRESET_BASE_CONFIG,
+      actorValue: CRAFTING_EXPERIENCE_CONFIG,
       requiredTool: { uuid: "Compendium.black-flag.items.Item.klz44oS9m4omG4eG", identifier: "alchemist" },
       allowedChecks: toolCheck("alchemist"),
       rollTable: CRAFTING_ROLL_TABLE,
@@ -149,6 +163,7 @@ export const STATION_PRESETS = Object.freeze([
     projectTemplate: "crafting",
     stationConfig: {
       ...STATION_PRESET_BASE_CONFIG,
+      actorValue: CRAFTING_EXPERIENCE_CONFIG,
       requiredTool: { uuid: "Compendium.black-flag.items.Item.02Se8KL2vaL2BF5s", identifier: "tinker" },
       allowedChecks: toolCheck("tinker"),
       rollTable: CRAFTING_ROLL_TABLE,
@@ -163,6 +178,7 @@ export const STATION_PRESETS = Object.freeze([
     projectTemplate: "crafting",
     stationConfig: {
       ...STATION_PRESET_BASE_CONFIG,
+      actorValue: CRAFTING_EXPERIENCE_CONFIG,
       requiredTool: { uuid: "Compendium.black-flag.items.Item.42AxnVcNl4R5WZj6", identifier: "clothier" },
       allowedChecks: toolCheck("clothier"),
       rollTable: CRAFTING_ROLL_TABLE,

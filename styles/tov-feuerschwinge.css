@@ -273,6 +273,9 @@
 .tovf-help-content h2,
 .tovf-help-content p { margin: 0; }
 .tovf-help-content ol { margin: 0; padding-left: 1.5rem; }
+.tovf-argon-settings .window-content { padding: 0; }
+.tovf-argon-settings-body { padding: 1rem; }
+.tovf-argon-settings-body > .hint { margin: 0 0 1rem; }
 
 .tovf-library-launch { width: 100%; margin-top: .35rem; }
 .tovf-creature-builder-actions .tovf-creature-builder-launch { flex: 1; }
@@ -280,12 +283,13 @@
 .tovf-library-root { display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .tovf-library-categories {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: .25rem;
   padding: .6rem .75rem;
   border-bottom: 1px solid var(--color-border-light-tertiary);
 }
-.tovf-library-categories button {
+.tovf-library-categories button,
+.tovf-library-more > summary {
   display: grid;
   grid-template-columns: 1.3rem minmax(0, auto) auto;
   min-width: 0;
@@ -295,13 +299,21 @@
   padding: .35rem .5rem;
   text-align: left;
 }
-.tovf-library-categories button span {
+.tovf-library-more { position: relative; min-width: 0; }
+.tovf-library-more > summary { height: 100%; border: 1px solid var(--color-border-light-tertiary); border-radius: 3px; cursor: pointer; list-style: none; }
+.tovf-library-more > summary::-webkit-details-marker { display: none; }
+.tovf-library-more > div { position: absolute; z-index: 30; top: calc(100% + .2rem); right: 0; display: grid; gap: .25rem; width: 14rem; padding: .35rem; border: 1px solid var(--color-border-light-tertiary); border-radius: 4px; background: var(--color-cool-5-90); box-shadow: 0 2px 8px #0008; }
+.tovf-library-more > div button { width: 100%; }
+.tovf-library-categories button span,
+.tovf-library-more > summary span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.tovf-library-categories button.active { background: var(--color-warm-2); color: var(--color-light-1); }
+.tovf-library-categories button.active,
+.tovf-library-more.active > summary { background: var(--color-warm-2); color: var(--color-light-1); }
+@media (max-width: 900px) { .tovf-library-categories { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .tovf-library-content { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; padding: .75rem; }
 .tovf-library-content > header {
   display: grid;
@@ -314,6 +326,7 @@
 .tovf-session-transfer-root details > summary { cursor: pointer; padding: .35rem 0; }
 .tovf-transfer-specialist { margin-top: .65rem; }
 .tovf-library-layout { display: flex; gap: .2rem; }
+.tovf-library-index-notice { margin: .5rem 0; padding: .55rem; border: 1px solid var(--color-warm-2); border-radius: 4px; }
 .tovf-library-source-filter { position: relative; min-width: 13rem; }
 .tovf-library-source-filter > summary {
   min-height: 2rem;
@@ -357,12 +370,32 @@
   overflow-y: auto;
   scrollbar-gutter: stable;
 }
+.tovf-library-filter-area:has(.tovf-library-spell-filters) { max-height: none; overflow: visible; }
 .tovf-library-filters.secondary { margin-top: .2rem; }
-.tovf-library-filters .filter-label { align-self: center; margin-right: .25rem; font-size: var(--font-size-12); }
-.tovf-library-filters select { flex: 1 1 14rem; min-width: 10rem; }
-.tovf-library-filters button { flex: 0 0 auto; width: auto; padding: .2rem .45rem; }
+.tovf-library-filters .filter-label { align-self: center; margin-right: .15rem; font-size: var(--font-size-12); }
+.tovf-library-filters select { flex: 1 1 14rem; min-width: 10rem; font-size: var(--font-size-12); }
+.tovf-library-filters button { flex: 0 0 auto; width: auto; min-height: 1.7rem; padding: .15rem .35rem; font-size: var(--font-size-12); }
 .tovf-library-filters button.active { background: var(--color-warm-2); color: var(--color-light-1); }
 .tovf-library-filters button small { margin-left: .2rem; opacity: .75; }
+.tovf-library-spell-filters { margin-top: .45rem; border: 1px solid var(--color-border-light-tertiary); border-radius: 4px; }
+.tovf-library-spell-filters > summary { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .35rem .5rem; cursor: pointer; font-size: var(--font-size-12); font-weight: 700; }
+.tovf-library-spell-filters > summary small { color: var(--color-text-subtle); font-weight: 400; }
+.tovf-library-spell-filter-grid { display: grid; grid-template-columns: repeat(3, minmax(10rem, 1fr)); gap: .45rem; padding: .5rem; border-top: 1px solid var(--color-border-light-tertiary); }
+.tovf-library-spell-filter-grid > label { display: flex; flex-direction: column; gap: .2rem; min-width: 0; font-size: var(--font-size-12); font-weight: 700; }
+.tovf-library-spell-filter-grid select { width: 100%; font-size: var(--font-size-12); }
+.tovf-library-number-range { display: grid; grid-template-columns: 1fr 1fr; gap: .3rem; }
+.tovf-library-number-range input { min-width: 0; width: 100%; font-size: var(--font-size-12); }
+.tovf-library-spell-multi { position: relative; min-width: 0; }
+.tovf-library-spell-multi > summary { min-height: 2rem; padding: .35rem .5rem; overflow: hidden; border: 1px solid var(--color-border-light-tertiary); border-radius: 3px; cursor: pointer; text-overflow: ellipsis; white-space: nowrap; }
+.tovf-library-spell-multi > div { position: absolute; z-index: 12; top: calc(100% + .2rem); left: 0; display: flex; flex-direction: column; min-width: 14rem; max-height: 15rem; overflow-y: auto; padding: .35rem; border: 1px solid var(--color-border-light-tertiary); border-radius: 3px; background: var(--color-cool-5-90); box-shadow: 0 2px 8px #0008; }
+.tovf-library-spell-multi label { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .4rem; align-items: center; padding: .2rem; font-size: var(--font-size-12); }
+.tovf-library-spell-multi input { flex: 0 0 auto; }
+.tovf-library-spell-multi small { opacity: .7; }
+.tovf-library-spell-toggles { display: flex; flex-wrap: wrap; gap: .3rem; padding: 0 .5rem .5rem; }
+.tovf-library-spell-toggles button { width: auto; min-height: 1.7rem; padding: .15rem .4rem; font-size: var(--font-size-12); }
+.tovf-library-spell-toggles button.active { background: var(--color-warm-2); color: var(--color-light-1); }
+.tovf-library-spell-toggles button.reset { margin-left: auto; }
+@media (max-width: 850px) { .tovf-library-spell-filter-grid { grid-template-columns: repeat(2, minmax(10rem, 1fr)); } }
 .tovf-library-content > .hint { margin: .4rem 0; }
 .tovf-library-table-builder { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; padding: .4rem; border: 1px solid var(--color-border-light-2); border-radius: 4px; background: rgba(193,119,50,.1); }
 .tovf-library-table-builder > span { margin-right: auto; }
@@ -781,8 +814,17 @@
 .tovf-gm-tools-section { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem; }
 .tovf-gm-character-title { display: flex; align-items: center; gap: .75rem; margin-bottom: .75rem; }
 .tovf-gm-character-title img { width: 52px; height: 52px; border-radius: 50%; }
-.tovf-gm-character-title h2 { flex: 1; margin: 0; }
+.tovf-gm-character-title select { flex: 1; min-width: 0; font-size: 1.25rem; font-weight: 700; }
 .tovf-gm-character-title button { width: auto; }
+.tovf-gm-milestone-audit { margin: 0 0 .85rem; padding: .55rem .7rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.tovf-gm-milestone-audit > summary { cursor: pointer; font-weight: 700; }
+.tovf-gm-milestone-audit > .notes { margin: .55rem 0; }
+.tovf-gm-milestone-audit-list { display: grid; gap: .4rem; }
+.tovf-gm-milestone-audit-list article { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: .55rem; padding: .45rem; border-left: 3px solid var(--color-level-warning); background: color-mix(in srgb, var(--color-level-warning) 8%, transparent); }
+.tovf-gm-milestone-audit-list img { width: 38px; height: 38px; border: 0; border-radius: 50%; object-fit: cover; }
+.tovf-gm-milestone-audit-list span,
+.tovf-gm-milestone-audit-list small { display: block; }
+.tovf-gm-milestone-audit-list button { width: auto; }
 .tovf-gm-field-grid, .tovf-gm-project-values { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .65rem; }
 .tovf-gm-field-grid label, .tovf-gm-project-values label, .tovf-gm-json-field { display: grid; gap: .25rem; }
 .tovf-gm-json-field { margin-top: .75rem; }

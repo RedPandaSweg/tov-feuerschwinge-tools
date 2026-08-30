@@ -3,6 +3,23 @@ import { MODULE_ID } from "../core/constants.mjs";
 let cubeTemplateFixInstalled = false;
 let currencyStackingInstalled = false;
 
+function installOtherInventorySection() {
+  const sections = CONFIG.BlackFlag?.sheetSections?.pc;
+  if (!Array.isArray(sections) || sections.some(section => section.id === "tovf-other")) return;
+
+  // Black Flag assigns each Item to the first matching section. Keeping this
+  // physical-item filter last therefore catches only equipment which none of
+  // the system's more specific inventory sections recognize, without pulling
+  // unclassified Features or other non-equipment Items into the inventory.
+  sections.push({
+    id: "tovf-other",
+    tab: "inventory",
+    label: "TOVF.Inventory.Other",
+    filters: [{ k: "system.isPhysical", v: true }],
+    options: { autoHide: true }
+  });
+}
+
 /**
  * Black Flag 3.0.077 calls an unbound `formatNumber` identifier while preparing
  * the numbered exhaustion effect. The formatter itself is publicly exposed by
@@ -155,6 +172,7 @@ function installSpellManagerTooltipCoverage() {
  * self-disabling so a corrected system implementation is never replaced.
  */
 export function installBlackFlagCompatibility() {
+  installOtherInventorySection();
   installExhaustionFormatNumberFix();
   installCubeTemplateFix();
   installItemStacking();

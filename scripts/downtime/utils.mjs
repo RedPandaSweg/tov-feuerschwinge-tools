@@ -32,7 +32,28 @@ export function toolMatches(item, requiredTool) {
     (configuredName && itemName === String(configuredName).trim().toLocaleLowerCase())
   );
 }
-export function hasRequiredTool(actor, requiredTool) { if (!requiredTool?.uuid && !requiredTool?.identifier && !requiredTool?.name) return true; return actor.items.some(item => toolMatches(item, requiredTool) && getSystemAdapter().isItemProficient(item)); }
+export function hasRequiredTool(actor, requiredTool) {
+  const status = toolRequirementStatus(actor, requiredTool);
+  return !status.required || (status.present && status.proficient);
+}
+export function toolRequirementStatus(actor, requiredTool) {
+  const required = Boolean(requiredTool?.uuid || requiredTool?.identifier || requiredTool?.name);
+  if (!required) return { required: false, present: true, proficient: true, name: "" };
+  const matching = actor.items.filter(item => toolMatches(item, requiredTool));
+  const configuredName = requiredTool.identifier
+    ? (globalThis.CONFIG?.BlackFlag?.tools?.localizedOptions ?? []).find(option => option.value === requiredTool.identifier)?.label
+    : "";
+  const identifier = String(requiredTool.identifier ?? "").trim().toLowerCase();
+  const actorProficiency = identifier
+    ? Number(actor.system?.proficiencies?.tools?.[identifier]?.proficiency?.multiplier ?? 0) > 0
+    : null;
+  return {
+    required: true,
+    present: matching.length > 0,
+    proficient: actorProficiency ?? matching.some(item => getSystemAdapter().isItemProficient(item)),
+    name: String(requiredTool.name || configuredName || requiredTool.identifier || "").trim()
+  };
+}
 export function actorKnowsSpell(actor, spell) {
   if (!actor || spell?.type !== "spell") return false;
   const targetIdentifier = itemIdentifier(spell);
@@ -162,6 +183,15 @@ export function getStationData(actor) {
     Object.hasOwn(stored, "allowedChecks") ? stored.allowedChecks : existingChecks
   );
   data.recipes = Array.isArray(stored.recipes) ? stored.recipes : [];
+  data.progressItems = (Array.isArray(stored.progressItems) ? stored.progressItems : [])
+    .filter(entry => entry?.uuid)
+    .map(entry => ({
+      uuid: String(entry.uuid),
+      name: String(entry.name ?? ""),
+      img: String(entry.img ?? ""),
+      identifier: String(entry.identifier ?? ""),
+      progress: Math.max(0.000001, Number(entry.progress) || 1)
+    }));
   data.modifiers = Array.isArray(stored.modifiers) ? stored.modifiers : [];
   data.progressSources = foundry.utils.mergeObject(
     foundry.utils.deepClone(DEFAULT_STATION_CONFIG.progressSources),

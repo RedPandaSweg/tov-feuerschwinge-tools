@@ -1,5 +1,6 @@
 import { MODULE_ID } from "../../core/constants.mjs";
 import { setExplodeItemActivities } from "./adapter.mjs?v=3.3.1-follow-up-filter-2";
+import { ArgonSettingsApp } from "./settings-app.mjs";
 
 export const getSetting = key => game.settings.get(MODULE_ID, key);
 
@@ -33,12 +34,20 @@ export function registerArgonSettings() {
     switchEquip: { type: Boolean, default: false },
     showSpecialActions: { type: Boolean, default: true }
   };
+  game.settings.registerMenu(MODULE_ID, "argonCombatHud", {
+    name: "TOVF.Argon.Settings.Menu.Name",
+    label: "TOVF.Argon.Settings.Menu.Label",
+    hint: "TOVF.Argon.Settings.Menu.Hint",
+    icon: "fa-solid fa-swords",
+    type: ArgonSettingsApp,
+    restricted: true
+  });
   for (const [key, definition] of Object.entries(definitions)) {
     game.settings.register(MODULE_ID, key, {
       name: `TOVF.Argon.Settings.${key}.Name`,
       hint: `TOVF.Argon.Settings.${key}.Hint`,
       scope: "world",
-      config: true,
+      config: false,
       ...definition,
       onChange: value => {
         definition.onChange?.(value);

@@ -5,10 +5,20 @@ import { ProjectService } from "./project-service.mjs";
 import { ResourceService } from "./resource-service.mjs";
 import { RewardService } from "./reward-service.mjs";
 import { StationEngine } from "./station-engine.mjs";
-import { actorKnowsSpell, getStationData, round } from "./utils.mjs";
+import { actorKnowsSpell, getStationData, round, toolRequirementStatus } from "./utils.mjs?v=3.4.2-requirement-feedback-1";
 import { getSystemAdapter } from "./system-adapter.mjs";
 
 export class SharedProjectService {
+  static #assertEligible(actor, station, definition) {
+    if (!station.enabled) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.StationDisabled"));
+    const requirements = [station.requiredTool, ...(definition.requiredTools ?? [])]
+      .map(tool => toolRequirementStatus(actor, tool)).filter(status => status.required);
+    const lackingProficiency = requirements.filter(status => !status.proficient);
+    if (lackingProficiency.length) throw new Error(game.i18n.format("DOWNTIME_MANAGER.Errors.ToolProficiencyMissing", { tools: lackingProficiency.map(status => status.name).join(", ") }));
+    const missingTools = requirements.filter(status => status.proficient && !status.present);
+    if (missingTools.length) throw new Error(game.i18n.format("DOWNTIME_MANAGER.Errors.RequiredToolMissing", { tools: missingTools.map(status => status.name).join(", ") }));
+  }
+
   static async #assertSpellUnknown(actor, item, definition) {
     const resultUuid = definition.resultUuid || definition.rewards?.[0]?.uuid || "";
     const resultItem = definition.isCustom && resultUuid
@@ -40,23 +50,32 @@ export class SharedProjectService {
     const state = states.find(entry => entry.projectUuid === projectUuid && !entry.completed);
     if (!state) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.SharedProjectMissing"));
     if (!Array.isArray(state.participantUuids)) state.participantUuids = state.leaderUuid ? [state.leaderUuid] : [];
-    state.contributions ??= {};
+    if (!Array.isArray(state.contributions)) {
+      state.contributions = Object.entries(state.contributions ?? {}).map(([actorUuid, contribution]) => ({
+        actorUuid,
+        downtime: Math.max(0, Number(contribution?.downtime) || 0),
+        progress: Math.max(0, Number(contribution?.progress) || 0)
+      }));
+    }
     return state;
   }
 
   static #contribution(state, actorUuid) {
-    state.contributions ??= {};
-    const stored = state.contributions[actorUuid] ?? {};
-    state.contributions[actorUuid] = {
-      downtime: Math.max(0, Number(stored.downtime) || 0),
-      progress: Math.max(0, Number(stored.progress) || 0)
-    };
-    return state.contributions[actorUuid];
+    if (!Array.isArray(state.contributions)) state.contributions = [];
+    let contribution = state.contributions.find(entry => entry.actorUuid === actorUuid);
+    if (!contribution) {
+      contribution = { actorUuid, downtime: 0, progress: 0 };
+      state.contributions.push(contribution);
+    }
+    contribution.downtime = Math.max(0, Number(contribution.downtime) || 0);
+    contribution.progress = Math.max(0, Number(contribution.progress) || 0);
+    return contribution;
   }
 
   static async start({ stationUuid, projectUuid, leaderUuid, batches = 1 }) {
-    const { stationActor, actor: leader, item, definition } = await this.#documents(stationUuid, projectUuid, leaderUuid);
+    const { stationActor, station, actor: leader, item, definition } = await this.#documents(stationUuid, projectUuid, leaderUuid);
     if (!leader) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ActorMissing"));
+    this.#assertEligible(leader, station, definition);
     await this.#assertSpellUnknown(leader, item, definition);
     if (!definition.collaborative) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ProjectNotCollaborative"));
     const states = this.get(stationActor);
@@ -70,7 +89,7 @@ export class SharedProjectService {
     if (!(await ResourceService.spend(leader, definition.ingredients ?? [], quantity))) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ResourcesMissing"));
     const state = {
       id: foundry.utils.randomID(), projectUuid, projectName: item.name,
-      leaderUuid, participantUuids: [leaderUuid], contributions: { [leaderUuid]: { downtime: 0, progress: 0 } },
+      leaderUuid, participantUuids: [leaderUuid], contributions: [{ actorUuid: leaderUuid, downtime: 0, progress: 0 }],
       progress: 0, intervalProgress: 0, pendingRoll: false, awaitingCompletionCheck: false,
       completed: false, batches: quantity, requiredProgress: round(Number(definition.requiredProgress) * quantity, 6), createdAt: Date.now()
     };
@@ -80,8 +99,9 @@ export class SharedProjectService {
   }
 
   static async join({ stationUuid, projectUuid, actorUuid }) {
-    const { stationActor, actor, item, definition } = await this.#documents(stationUuid, projectUuid, actorUuid);
+    const { stationActor, station, actor, item, definition } = await this.#documents(stationUuid, projectUuid, actorUuid);
     if (!actor) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ActorMissing"));
+    this.#assertEligible(actor, station, definition);
     await this.#assertSpellUnknown(actor, item, definition);
     const states = this.get(stationActor);
     const state = this.#state(states, projectUuid);
@@ -113,6 +133,7 @@ export class SharedProjectService {
   static async invest({ stationUuid, projectUuid, actorUuid, amount, check = null }) {
     const { stationActor, station, actor, definition } = await this.#documents(stationUuid, projectUuid, actorUuid);
     if (!actor) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ActorMissing"));
+    this.#assertEligible(actor, station, definition);
     const states = this.get(stationActor);
     const state = this.#state(states, projectUuid);
     if (!state.participantUuids.includes(actorUuid)) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.SharedParticipantRequired"));
@@ -144,6 +165,32 @@ export class SharedProjectService {
     return state;
   }
 
+  static async useProgressItem({ stationUuid, projectUuid, actorUuid, itemUuid, quantity: requestedQuantity = 1 }) {
+    const { stationActor, station, actor, definition } = await this.#documents(stationUuid, projectUuid, actorUuid);
+    if (!actor) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ActorMissing"));
+    this.#assertEligible(actor, station, definition);
+    const states = this.get(stationActor); const state = this.#state(states, projectUuid);
+    if (!station.enabled) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.StationDisabled"));
+    if (!state.participantUuids.includes(actorUuid)) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.SharedParticipantRequired"));
+    if (state.pendingRoll || state.awaitingCompletionCheck) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.RollRequired"));
+    const progressItem = station.progressItems.find(entry => entry.uuid === itemUuid);
+    if (!progressItem) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ProgressItemUnavailable"));
+    const perItem = Math.max(0.000001, Number(progressItem.progress) || 1);
+    const quantity = Math.max(1, Math.floor(Number(requestedQuantity) || 1));
+    if (!(await ResourceService.has(actor, [{ ...progressItem, quantity }], 1))) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ProgressItemMissing"));
+    if (Number(state.progress) + perItem * quantity >= Number(state.requiredProgress) - 1e-9) {
+      const leader = await fromUuid(state.leaderUuid);
+      const rewards = (definition.rewards ?? []).map(reward => ({ ...reward, quantity: StationEngine.calculateRewardQuantity(reward.quantity ?? 1, {}, state.batches) }));
+      await RewardService.validateItems(rewards);
+      RewardService.validateCharacterRewards(definition.characterRewards ?? []);
+      if (!(await ResourceService.has(leader, definition.completionCosts ?? [], state.batches))) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.CompletionCostsMissing"));
+    }
+    if (!(await ResourceService.spend(actor, [{ ...progressItem, quantity }], 1))) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ProgressItemMissing"));
+    const progress = round(perItem * quantity, 6);
+    const result = await this.#resolve({ stationActor, station, actor, definition, states, state, check: null, row: { label: progressItem.name, addition: progress, multiplier: 1, rewardAddition: 0, rewardMultiplier: 1, actorValueChange: 0 }, rolled: null, progressPrecalculated: true, resetInterval: false });
+    return { ...result, quantity, progress, itemName: progressItem.name };
+  }
+
   static async resolveRoll({ stationUuid, projectUuid, actorUuid, check, rolled }) {
     const { stationActor, station, actor, definition } = await this.#documents(stationUuid, projectUuid, actorUuid);
     const states = this.get(stationActor);
@@ -157,7 +204,7 @@ export class SharedProjectService {
     return this.#resolve({ stationActor, station, actor, definition, states, state, check, row, rolled, progressPrecalculated: true });
   }
 
-  static async #resolve({ stationActor, station, actor, definition, states, state, check, row, rolled, progressPrecalculated = false }) {
+  static async #resolve({ stationActor, station, actor, definition, states, state, check, row, rolled, progressPrecalculated = false, resetInterval = true }) {
     const contribution = this.#contribution(state, actor.uuid);
     const value = RewardService.getStationValue(actor, stationActor, station);
     const calculation = StationEngine.calculateProgress({ station, downtime: state.intervalProgress, rollRow: row, actorValue: value, actorSources: StationEngine.actorProgressSources(actor, check) });
@@ -165,11 +212,21 @@ export class SharedProjectService {
     const rewardRow = { ...row, rewardAddition: Number(row.rewardAddition ?? 0) + valueModifier.rewardAddition, rewardMultiplier: Number(row.rewardMultiplier ?? 1) * valueModifier.rewardMultiplier };
     const intervalBaseProgress = round(Number(station.baseProgress ?? 0) * Number(state.intervalProgress ?? 0), 6);
     const progressChange = progressPrecalculated ? round(Number(row?.addition ?? 0) + intervalBaseProgress * (Number(row?.multiplier ?? 1) - 1), 6) : calculation.progress;
-    if (progressPrecalculated) { calculation.progress = progressChange; calculation.bonusOnly = true; calculation.intervalBaseProgress = intervalBaseProgress; }
+    if (progressPrecalculated) {
+      calculation.appliedProgress = progressChange;
+      calculation.intervalBaseProgress = intervalBaseProgress;
+      if (!resetInterval) {
+        calculation.progress = progressChange;
+        calculation.bonusOnly = true;
+        calculation.downtime = 0;
+      }
+    }
     state.progress = round(Math.max(0, state.progress + progressChange), 6);
     contribution.progress = round(Math.max(0, contribution.progress + progressChange), 6);
-    state.intervalProgress = 0; state.pendingRoll = false;
-    state.lastResult = { total: rolled?.total, natural: rolled?.natural, label: row.label, calculation };
+    if (resetInterval) state.intervalProgress = 0;
+    state.pendingRoll = false;
+    if (rolled) state.lastResult = { total: rolled.total, natural: rolled.natural, label: row.label, calculation };
+    else delete state.lastResult;
     await RewardService.changeStationValue(actor, stationActor, station, Number(row.actorValueChange ?? 0));
     if (state.progress >= state.requiredProgress - 1e-9) {
       if (definition.completionCheck?.enabled) {
