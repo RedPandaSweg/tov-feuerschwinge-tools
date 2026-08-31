@@ -1,7 +1,7 @@
 import { MODULE_ID } from "../core/constants.mjs";
 import { levelFromMilestones, sessionProgress } from "../downtime/session-service.mjs";
-import { balanceInCopper, changeCurrency, formatCopper, itemQuantity, priceInCopper, quantityForPrice, validateCurrencyChange } from "./currency.mjs";
-import { addItem, cleanTransferredItem, exchange, removeItem, transferItem } from "./transactions.mjs";
+import { balanceInCopper, changeCurrency, formatCopper, itemQuantity, priceInCopper, quantityForPrice, validateCurrencyChange } from "./currency.mjs?v=3.5.0-item-quantity-1";
+import { addItem, cleanTransferredItem, exchange, removeItem, transferItem } from "./transactions.mjs?v=3.5.0-item-quantity-1";
 import {
   createSpellScrollData, merchantSpellScrollOffers, resolveSpellScrollOffer, saveMerchantSpellScrollOffers
 } from "../spell-scrolls.mjs?v=3.5.0-spell-scrolls-3";
@@ -20,6 +20,25 @@ function isTradeableItem(item) {
 
 function itemDiscount(item) {
   return Math.clamp(Number(item?.getFlag?.(MODULE_ID, "merchantItem")?.discountPercent) || 0, 0, 100);
+}
+
+export function merchantStockQuantity(item) {
+  if (item?.type !== "container") return itemQuantity(item);
+  const configured = item.getFlag?.(MODULE_ID, "merchantItem")?.stockQuantity;
+  return Math.max(0, Math.floor(Number(configured ?? 1) || 0));
+}
+
+async function createEmptyContainers(actor, source, quantity) {
+  const base = cleanTransferredItem(source, 1);
+  delete base._id;
+  delete base._stats;
+  if (base.system) base.system.container = null;
+  if (base.flags?.[MODULE_ID]) {
+    delete base.flags[MODULE_ID].merchantItem;
+    delete base.flags[MODULE_ID].commerce;
+  }
+  const items = Array.from({ length: quantity }, () => foundry.utils.deepClone(base));
+  if (items.length) await actor.createEmbeddedDocuments("Item", items);
 }
 
 function itemPriceDenomination(item) {
@@ -295,19 +314,28 @@ async function merchantBuy(payload, userId) {
   const priceUnits = Math.max(1, Math.floor(Number(payload.quantity) || 1));
   const quantity = priceUnits * quantityForPrice(item);
   const config = merchantConfig(shop);
-  if (!config.infiniteStock && itemQuantity(item) < quantity) throw new Error("Der Händler hat nicht genug davon auf Lager.");
+  const stock = merchantStockQuantity(item);
+  if (!config.infiniteStock && stock < quantity) throw new Error("Der Händler hat nicht genug davon auf Lager.");
   const unitCopper = Math.round(priceInCopper(item, config.buyModifier) * (1 - itemDiscount(item) / 100));
   const copper = unitCopper * priceUnits;
   const denomination = itemPriceDenomination(item);
   validateCurrencyChange(buyer, -copper);
   if (!config.infiniteCurrency) validateCurrencyChange(shop, copper, { denomination });
+  const containerConfig = item.type === "container" ? (item.getFlag(MODULE_ID, "merchantItem") ?? {}) : null;
   await changeCurrency(buyer, -copper);
   try {
     if (!config.infiniteCurrency) await changeCurrency(shop, copper, { denomination });
-    await transferItem({ source: shop, target: buyer, itemId: item.id, quantity, keepSource: config.infiniteStock });
+    if (containerConfig && !config.infiniteStock) {
+      await item.setFlag(MODULE_ID, "merchantItem", { ...containerConfig, stockQuantity: stock - quantity });
+    }
+    if (item.type === "container") await createEmptyContainers(buyer, item, quantity);
+    else await transferItem({ source: shop, target: buyer, itemId: item.id, quantity, keepSource: config.infiniteStock });
   } catch (error) {
     await changeCurrency(buyer, copper).catch(() => {});
     if (!config.infiniteCurrency) await changeCurrency(shop, -copper).catch(() => {});
+    if (containerConfig && !config.infiniteStock) {
+      await item.setFlag(MODULE_ID, "merchantItem", { ...containerConfig, stockQuantity: stock }).catch(() => {});
+    }
     throw error;
   }
   await recordMerchantPurchase({ sessionId: payload.sessionId, shop, buyer, item, quantity, copper, userId })

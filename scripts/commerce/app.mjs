@@ -1,10 +1,10 @@
 import { MODULE_ID } from "../core/constants.mjs";
 import { selectCharacters } from "../character-picker.mjs";
 import { getSystemAdapter } from "../downtime/system-adapter.mjs";
-import { formatCopper, itemQuantity, priceInCopper, purse, quantityForPrice } from "./currency.mjs";
-import { broadcastPeerTrade, commerceRequest } from "./socket.mjs";
-import { AUCTION_HOUSE_FLAG, commerceState, isAuctionHouse, merchantAccess, merchantAllowsActor, merchantAvailableToUser, merchantConfig, merchantItemAvailableToActor, ownedCharacters } from "./service.mjs";
-import { addItem, cleanTransferredItem } from "./transactions.mjs";
+import { formatCopper, itemQuantity, priceInCopper, purse, quantityForPrice, quantityUpdate } from "./currency.mjs?v=3.5.0-item-quantity-1";
+import { broadcastPeerTrade, commerceRequest } from "./socket.mjs?v=3.5.0-container-stock-1";
+import { AUCTION_HOUSE_FLAG, commerceState, isAuctionHouse, merchantAccess, merchantAllowsActor, merchantAvailableToUser, merchantConfig, merchantItemAvailableToActor, merchantStockQuantity, ownedCharacters } from "./service.mjs?v=3.5.0-container-stock-1";
+import { addItem, cleanTransferredItem } from "./transactions.mjs?v=3.5.0-item-quantity-1";
 import {
   addMerchantSpellScrollOffer, createSpellScrollData, merchantSpellScrollOffers,
   resolveSpellScrollOffer, saveMerchantSpellScrollOffers
@@ -154,7 +154,7 @@ function inventoryEntries(actor, multiplier, config, { management = false, disco
     const itemConfig = item.getFlag(MODULE_ID, "merchantItem") ?? {};
     const hidden = itemConfig.hidden === true;
     const discountPercent = discounts ? Math.clamp(Number(itemConfig.discountPercent) || 0, 0, 100) : 0;
-    const quantity = itemQuantity(item);
+    const quantity = merchantStockQuantity(item);
     const originalPriceCopper = priceInCopper(item, multiplier);
     const effectiveMultiplier = multiplier * (1 - discountPercent / 100);
     const effectivePriceCopper = Math.round(originalPriceCopper * (1 - discountPercent / 100));
@@ -263,7 +263,10 @@ async function openItemPreview(source, viewingActor = null) {
     actorData.name = viewingActor?.name ?? actorData.name;
     actorData.items = [...(actorData.items ?? []), data];
     actorData.ownership = { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER };
-    const previewActor = await CONFIG.Actor.documentClass.create(actorData, { temporary: true });
+    // Construct the preview locally. Using Document.create with a temporary
+    // option is not reliable enough across Foundry versions and can persist a
+    // complete copy of the selected buyer in the world Actor directory.
+    const previewActor = new CONFIG.Actor.documentClass(actorData, { temporary: true });
     const item = previewActor?.items.get(data._id);
     if (!item) return false;
     item.sheet.render(true);
@@ -462,7 +465,8 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
       deleteMerchantItem: this.#deleteMerchantItem, clearMerchantItems: this.#clearMerchantItems,
       toggleMerchantItem: this.#toggleMerchantItem, populateFromTable: this.#populateFromTable,
       chooseMerchantImage: this.#chooseMerchantImage, openMerchantItem: this.#openMerchantItem,
-      setItemDiscount: this.#setItemDiscount, setItemPriceQuantity: this.#setItemPriceQuantity, openAuctionItem: this.#openAuctionItem
+      setItemDiscount: this.#setItemDiscount, setItemPriceQuantity: this.#setItemPriceQuantity,
+      setStockQuantity: this.#setStockQuantity, openAuctionItem: this.#openAuctionItem
       , changeAuctionPage: this.#changeAuctionPage, createRequest: this.#createRequest,
       fulfillRequest: this.#fulfillRequest, cancelRequest: this.#cancelRequest, openRequestItem: this.#openRequestItem
       , acceptTradeInvite: this.#acceptTradeInvite, tradeRemoveItem: this.#tradeRemoveItem, tradeSetMoney: this.#tradeSetMoney,
@@ -490,6 +494,7 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }, 180));
     if (this.mode === "merchant" && context.managementPage) {
       for (const discountButton of this.element.querySelectorAll('[data-action="setItemDiscount"]')) {
+        discountButton.insertAdjacentHTML("beforebegin", `<button type="button" data-action="setStockQuantity" data-item-id="${discountButton.dataset.itemId ?? ""}" data-offer-id="${discountButton.dataset.offerId ?? ""}" title="Verfügbaren Bestand festlegen"><i class="fa-solid fa-box"></i></button>`);
         if (discountButton.dataset.offerId) continue;
         const item = this._merchant()?.items.get(discountButton.dataset.itemId);
         discountButton.insertAdjacentHTML("beforebegin", `<button type="button" data-action="setItemPriceQuantity" data-item-id="${discountButton.dataset.itemId}" title="Menge pro Preiseinheit festlegen (aktuell ${quantityForPrice(item)})"><i class="fa-solid fa-boxes-stacked"></i></button>`);
@@ -758,6 +763,10 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     const item = actor?.items.get(target.dataset.itemId);
     if (!item) return ui.notifications.warn("Der Gegenstand wurde nicht gefunden.");
+    if (this.shopPage === "management" && game.user.isGM) {
+      item.sheet.render(true);
+      return;
+    }
     if (!await openItemPreview(item, this._actor())) ui.notifications.warn("Der Gegenstand konnte nicht geöffnet werden.");
   }
   static async #openAuctionItem(_event, target) {
@@ -801,6 +810,33 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     await item.setFlag(MODULE_ID, "commerce.quantityForPrice", priceQuantity);
     ui.notifications.info(`Der Preis von ${item.name} gilt jetzt für ${priceQuantity} Stück.`);
     await this.render({ force: true });
+  }
+  static async #setStockQuantity(_event, target) {
+    const actor = this._merchant();
+    if (!actor || !game.user.isGM) return;
+    const scrollTop = this.element.querySelector(".tovf-merchant-content.management")?.scrollTop ?? 0;
+    if (target.dataset.offerId) {
+      const offers = merchantSpellScrollOffers(actor);
+      const offer = offers.find(entry => entry.id === target.dataset.offerId);
+      if (!offer) return;
+      const quantity = await numberPrompt({ title: `Bestand: ${offer.name}`, label: "Verfügbare Stückzahl", value: offer.quantity, min: 0, step: 1 });
+      if (quantity == null) return;
+      offer.quantity = Math.max(0, Math.floor(quantity));
+      await saveMerchantSpellScrollOffers(actor, offers);
+    } else {
+      const item = actor.items.get(target.dataset.itemId);
+      if (!item) return;
+      const quantity = await numberPrompt({ title: `Bestand: ${item.name}`, label: "Verfügbare Stückzahl", value: merchantStockQuantity(item), min: 0, step: 1 });
+      if (quantity == null) return;
+      const stock = Math.max(0, Math.floor(quantity));
+      if (item.type === "container") {
+        const current = item.getFlag(MODULE_ID, "merchantItem") ?? {};
+        await item.setFlag(MODULE_ID, "merchantItem", { ...current, stockQuantity: stock });
+      } else await actor.updateEmbeddedDocuments("Item", [quantityUpdate(item, stock)]);
+    }
+    await this.render({ force: true });
+    const content = this.element.querySelector(".tovf-merchant-content.management");
+    if (content) content.scrollTop = scrollTop;
   }
   static async #deleteMerchantItem(_event, target) { const actor = this._merchant(); if (!actor) return;
     if (target.dataset.offerId) { await saveMerchantSpellScrollOffers(actor, merchantSpellScrollOffers(actor).filter(entry => entry.id !== target.dataset.offerId)); await this.render({ force: true }); return; }

@@ -1,12 +1,28 @@
 const COIN_CP = Object.freeze({ pp: 1000, gp: 100, sp: 10, cp: 1 });
 const COIN_ORDER = Object.freeze(["pp", "gp", "sp", "cp"]);
 
-export function itemQuantity(item) { return Math.max(0, Number(item?.system?.quantity ?? 1) || 0); }
+export function itemQuantity(item) {
+  const quantity = item?.system?.quantity;
+  return Math.max(0, Number(quantity?.value ?? quantity ?? 1) || 0);
+}
+export function setItemQuantity(data, quantity) {
+  const value = Math.max(0, Number(quantity) || 0);
+  data.system ??= {};
+  if (data.system.quantity && typeof data.system.quantity === "object") data.system.quantity.value = value;
+  else data.system.quantity = value;
+  return data;
+}
 export function quantityForPrice(item) {
   const configured = foundry.utils.getProperty(item, "flags.tov-feuerschwinge-tools.commerce.quantityForPrice") ?? 1;
   return Math.max(1, Math.floor(Number(configured) || 1));
 }
-export function quantityUpdate(item, quantity) { return { _id: item.id, "system.quantity": Math.max(0, Number(quantity) || 0) }; }
+export function quantityUpdate(item, quantity) {
+  const value = Math.max(0, Number(quantity) || 0);
+  const path = item?.system?.quantity && typeof item.system.quantity === "object"
+    ? "system.quantity.value"
+    : "system.quantity";
+  return { _id: item.id, [path]: value };
+}
 export function currencyIdentifier(item) {
   if (item?.type !== "currency") return "";
   return String(item.system?.identifier?.value ?? item.system?.identifier ?? "").trim().toLowerCase();

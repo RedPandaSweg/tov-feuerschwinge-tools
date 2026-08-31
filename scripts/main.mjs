@@ -40,7 +40,7 @@ import { createMagicalDrinkWorldItems, effectGroupsApi, installEffectGroups } fr
 import { activateTokenPresetSocket, registerTokenPresets } from "./token-presets.mjs";
 import { activateTokenLightAuraSocket, toggleTokenLightAura } from "./token-light-aura.mjs";
 import { activateSimpleTileTriggers, registerSimpleTileTriggers } from "./simple-tile-triggers.mjs?v=3.2.2";
-import { activateCommerce, registerCommerce } from "./commerce/main.mjs?v=3.5.0-spell-scrolls-3";
+import { activateCommerce, registerCommerce } from "./commerce/main.mjs?v=3.5.0-container-stock-1";
 import "./downtime/main.mjs?v=3.5.0-actor-spell-migration-10";
 import "./contested-activity.mjs";
 import "./void-taint/main.mjs?v=3.3.0-void-taint-1";

@@ -1,5 +1,5 @@
 import { MODULE_ID } from "../core/constants.mjs";
-import { executeCommerceAction } from "./service.mjs";
+import { executeCommerceAction } from "./service.mjs?v=3.5.0-container-stock-1";
 
 const SCOPE = "commerce";
 const pending = new Map();

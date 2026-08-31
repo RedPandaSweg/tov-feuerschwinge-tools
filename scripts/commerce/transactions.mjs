@@ -1,4 +1,4 @@
-import { changeCurrency, itemQuantity, quantityUpdate, validateCurrencyChange } from "./currency.mjs";
+import { changeCurrency, itemQuantity, quantityUpdate, setItemQuantity, validateCurrencyChange } from "./currency.mjs?v=3.5.0-item-quantity-1";
 
 const locks = new Map();
 
@@ -21,7 +21,7 @@ export function cleanTransferredItem(item, quantity) {
   const data = item.toObject();
   delete data._id;
   delete data._stats;
-  data.system.quantity = quantity;
+  setItemQuantity(data, quantity);
   data.system.container = null;
   foundry.utils.deleteProperty(data, "flags.core.sourceId");
   if (data.flags?.["black-flag"]?.relationship?.attuned) data.flags["black-flag"].relationship.attuned = false;
@@ -46,11 +46,11 @@ export async function addItem(actor, itemData, quantity, { stackWeapons = false 
   const signature = stackSignature(itemData);
   const existing = itemData.type === "weapon" && !stackWeapons ? null : actor.items.find(item => stackSignature(item) === signature);
   if (existing) {
-    await existing.update({ "system.quantity": itemQuantity(existing) + quantity });
+    await existing.update(quantityUpdate(existing, itemQuantity(existing) + quantity));
     return existing;
   }
   const data = foundry.utils.deepClone(itemData);
-  foundry.utils.setProperty(data, "system.quantity", quantity);
+  setItemQuantity(data, quantity);
   const [created] = await actor.createEmbeddedDocuments("Item", [data]);
   return created;
 }
