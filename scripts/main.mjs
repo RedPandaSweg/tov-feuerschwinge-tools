@@ -18,7 +18,7 @@ import {
 } from "./integrations/weapon-option-activities.mjs?v=3.2.4-tooltip-links-2";
 import { installArgonBlackFlagCompatibility } from "./integrations/argon-black-flag-compatibility.mjs?v=3.4.2-argon-settings-popup-1";
 import { activatePlayerUnpause, registerPlayerUnpause } from "./player-unpause.mjs";
-import { registerCompendiumLibrary } from "./compendium-library.mjs?v=3.5.0-spell-identity-1";
+import { registerCompendiumLibrary } from "./compendium-library.mjs?v=3.5.0-feuerschwinge-spell-priority-1";
 import { activateChallengeManager, registerChallengeManager } from "./challenge-manager.mjs";
 import { registerLinkTools } from "./link-tools-config.mjs";
 import {

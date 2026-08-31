@@ -1,1 +1,1 @@
-import "./main.mjs?v=3.5.0-actor-spell-migration-10";
+import "./main.mjs?v=3.5.0-feuerschwinge-spell-priority-1";

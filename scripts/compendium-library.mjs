@@ -13,7 +13,7 @@ const SOURCE_MODULES = packageId => (
 );
 const FALLBACK_ITEM_IMAGE = "icons/svg/item-bag.svg";
 const LIBRARY_INDEX_PACK = "tov-feuerschwinge-library-index";
-const LIBRARY_INDEX_VERSION = 4;
+const LIBRARY_INDEX_VERSION = 5;
 
 function libraryIndexPack() {
   return game.packs.get(`world.${LIBRARY_INDEX_PACK}`);
@@ -596,28 +596,21 @@ function normalizedName(value) {
   return String(value ?? "").trim().toLocaleLowerCase(game.i18n.lang);
 }
 
-function spellIdentity(entry) {
-  return String(
-    entry?._stats?.compendiumSource
-    ?? entry?.getFlag?.("core", "sourceId")
-    ?? foundry.utils.getProperty(entry, "flags.core.sourceId")
-    ?? entry?.uuid
-    ?? ""
-  ).trim();
+function spellCircle(entry) {
+  const circle = Number(foundry.utils.getProperty(entry, "system.circle.base"));
+  return Number.isFinite(circle) ? circle : null;
 }
 
 function displayKey(entry) {
   const name = entry.itemType === "spell" ? canonicalSpellName(entry.name) : entry.name;
   const base = `${entry.documentType}|${entry.itemType}|${normalizedName(name)}`;
   if (entry.itemType !== "spell") return base;
-  // Equal names and circles do not imply equal Spells. Only collapse copies
-  // that retain the same original compendium provenance.
-  return `${base}|${entry.spellIdentity || entry.uuid}`;
+  return `${base}|${entry.spellCircle ?? ""}`;
 }
 
 function sourcePriority(entry) {
-  if (entry.source === game.system.id) return 0;
-  if (entry.source !== CONTENT_MODULE_ID) return 1;
+  if (entry.source === CONTENT_MODULE_ID) return 0;
+  if (entry.source === game.system.id) return 1;
   return 2;
 }
 
@@ -757,7 +750,6 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           "system.components.required",
           "system.activities",
           "effects"
-          , "flags.core.sourceId"
           , "system.description.value"
           , `flags.${MODULE_ID}.library.tags`
         ]
@@ -805,7 +797,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           spellConcentration: entry.type === "spell" && spellRequiresConcentration(document),
           spellRitual: entry.type === "spell" && spellIsRitual(document),
           spellVoid: entry.type === "spell" && spellIsVoid(document),
-          spellIdentity: entry.type === "spell" ? spellIdentity(document) : "",
+          spellCircle: entry.type === "spell" ? spellCircle(document) : null,
           magicAttunement: category === "magicItems"
             ? String(foundry.utils.getProperty(entry, "system.attunement.value") ?? "none") || "none"
             : "",
