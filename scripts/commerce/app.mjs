@@ -3,8 +3,12 @@ import { selectCharacters } from "../character-picker.mjs";
 import { getSystemAdapter } from "../downtime/system-adapter.mjs";
 import { formatCopper, itemQuantity, priceInCopper, purse, quantityForPrice } from "./currency.mjs";
 import { broadcastPeerTrade, commerceRequest } from "./socket.mjs";
-import { AUCTION_HOUSE_FLAG, commerceState, isAuctionHouse, merchantAccess, merchantAllowsActor, merchantAvailableToUser, merchantConfig, ownedCharacters } from "./service.mjs";
+import { AUCTION_HOUSE_FLAG, commerceState, isAuctionHouse, merchantAccess, merchantAllowsActor, merchantAvailableToUser, merchantConfig, merchantItemAvailableToActor, ownedCharacters } from "./service.mjs";
 import { addItem, cleanTransferredItem } from "./transactions.mjs";
+import {
+  addMerchantSpellScrollOffer, createSpellScrollData, merchantSpellScrollOffers,
+  resolveSpellScrollOffer, saveMerchantSpellScrollOffers
+} from "../spell-scrolls.mjs?v=3.5.0-spell-scrolls-3";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const TRADEABLE_TYPES = new Set(["ammunition", "armor", "consumable", "container", "gear", "sundry", "tool", "weapon"]);
@@ -143,7 +147,7 @@ function categoryData(item) {
   return categoryResult([item.type, category], [typeLabel, subtypeLabel]);
 }
 
-function inventoryEntries(actor, multiplier, config, { management = false, discounts = false } = {}) {
+function inventoryEntries(actor, multiplier, config, { management = false, discounts = false, buyer = null } = {}) {
   if (!actor) return [];
   return actor.items.filter(item => item.type !== "currency" && TRADEABLE_TYPES.has(item.type)).map(item => {
     const category = categoryData(item);
@@ -157,10 +161,30 @@ function inventoryEntries(actor, multiplier, config, { management = false, disco
     const priceQuantity = quantityForPrice(item);
     const detailLabel = [config.displayQuantity ? `${quantity} verfügbar` : "", priceQuantity > 1 ? `Preis für ${priceQuantity}` : ""].filter(Boolean).join(" · ");
     return { id: item.id, actorId: actor.id, name: item.name, img: item.img, quantity, quantityForPrice: priceQuantity, detailLabel, categoryId: category.id,
-      categoryLabel: category.label, hidden, visible: management || (!hidden && (config.showZeroQuantity || quantity > 0)),
+      categoryLabel: category.label, hidden, visible: management || (!hidden && (config.showZeroQuantity || quantity > 0)
+        && (!buyer || merchantItemAvailableToActor(item, buyer))),
       discounted: discountPercent > 0, discountPercent, originalPrice: formatCopper(originalPriceCopper),
       originalPriceCoins: priceCoins(item, multiplier), priceCopper: effectivePriceCopper,
       price: formatCopper(effectivePriceCopper), priceCoins: priceCoins(item, effectiveMultiplier) };
+  });
+}
+
+function spellScrollOfferEntries(actor, multiplier, config, { management = false, discounts = false, buyer = null } = {}) {
+  if (!actor) return [];
+  return merchantSpellScrollOffers(actor).map(offer => {
+    const itemLike = { type: "consumable", system: { type: { category: "scroll" }, rarity: offer.rarity } };
+    const category = categoryData(itemLike);
+    const hidden = offer.hidden === true;
+    const discountPercent = discounts ? Math.clamp(Number(offer.discountPercent) || 0, 0, 100) : 0;
+    const originalPriceCopper = Math.round(Math.max(0, Number(offer.price) || 0) * 100 * multiplier);
+    const effectivePriceCopper = Math.round(originalPriceCopper * (1 - discountPercent / 100));
+    const detailLabel = config.displayQuantity ? `${offer.quantity} verfügbar` : "";
+    return { id: offer.id, offerId: offer.id, virtual: true, actorId: actor.id, name: offer.name, img: offer.img,
+      quantity: offer.quantity, quantityForPrice: 1, detailLabel, categoryId: category.id, categoryLabel: category.label,
+      hidden, visible: management || (!hidden && (config.showZeroQuantity || offer.quantity > 0)
+        && (!buyer || merchantItemAvailableToActor(itemLike, buyer))), discounted: discountPercent > 0, discountPercent,
+      originalPrice: formatCopper(originalPriceCopper), originalPriceCoins: copperPriceCoins(originalPriceCopper),
+      priceCopper: effectivePriceCopper, price: formatCopper(effectivePriceCopper), priceCoins: copperPriceCoins(effectivePriceCopper) };
   });
 }
 
@@ -202,7 +226,7 @@ async function itemsFromTable(table, count, { quantityMin = 1, quantityMax = 1 }
   for (const result of draw.results ?? []) {
     const uuid = result.documentUuid ?? (result.documentCollection && result.documentId ? `${result.documentCollection}.${result.documentId}` : "");
     const document = uuid ? await fromUuid(uuid) : null;
-    if (document?.documentName !== "Item" || !TRADEABLE_TYPES.has(document.type)) continue;
+    if (document?.documentName !== "Item" || !(TRADEABLE_TYPES.has(document.type) || document.type === "spell")) continue;
     const quantity = minimum + Math.floor(Math.random() * (maximum - minimum + 1));
     const entry = items.get(document.uuid);
     if (entry) entry.quantity += quantity;
@@ -215,7 +239,7 @@ async function itemFromDrop(event) {
   let data;
   try { data = JSON.parse(event.dataTransfer?.getData("text/plain") || "{}"); } catch { return null; }
   const item = data.uuid ? await fromUuid(data.uuid) : data.type === "Item" && data.id ? game.items.get(data.id) : null;
-  return item?.documentName === "Item" && TRADEABLE_TYPES.has(item.type) ? item : null;
+  return item?.documentName === "Item" && (TRADEABLE_TYPES.has(item.type) || item.type === "spell") ? item : null;
 }
 
 async function requirementItemFromDrop(event) {
@@ -224,15 +248,30 @@ async function requirementItemFromDrop(event) {
   return item?.documentName === "Item" ? item : null;
 }
 
-function openItemPreview(source) {
+async function openItemPreview(source, viewingActor = null) {
   const data = foundry.utils.deepClone(source?.toObject ? source.toObject() : source);
   if (!data) return false;
-  delete data._id;
-  delete data.folder;
-  data.ownership = { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER };
-  const item = new CONFIG.Item.documentClass(data, { parent: null });
-  item.sheet.render(true);
-  return true;
+  try {
+    delete data.folder;
+    delete data.ownership;
+    data._id = foundry.utils.randomID();
+    const actorData = viewingActor?.toObject ? foundry.utils.deepClone(viewingActor.toObject()) : {
+      name: `${data.name || "Item"} – Vorschau`, type: "npc", items: []
+    };
+    delete actorData.folder;
+    actorData._id = foundry.utils.randomID();
+    actorData.name = viewingActor?.name ?? actorData.name;
+    actorData.items = [...(actorData.items ?? []), data];
+    actorData.ownership = { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER };
+    const previewActor = await CONFIG.Actor.documentClass.create(actorData, { temporary: true });
+    const item = previewActor?.items.get(data._id);
+    if (!item) return false;
+    item.sheet.render(true);
+    return true;
+  } catch (error) {
+    console.error(`${MODULE_ID} | Item preview failed`, error);
+    return false;
+  }
 }
 
 function requiredItemData(item) {
@@ -266,14 +305,17 @@ async function configureMerchantRequirements(actor) {
     : '<i class="fa-solid fa-box-open"></i><span>Item, Spell oder Feature hierher ziehen</span>';
   const content = `<div class="standard-form tovf-merchant-requirements">
     <p class="hint">Ein Charakter muss alle ausgewählten Voraussetzungen erfüllen. Leere Felder schränken den Zugriff nicht ein.</p>
-    <div class="form-group stacked"><label>Erforderliche Sprachen</label><details class="tovf-requirement-picker" data-requirement-picker><summary><span data-picker-label>Sprachen auswählen</span><i class="fa-solid fa-chevron-down"></i></summary><div>${languageOptions || "<em>Keine Sprachen verfügbar.</em>"}</div></details></div>
-    <div class="form-group stacked"><label>Erforderliche Proficiencies</label><details class="tovf-requirement-picker" data-requirement-picker><summary><span data-picker-label>Proficiencies auswählen</span><i class="fa-solid fa-chevron-down"></i></summary><div>${proficiencyOptions || "<em>Keine Proficiencies verfügbar.</em>"}</div></details></div>
+    <div class="tovf-merchant-requirement-row">
+      <div class="form-group stacked"><label>Mindestlevel</label><input type="number" name="minimumLevel" value="${current.minimumLevel}" min="1" max="20" step="1"><p class="hint">Meilensteinbasiert</p></div>
+      <div class="form-group stacked"><label>Erforderliche Sprachen</label><details class="tovf-requirement-picker" data-requirement-picker><summary><span data-picker-label>Sprachen auswählen</span><i class="fa-solid fa-chevron-down"></i></summary><div>${languageOptions || "<em>Keine Sprachen verfügbar.</em>"}</div></details></div>
+      <div class="form-group stacked"><label>Erforderliche Proficiencies</label><details class="tovf-requirement-picker" data-requirement-picker><summary><span data-picker-label>Proficiencies auswählen</span><i class="fa-solid fa-chevron-down"></i></summary><div>${proficiencyOptions || "<em>Keine Proficiencies verfügbar.</em>"}</div></details></div>
+    </div>
     <div class="form-group stacked"><label>Erforderliches Item</label><div class="tovf-merchant-requirement-drop" data-required-item-drop>${itemMarkup()}</div></div>
     <div class="form-group stacked"><label>Nachricht bei verweigertem Zugriff</label><prose-mirror name="deniedMessage" value="${esc(current.accessDeniedMessage)}" data-document-uuid="${actor.uuid}" class="description"></prose-mirror></div>
   </div>`;
   return foundry.applications.api.DialogV2.prompt({
     classes: ["tovf-commerce-dialog", "tovf-merchant-requirements-dialog"],
-    window: { title: `Voraussetzungen: ${actor.name}` }, position: { width: 620, height: 720 }, content,
+    window: { title: `Voraussetzungen: ${actor.name}`, resizable: true }, position: { width: 620 }, content,
     render: (_event, dialog) => {
       const drop = dialog.element.querySelector("[data-required-item-drop]");
       const refresh = () => { drop.innerHTML = itemMarkup(); };
@@ -301,6 +343,7 @@ async function configureMerchantRequirements(actor) {
       });
     },
     ok: { label: "Speichern", callback: (_event, button) => ({
+      minimumLevel: Math.max(1, Math.min(20, Math.floor(Number(button.form.elements.minimumLevel.value) || 1))),
       requiredLanguages: [...button.form.querySelectorAll('input[name="languages"]:checked')].map(input => input.value),
       requiredProficiencies: [...button.form.querySelectorAll('input[name="proficiencies"]:checked')].map(input => input.value),
       requiredItem,
@@ -447,6 +490,7 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }, 180));
     if (this.mode === "merchant" && context.managementPage) {
       for (const discountButton of this.element.querySelectorAll('[data-action="setItemDiscount"]')) {
+        if (discountButton.dataset.offerId) continue;
         const item = this._merchant()?.items.get(discountButton.dataset.itemId);
         discountButton.insertAdjacentHTML("beforebegin", `<button type="button" data-action="setItemPriceQuantity" data-item-id="${discountButton.dataset.itemId}" title="Menge pro Preiseinheit festlegen (aktuell ${quantityForPrice(item)})"><i class="fa-solid fa-boxes-stacked"></i></button>`);
       }
@@ -460,11 +504,16 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
         content.addEventListener("drop", async event => {
           event.preventDefault(); dropzone.classList.remove("dragover");
           const item = await itemFromDrop(event);
-          if (!item) return ui.notifications.warn("Nur handelbare Equipment-Items können einem Händler hinzugefügt werden.");
+          if (!item) return ui.notifications.warn("Nur handelbare Equipment-Items oder Spells können einem Händler hinzugefügt werden.");
           const merchant = this._merchant(); if (!merchant) return;
           const quantity = Math.max(1, itemQuantity(item));
-          await addItem(merchant, cleanTransferredItem(item, quantity), quantity);
-          ui.notifications.info(`${quantity}× ${item.name} wurde dem Händler hinzugefügt.`);
+          if (item.type === "spell") {
+            await addMerchantSpellScrollOffer(merchant, item, quantity);
+            ui.notifications.info(`${quantity}× Spell Scroll: ${item.name} wurde dem Händler hinzugefügt.`);
+          } else {
+            await addItem(merchant, cleanTransferredItem(item, quantity), quantity);
+            ui.notifications.info(`${quantity}× ${item.name} wurde dem Händler hinzugefügt.`);
+          }
           await this.render({ force: true });
         });
       }
@@ -568,7 +617,10 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!characters.some(actor => actor.id === selectedActor?.id)) selectedActor = characters[0] ?? null;
     this.actorId = selectedActor?.id ?? null;
     const management = this.shopPage === "management" && game.user.isGM;
-    const shopAll = inventoryEntries(shop, config.buyModifier, config, { management, discounts: true });
+    const shopAll = [
+      ...inventoryEntries(shop, config.buyModifier, config, { management, discounts: true, buyer: selectedActor }),
+      ...spellScrollOfferEntries(shop, config.buyModifier, config, { management, discounts: true, buyer: selectedActor })
+    ];
     const actorAll = inventoryEntries(selectedActor, config.sellModifier, config);
     const sourceEntries = this.shopPage === "sell" ? actorAll : shopAll;
     const visibleEntries = filtered(sourceEntries, this.category, this.search);
@@ -646,10 +698,10 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #changeMode(_event, target) { this.mode = target.dataset.mode; await this.render({ force: true }); }
   static async #changeShopPage(_event, target) { this.shopPage = target.dataset.page; this.category = ""; this.search = ""; await this.render({ force: true }); }
   static async #changeAuctionPage(_event, target) { this.auctionPage = target.dataset.page; this.category = ""; this.search = ""; await this.render({ force: true }); }
-  static async #buy(_event, target) { const item = this._merchant()?.items.get(target.dataset.itemId); const bundle = quantityForPrice(item);
+  static async #buy(_event, target) { const item = this._merchant()?.items.get(target.dataset.itemId); const bundle = target.dataset.offerId ? 1 : quantityForPrice(item);
     const quantity = await numberPrompt({ title: "Kaufen", label: bundle > 1 ? `Menge (${bundle} Stück je Preiseinheit)` : "Menge" }); if (!quantity) return;
     await this._run(() => commerceRequest("merchantBuy", { merchantId: this.merchantId, actorId: this.actorId,
-      itemId: target.dataset.itemId, quantity, sessionId: this.merchantSessionId, sceneId: merchantAccessOptions().sceneId })); }
+      itemId: target.dataset.itemId, offerId: target.dataset.offerId, quantity, sessionId: this.merchantSessionId, sceneId: merchantAccessOptions().sceneId })); }
   static async #sell(_event, target) { const item = this._actor()?.items.get(target.dataset.itemId); const bundle = quantityForPrice(item);
     const quantity = await numberPrompt({ title: "Verkaufen", label: bundle > 1 ? `Menge (${bundle} Stück je Preiseinheit)` : "Menge" }); if (!quantity) return;
     await this._run(() => commerceRequest("merchantSell", { merchantId: this.merchantId, actorId: this.actorId, itemId: target.dataset.itemId,
@@ -695,25 +747,45 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
       await this.render({ force: true });
     }}).render(true);
   }
-  static #openMerchantItem(_event, target) {
+  static async #openMerchantItem(_event, target) {
     const actor = game.actors.get(target.dataset.actorId);
+    if (target.dataset.offerId) {
+      const offer = merchantSpellScrollOffers(actor).find(entry => entry.id === target.dataset.offerId);
+      const spell = await resolveSpellScrollOffer(offer);
+      if (!spell) return ui.notifications.warn("Der Spell dieses Angebots wurde nicht gefunden.");
+      if (!await openItemPreview(await createSpellScrollData(spell), this._actor())) ui.notifications.warn("Die Spellscroll konnte nicht geöffnet werden.");
+      return;
+    }
     const item = actor?.items.get(target.dataset.itemId);
     if (!item) return ui.notifications.warn("Der Gegenstand wurde nicht gefunden.");
-    openItemPreview(item);
+    if (!await openItemPreview(item, this._actor())) ui.notifications.warn("Der Gegenstand konnte nicht geöffnet werden.");
   }
-  static #openAuctionItem(_event, target) {
+  static async #openAuctionItem(_event, target) {
     const auction = commerceState().auctions.find(entry => entry.id === target.dataset.auctionId);
     if (!auction?.itemData) return ui.notifications.warn("Der Auktionsgegenstand wurde nicht gefunden.");
-    openItemPreview(auction.itemData);
+    if (!await openItemPreview(auction.itemData, this._actor())) ui.notifications.warn("Der Auktionsgegenstand konnte nicht geöffnet werden.");
   }
-  static #openRequestItem(_event, target) {
+  static async #openRequestItem(_event, target) {
     const request = commerceState().requests.find(entry => entry.id === target.dataset.requestId);
     if (!request?.wantedItem) return ui.notifications.warn("Der gesuchte Gegenstand wurde nicht gefunden.");
-    openItemPreview(request.wantedItem);
+    if (!await openItemPreview(request.wantedItem, this._actor())) ui.notifications.warn("Der gesuchte Gegenstand konnte nicht geöffnet werden.");
   }
-  static async #toggleMerchantItem(_event, target) { const item = this._merchant()?.items.get(target.dataset.itemId); if (!item) return;
+  static async #toggleMerchantItem(_event, target) {
+    if (target.dataset.offerId) {
+      const actor = this._merchant(); const offers = merchantSpellScrollOffers(actor);
+      const offer = offers.find(entry => entry.id === target.dataset.offerId); if (!offer) return;
+      offer.hidden = target.dataset.hidden !== "true"; await saveMerchantSpellScrollOffers(actor, offers); await this.render({ force: true }); return;
+    }
+    const item = this._merchant()?.items.get(target.dataset.itemId); if (!item) return;
     await item.setFlag(MODULE_ID, "merchantItem", { hidden: target.dataset.hidden !== "true" }); await this.render({ force: true }); }
   static async #setItemDiscount(_event, target) {
+    if (target.dataset.offerId) {
+      const actor = this._merchant(); const offers = merchantSpellScrollOffers(actor);
+      const offer = offers.find(entry => entry.id === target.dataset.offerId); if (!offer) return;
+      const discountPercent = await numberPrompt({ title: `Rabatt für ${offer.name}`, label: "Rabatt in Prozent", value: offer.discountPercent, min: 0, step: 1 });
+      if (discountPercent == null) return; offer.discountPercent = Math.clamp(Math.round(discountPercent), 0, 100);
+      await saveMerchantSpellScrollOffers(actor, offers); await this.render({ force: true }); return;
+    }
     const item = this._merchant()?.items.get(target.dataset.itemId); if (!item) return;
     const discountPercent = await numberPrompt({ title: `Rabatt für ${item.name}`, label: "Rabatt in Prozent", value: Number(target.dataset.discount) || 0, min: 0, step: 1 });
     if (discountPercent == null) return;
@@ -731,11 +803,12 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     await this.render({ force: true });
   }
   static async #deleteMerchantItem(_event, target) { const actor = this._merchant(); if (!actor) return;
+    if (target.dataset.offerId) { await saveMerchantSpellScrollOffers(actor, merchantSpellScrollOffers(actor).filter(entry => entry.id !== target.dataset.offerId)); await this.render({ force: true }); return; }
     await actor.deleteEmbeddedDocuments("Item", [target.dataset.itemId]); await this.render({ force: true }); }
   static async #clearMerchantItems() { const actor = this._merchant(); if (!actor) return;
     const confirmed = await foundry.applications.api.DialogV2.confirm({ classes: ["tovf-commerce-dialog"], window: { title: "Händlerinventar leeren" }, content: "<p>Alle handelbaren Gegenstände dieses Händlers entfernen?</p>" });
     if (!confirmed) return; const ids = actor.items.filter(i => i.type !== "currency" && TRADEABLE_TYPES.has(i.type)).map(i => i.id);
-    if (ids.length) await actor.deleteEmbeddedDocuments("Item", ids); await this.render({ force: true }); }
+    if (ids.length) await actor.deleteEmbeddedDocuments("Item", ids); await saveMerchantSpellScrollOffers(actor, []); await this.render({ force: true }); }
   static async #populateFromTable() { const actor = this._merchant(); const tableId = this.element.querySelector("[name=rollTableId]")?.value;
     const count = Math.max(1, Math.floor(Number(this.element.querySelector("[name=rollCount]")?.value) || 1));
     const quantityMin = Math.max(1, Math.floor(Number(this.element.querySelector("[name=rollQuantityMin]")?.value) || 1));
@@ -743,7 +816,11 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const table = game.tables.get(tableId); if (!actor || !table) return;
     const items = await itemsFromTable(table, count, { quantityMin, quantityMax }); if (!items.length) return ui.notifications.warn("Die Tabelle hat keine Item-Ergebnisse geliefert.");
     let total = 0;
-    for (const { document, quantity } of items) { await addItem(actor, cleanTransferredItem(document, quantity), quantity, { stackWeapons: true }); total += quantity; }
+    for (const { document, quantity } of items) {
+      if (document.type === "spell") await addMerchantSpellScrollOffer(actor, document, quantity);
+      else await addItem(actor, cleanTransferredItem(document, quantity), quantity, { stackWeapons: true });
+      total += quantity;
+    }
     ui.notifications.info(`${total} Gegenstände aus ${count} Würfen hinzugefügt (${items.length} verschiedene Items).`); await this.render({ force: true }); }
   static async #configureMerchant() { if (!game.user.isGM) return; const actors = game.actors.map(a => `<option value="${a.id}">${a.name}</option>`).join("");
     const id = await foundry.applications.api.DialogV2.prompt({ classes: ["tovf-commerce-dialog"], window: { title: "Händler einrichten" }, content: `<select name="actorId">${actors}</select>`,
@@ -855,9 +932,9 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     updatePeerOffer(offer.trade, offer.side, offer.items, copper); await this.render({ force: true });
   }
   static async #confirmTrade(_event,target) { await confirmPeerTrade(target.dataset.tradeId); }
-  static #openTradeItem(_event,target) {
+  static async #openTradeItem(_event,target) {
     const item = game.actors.get(target.dataset.actorId)?.items.get(target.dataset.itemId);
-    if (!item || !openItemPreview(item)) ui.notifications.warn("Der Gegenstand wurde nicht gefunden.");
+    if (!item || !await openItemPreview(item, this._actor() ?? item.actor)) ui.notifications.warn("Der Gegenstand wurde nicht gefunden.");
   }
   static async #cancelTrade(_e,t) { cancelPeerTrade(t.dataset.tradeId); }
 }

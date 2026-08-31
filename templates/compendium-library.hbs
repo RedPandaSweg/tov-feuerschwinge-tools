@@ -209,7 +209,7 @@
           data-table-entry-select aria-label="{{name}} für Rolltable auswählen" {{checked tableSelected}}></span>{{/if}}
         <img src="{{img}}" alt="">
         <button type="button" data-action="openDocument">
-          <strong>{{name}}</strong>
+          <strong>{{name}}{{#if spellConcentration}} <abbr class="tovf-spell-marker concentration" title="Concentration">C</abbr>{{/if}}{{#if spellRitual}} <abbr class="tovf-spell-marker ritual" title="Ritual">R</abbr>{{/if}}</strong>
           <span title="{{packLabel}}">{{packLabel}}</span>
         </button>
         {{#if showPrice}}<span class="tovf-library-price"><i class="fa-solid fa-coins"></i> {{priceValue}} {{priceDenomination}}</span>{{/if}}

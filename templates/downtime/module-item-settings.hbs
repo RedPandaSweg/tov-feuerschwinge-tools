@@ -44,5 +44,14 @@
       <button type="button" data-action="resetMilestoneBands"><i class="fa-solid fa-rotate-left"></i> {{localize "DOWNTIME_MANAGER.Settings.MilestoneLevels.Reset"}}</button>
     </div>
   </fieldset>
+  <fieldset>
+    <legend>{{localize "DOWNTIME_MANAGER.Settings.ShopRarityLevels.Name"}}</legend>
+    <p class="notes">{{localize "DOWNTIME_MANAGER.Settings.ShopRarityLevels.Hint"}}</p>
+    <div class="sc-list">
+      {{#each rarityLevels}}<div class="sc-grid-row sc-category-setting-row">
+        <label><span>{{label}}</span><input type="number" name="rarityLevels.{{id}}" value="{{level}}" min="1" max="20" step="1"></label>
+      </div>{{/each}}
+    </div>
+  </fieldset>
   <footer class="form-footer"><button type="submit"><i class="fa-solid fa-floppy-disk"></i> {{localize "DOWNTIME_MANAGER.Actions.Save"}}</button></footer>
 </div>

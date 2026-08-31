@@ -1,8 +1,13 @@
 import { MODULE_ID } from "../core/constants.mjs";
+import { levelFromMilestones, sessionProgress } from "../downtime/session-service.mjs";
 import { balanceInCopper, changeCurrency, formatCopper, itemQuantity, priceInCopper, quantityForPrice, validateCurrencyChange } from "./currency.mjs";
 import { addItem, cleanTransferredItem, exchange, removeItem, transferItem } from "./transactions.mjs";
+import {
+  createSpellScrollData, merchantSpellScrollOffers, resolveSpellScrollOffer, saveMerchantSpellScrollOffers
+} from "../spell-scrolls.mjs?v=3.5.0-spell-scrolls-3";
 
 export const COMMERCE_SETTING = "commerceState";
+export const COMMERCE_RARITY_LEVELS_SETTING = "commerceRarityLevels";
 export const MERCHANT_FLAG = "merchant";
 export const AUCTION_HOUSE_FLAG = "auctionHouse";
 const DEFAULT_STATE = Object.freeze({ version: 1, auctions: [], requests: [], trades: [] });
@@ -146,6 +151,7 @@ export function merchantConfig(actor) {
     showZeroQuantity: source.showZeroQuantity === true,
     requireInteractionRange: source.requireInteractionRange !== false,
     interactionRange: Math.max(1, Math.floor(Number(source.interactionRange) || 1)),
+    minimumLevel: Math.max(1, Math.min(20, Math.floor(Number(source.minimumLevel) || 1))),
     allowedActorIds: cleanStrings(source.allowedActorIds),
     requiredLanguages: cleanStrings(source.requiredLanguages),
     requiredProficiencies: cleanStrings(source.requiredProficiencies),
@@ -162,6 +168,21 @@ export function isAuctionHouse(actor) {
 
 export function ownedCharacters(user = game.user) {
   return game.actors.filter(actor => actor.type === "pc" && actor.testUserPermission(user, "OWNER"));
+}
+
+export function milestoneLevel(actor) {
+  return levelFromMilestones(sessionProgress(actor).milestones);
+}
+
+export function rarityMinimumLevel(item) {
+  const rarity = String(item?.system?.rarity ?? "").trim();
+  if (!rarity) return 1;
+  const stored = game.settings.get(MODULE_ID, COMMERCE_RARITY_LEVELS_SETTING) ?? {};
+  return Math.max(1, Math.min(20, Math.floor(Number(stored[rarity]) || 1)));
+}
+
+export function merchantItemAvailableToActor(item, actor) {
+  return !!actor && milestoneLevel(actor) >= rarityMinimumLevel(item);
 }
 
 function hasProficiency(actor, encoded) {
@@ -224,6 +245,7 @@ export function merchantAccess(shop, actor, user = game.user, { sceneId = null }
   if (!actor) reasons.push("character");
   else {
     if (config.allowedActorIds.length && !config.allowedActorIds.includes(actor.id)) reasons.push("character");
+    if (milestoneLevel(actor) < config.minimumLevel) reasons.push("level");
     const languages = new Set(actor.system?.proficiencies?.languages?.value ?? []);
     if (config.requiredLanguages.some(language => !languages.has(language))) reasons.push("language");
     if (config.requiredProficiencies.some(proficiency => !hasProficiency(actor, proficiency))) reasons.push("proficiency");
@@ -264,8 +286,12 @@ async function merchantBuy(payload, userId) {
   const buyer = actor(payload.actorId);
   if (!actorOwnedBy(buyer, userId)) throw new Error("Du besitzt diesen Charakter nicht.");
   if (!merchantAllowsActor(shop, buyer, game.users.get(userId), { sceneId: payload.sceneId })) throw new Error("Dieser Charakter darf bei diesem Händler nicht handeln.");
+  if (payload.offerId) return merchantBuySpellScroll({ payload, userId, shop, buyer });
   const item = shop.items.get(payload.itemId);
   if (!isTradeableItem(item)) throw new Error("Dieser Gegenstand kann nicht gehandelt werden.");
+  if (!merchantItemAvailableToActor(item, buyer)) {
+    throw new Error(`Dieser Gegenstand kann erst ab Level ${rarityMinimumLevel(item)} gekauft werden.`);
+  }
   const priceUnits = Math.max(1, Math.floor(Number(payload.quantity) || 1));
   const quantity = priceUnits * quantityForPrice(item);
   const config = merchantConfig(shop);
@@ -287,6 +313,45 @@ async function merchantBuy(payload, userId) {
   await recordMerchantPurchase({ sessionId: payload.sessionId, shop, buyer, item, quantity, copper, userId })
     .catch(error => console.error(`${MODULE_ID} | Merchant chat card failed`, error));
   return { message: `${buyer.name} kauft ${quantity}× ${item.name} für ${formatCopper(copper)}.` };
+}
+
+async function merchantBuySpellScroll({ payload, userId, shop, buyer }) {
+  const offers = merchantSpellScrollOffers(shop);
+  const offer = offers.find(entry => entry.id === payload.offerId);
+  if (!offer || offer.hidden) throw new Error("Dieses Spellscroll-Angebot wurde nicht gefunden.");
+  const itemLike = { system: { rarity: offer.rarity } };
+  if (!merchantItemAvailableToActor(itemLike, buyer)) {
+    throw new Error(`Dieser Gegenstand kann erst ab Level ${rarityMinimumLevel(itemLike)} gekauft werden.`);
+  }
+  const quantity = Math.max(1, Math.floor(Number(payload.quantity) || 1));
+  const config = merchantConfig(shop);
+  if (!config.infiniteStock && offer.quantity < quantity) throw new Error("Der Händler hat nicht genug davon auf Lager.");
+  const spell = await resolveSpellScrollOffer(offer);
+  if (!spell) throw new Error("Der verknüpfte Spell ist nicht mehr verfügbar.");
+  const itemData = await createSpellScrollData(spell, { quantity });
+  const unitCopper = Math.round(offer.price * 100 * config.buyModifier * (1 - offer.discountPercent / 100));
+  const copper = unitCopper * quantity;
+  validateCurrencyChange(buyer, -copper);
+  if (!config.infiniteCurrency) validateCurrencyChange(shop, copper, { denomination: "gp" });
+  const originalOffers = foundry.utils.deepClone(offers);
+  if (!config.infiniteStock) {
+    offer.quantity -= quantity;
+    await saveMerchantSpellScrollOffers(shop, offers);
+  }
+  await changeCurrency(buyer, -copper);
+  try {
+    if (!config.infiniteCurrency) await changeCurrency(shop, copper, { denomination: "gp" });
+    await addItem(buyer, itemData, quantity);
+  } catch (error) {
+    await changeCurrency(buyer, copper).catch(() => {});
+    if (!config.infiniteCurrency) await changeCurrency(shop, -copper, { denomination: "gp" }).catch(() => {});
+    if (!config.infiniteStock) await saveMerchantSpellScrollOffers(shop, originalOffers).catch(() => {});
+    throw error;
+  }
+  const item = { id: offer.id, name: offer.name, img: offer.img };
+  await recordMerchantPurchase({ sessionId: payload.sessionId, shop, buyer, item, quantity, copper, userId })
+    .catch(error => console.error(`${MODULE_ID} | Merchant chat card failed`, error));
+  return { message: `${buyer.name} kauft ${quantity}× ${offer.name} für ${formatCopper(copper)}.` };
 }
 
 async function merchantSell(payload, userId) {

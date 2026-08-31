@@ -33,8 +33,9 @@ import {
 import { MIGRATION_SETTING, migrateIntegratedDowntime } from "./migration.mjs";
 import { openChallengeManager } from "../challenge-manager.mjs";
 import { openFeuerschwingeSettings } from "../settings-categories.mjs";
-import { GMToolsApp } from "./gm-tools-app.mjs?v=3.4.2-milestone-audit-2";
-import { isCompendiumItem, synchronizeCompendiumItem } from "../item-compendium-sync.mjs";
+import { createWorldSpellScroll } from "../spell-scrolls.mjs?v=3.5.0-spell-scrolls-3";
+import { GMToolsApp } from "./gm-tools-app.mjs?v=3.5.0-actor-spell-migration-10";
+import { isCompendiumItem, synchronizeCompendiumItem } from "../item-compendium-sync.mjs?v=3.5.0-cross-source-spell-sync-8";
 
 function documentFromApp(app, documentName) {
   const document =
@@ -406,6 +407,15 @@ function itemHeaderControls(app, controls) {
           });
         }
 
+        if (item.type === "spell") {
+          buttons.push({
+            action: "spellScroll",
+            icon: "fa-solid fa-scroll",
+            label: "Spellscroll erstellen",
+            callback: () => "spellScroll"
+          });
+        }
+
         const action = await foundry.applications.api.DialogV2.wait({
           window: {
             title: game.i18n.localize("DOWNTIME_MANAGER.Headers.Feuerschwinge")
@@ -416,6 +426,9 @@ function itemHeaderControls(app, controls) {
 
         if (action === "synchronize") {
           await synchronizeCompendiumItem(item);
+        } else if (action === "spellScroll") {
+          const scroll = await createWorldSpellScroll(item, { folder: item.pack || item.parent ? null : item.folder });
+          if (scroll) ui.notifications.info(`${scroll.name} wurde im Item-Verzeichnis erstellt.`);
         } else if (action === "downtime") {
           if (isRecipeItem(item)) openRecipeEditor(item);
           else new DowntimeItemApp(item).render(true);

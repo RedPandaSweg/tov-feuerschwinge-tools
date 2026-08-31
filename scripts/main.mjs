@@ -18,7 +18,7 @@ import {
 } from "./integrations/weapon-option-activities.mjs?v=3.2.4-tooltip-links-2";
 import { installArgonBlackFlagCompatibility } from "./integrations/argon-black-flag-compatibility.mjs?v=3.4.2-argon-settings-popup-1";
 import { activatePlayerUnpause, registerPlayerUnpause } from "./player-unpause.mjs";
-import { registerCompendiumLibrary } from "./compendium-library.mjs?v=3.4.2-standard-spell-durations-1";
+import { registerCompendiumLibrary } from "./compendium-library.mjs?v=3.5.0-spell-identity-1";
 import { activateChallengeManager, registerChallengeManager } from "./challenge-manager.mjs";
 import { registerLinkTools } from "./link-tools-config.mjs";
 import {
@@ -35,17 +35,20 @@ import { installTheurgeSpellcasting } from "./integrations/theurge-spellcasting.
 import { installCompendiumUsability } from "./compendium-usability.mjs";
 import { installChatImagePopouts } from "./chat-image-popout.mjs";
 import { registerChatMessageDeletion } from "./chat-message-deletion.mjs";
+import { installChatTimestamps } from "./chat-timestamps.mjs";
 import { createMagicalDrinkWorldItems, effectGroupsApi, installEffectGroups } from "./effect-groups.mjs?v=3.2.5-effect-groups-7";
 import { activateTokenPresetSocket, registerTokenPresets } from "./token-presets.mjs";
 import { activateTokenLightAuraSocket, toggleTokenLightAura } from "./token-light-aura.mjs";
 import { activateSimpleTileTriggers, registerSimpleTileTriggers } from "./simple-tile-triggers.mjs?v=3.2.2";
-import { activateCommerce, registerCommerce } from "./commerce/main.mjs?v=3.2.7-rolltable-stock-2";
-import "./downtime/main.mjs?v=3.4.2-roll-result-only-1";
+import { activateCommerce, registerCommerce } from "./commerce/main.mjs?v=3.5.0-spell-scrolls-3";
+import "./downtime/main.mjs?v=3.5.0-actor-spell-migration-10";
 import "./contested-activity.mjs";
 import "./void-taint/main.mjs?v=3.3.0-void-taint-1";
 import { registerTalentBackgrounds } from "./talent-backgrounds.mjs?v=3.3.1-talent-backgrounds-6";
 import { installCustomBackground } from "./integrations/custom-background.mjs?v=3.3.1-custom-background-16";
 import { installActiveEffectChangesUi } from "./active-effect-changes-ui.mjs";
+import { installSpellScrollTools } from "./spell-scrolls.mjs?v=3.5.0-spell-scrolls-3";
+import { installSpellNameMarkers } from "./spell-name-markers.mjs?v=3.5.0-spell-markers-1";
 
 // Keep tile triggers independent from the shared initialization chain so an
 // unrelated tool cannot prevent their hooks and diagnostics from registering.
@@ -53,6 +56,7 @@ registerSimpleTileTriggers();
 Hooks.once("ready", activateSimpleTileTriggers);
 registerCommerce();
 Hooks.once("ready", activateCommerce);
+installChatTimestamps();
 
 const MODULE_MENU_ORDER = new Map([
   ["help", 0],
@@ -128,6 +132,8 @@ Hooks.once("init", () => {
   registerTalentBackgrounds();
   installCustomBackground();
   installActiveEffectChangesUi();
+  installSpellScrollTools();
+  installSpellNameMarkers();
   installEffectGroups();
   registerTokenPresets();
   installArgonBlackFlagCompatibility();

@@ -1,6 +1,7 @@
 import { DEFAULT_MILESTONE_LEVEL_BANDS, MODULE_ID, SETTINGS } from "./constants.mjs";
 import { configuredCategories } from "./utils.mjs";
 import { normalizeMilestoneLevelBands } from "./session-service.mjs";
+import { COMMERCE_RARITY_LEVELS_SETTING } from "../commerce/service.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -40,7 +41,8 @@ export class ModuleItemSettingsApp extends HandlebarsApplicationMixin(Applicatio
         defaultCostItemUuid: String(game.settings.get(MODULE_ID, SETTINGS.DEFAULT_COST_ITEM_UUID) ?? ""),
         categories: configuredCategories(),
         milestoneCatchUp: game.settings.get(MODULE_ID, SETTINGS.MILESTONE_CATCH_UP)?.enabled !== false,
-        milestoneBands: normalizeMilestoneLevelBands(game.settings.get(MODULE_ID, SETTINGS.MILESTONE_LEVEL_BANDS))
+        milestoneBands: normalizeMilestoneLevelBands(game.settings.get(MODULE_ID, SETTINGS.MILESTONE_LEVEL_BANDS)),
+        rarityLevels: foundry.utils.deepClone(game.settings.get(MODULE_ID, COMMERCE_RARITY_LEVELS_SETTING) ?? {})
       };
     }
     const baseItem = await resolveItem(this._draft.recipeBaseItemUuid);
@@ -50,6 +52,7 @@ export class ModuleItemSettingsApp extends HandlebarsApplicationMixin(Applicatio
       categories: this._draft.categories,
       milestoneBands: this._draft.milestoneBands,
       milestoneCatchUp: this._draft.milestoneCatchUp,
+      rarityLevels: this.#rarityLevels(),
       fields: [
         {
           setting: "recipeBaseItemUuid",
@@ -142,6 +145,21 @@ export class ModuleItemSettingsApp extends HandlebarsApplicationMixin(Applicatio
       sessions: Number(this.element?.querySelector(`[name="milestoneBands.${index}.sessions"]`)?.value ?? band.sessions)
     }));
     this._draft.milestoneCatchUp = Boolean(this.element?.querySelector('[name="milestoneCatchUp"]')?.checked);
+    for (const rarity of Object.keys(this._draft.rarityLevels)) {
+      const value = this.element?.querySelector(`[name="rarityLevels.${rarity}"]`)?.value;
+      if (value != null) this._draft.rarityLevels[rarity] = Math.max(1, Math.min(20, Math.floor(Number(value) || 1)));
+    }
+  }
+
+  #rarityLevels() {
+    const configured = CONFIG.BlackFlag?.rarities?.localized ?? CONFIG.BlackFlag?.rarities ?? {};
+    const ids = [...new Set([...Object.keys(configured), ...Object.keys(this._draft.rarityLevels)])];
+    for (const id of ids) this._draft.rarityLevels[id] ??= 1;
+    return ids.map(id => {
+      const localization = configured[id]?.label ?? configured[id]?.localization ?? configured[id];
+      const translated = typeof localization === "string" ? game.i18n.localize(localization) : id;
+      return { id, label: translated === localization && localization?.includes?.(".") ? id : translated, level: this._draft.rarityLevels[id] };
+    });
   }
 
   static async #submit() {
@@ -163,6 +181,7 @@ export class ModuleItemSettingsApp extends HandlebarsApplicationMixin(Applicatio
     await game.settings.set(MODULE_ID, SETTINGS.STATION_CATEGORIES, { entries: unique });
     await game.settings.set(MODULE_ID, SETTINGS.MILESTONE_LEVEL_BANDS, { entries: milestoneBands });
     await game.settings.set(MODULE_ID, SETTINGS.MILESTONE_CATCH_UP, { enabled: this._draft.milestoneCatchUp });
+    await game.settings.set(MODULE_ID, COMMERCE_RARITY_LEVELS_SETTING, this._draft.rarityLevels);
     ui.notifications.info(game.i18n.localize("DOWNTIME_MANAGER.Notifications.ItemSettingsSaved"));
     await this.close();
   }

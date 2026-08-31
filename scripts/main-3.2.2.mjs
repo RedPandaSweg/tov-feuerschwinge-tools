@@ -1,1 +1,1 @@
-import "./main.mjs?v=3.4.2-roll-result-only-1";
+import "./main.mjs?v=3.5.0-actor-spell-migration-10";

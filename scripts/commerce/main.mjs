@@ -1,7 +1,7 @@
 import { MODULE_ID } from "../core/constants.mjs";
-import { registerCommerceControls, openCommerce } from "./app.mjs?v=3.2.7-rolltable-stock-2";
+import { registerCommerceControls, openCommerce } from "./app.mjs?v=3.5.0-spell-scrolls-3";
 import { activateCommerceSocket, commerceRequest } from "./socket.mjs";
-import { COMMERCE_SETTING, commerceState, commerceSummary, settleExpiredAuctions } from "./service.mjs";
+import { COMMERCE_RARITY_LEVELS_SETTING, COMMERCE_SETTING, commerceState, commerceSummary, settleExpiredAuctions } from "./service.mjs";
 import { migrateItemPilesMerchants } from "./migration.mjs";
 
 let settlementTimer;
@@ -11,6 +11,9 @@ export function registerCommerce() {
     game.settings.register(MODULE_ID, COMMERCE_SETTING, {
       scope: "world", config: false, type: Object,
       default: { version: 1, auctions: [], requests: [], trades: [] }
+    });
+    game.settings.register(MODULE_ID, COMMERCE_RARITY_LEVELS_SETTING, {
+      scope: "world", config: false, type: Object, default: {}
     });
   });
   registerCommerceControls();

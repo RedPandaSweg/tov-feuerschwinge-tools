@@ -1,4 +1,5 @@
 import { CONTENT_MODULE_ID, MODULE_ID, modulePath } from "./core/constants.mjs";
+import { canonicalSpellName, spellMarkerState } from "./spell-name-markers.mjs?v=3.5.0-spell-markers-1";
 
 const CHARACTER_TYPES = new Set(["background", "class", "heritage", "lineage", "subclass", "talent"]);
 const CHARACTER_FEATURE_CATEGORIES = new Set([
@@ -12,7 +13,7 @@ const SOURCE_MODULES = packageId => (
 );
 const FALLBACK_ITEM_IMAGE = "icons/svg/item-bag.svg";
 const LIBRARY_INDEX_PACK = "tov-feuerschwinge-library-index";
-const LIBRARY_INDEX_VERSION = 2;
+const LIBRARY_INDEX_VERSION = 4;
 
 function libraryIndexPack() {
   return game.packs.get(`world.${LIBRARY_INDEX_PACK}`);
@@ -410,8 +411,12 @@ function configLabel(config, id) {
 }
 
 function spellRequiresConcentration(entry) {
-  return spellTags(entry).has("concentration")
-    || Boolean(foundry.utils.getProperty(entry, "system.duration.concentration"));
+  return spellMarkerState(entry).concentration
+    || spellTags(entry).has("concentration");
+}
+
+function spellIsRitual(entry) {
+  return spellMarkerState(entry).ritual;
 }
 
 function spellIsVoid(entry) {
@@ -591,8 +596,23 @@ function normalizedName(value) {
   return String(value ?? "").trim().toLocaleLowerCase(game.i18n.lang);
 }
 
+function spellIdentity(entry) {
+  return String(
+    entry?._stats?.compendiumSource
+    ?? entry?.getFlag?.("core", "sourceId")
+    ?? foundry.utils.getProperty(entry, "flags.core.sourceId")
+    ?? entry?.uuid
+    ?? ""
+  ).trim();
+}
+
 function displayKey(entry) {
-  return `${entry.documentType}|${entry.itemType}|${normalizedName(entry.name)}`;
+  const name = entry.itemType === "spell" ? canonicalSpellName(entry.name) : entry.name;
+  const base = `${entry.documentType}|${entry.itemType}|${normalizedName(name)}`;
+  if (entry.itemType !== "spell") return base;
+  // Equal names and circles do not imply equal Spells. Only collapse copies
+  // that retain the same original compendium provenance.
+  return `${base}|${entry.spellIdentity || entry.uuid}`;
 }
 
 function sourcePriority(entry) {
@@ -628,6 +648,8 @@ function deduplicateEntries(entries) {
     const preferred = group[0];
     return {
       ...preferred,
+      spellConcentration: group.some(entry => entry.spellConcentration),
+      spellRitual: group.some(entry => entry.spellRitual),
       duplicateCount: group.length,
       hasDuplicates: group.length > 1,
       sourceSummary: [...new Set(group.map(entry => entry.sourceLabel))].join(", ")
@@ -735,6 +757,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           "system.components.required",
           "system.activities",
           "effects"
+          , "flags.core.sourceId"
           , "system.description.value"
           , `flags.${MODULE_ID}.library.tags`
         ]
@@ -754,11 +777,13 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
         const priceValue = Math.max(0, Number(foundry.utils.getProperty(entry, "system.price.value")) || 0);
         const priceDenomination = String(foundry.utils.getProperty(entry, "system.price.denomination") ?? "gp").toLocaleLowerCase("en");
         const priceGold = priceValue * ({ pp: 10, gp: 1, sp: 0.1, cp: 0.01 }[priceDenomination] ?? 1);
+        const displayName = entry.type === "spell" ? canonicalSpellName(entry.name) : entry.name;
         entries.push({
           id: entry._id,
           uuid: pack.getUuid(entry._id),
-          name: entry.name,
-          lowerName: entry.name.toLocaleLowerCase(game.i18n.lang),
+          name: displayName,
+          lowerName: displayName.toLocaleLowerCase(game.i18n.lang),
+          searchName: `${displayName} ${entry.name}`.toLocaleLowerCase(game.i18n.lang),
           img: safeImage(entry.img, pack.documentName),
           documentType: pack.documentName,
           itemType: entry.type ?? "",
@@ -778,8 +803,9 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           spellAttack: activityData?.attack ?? false,
           spellSave: activityData?.save ?? false,
           spellConcentration: entry.type === "spell" && spellRequiresConcentration(document),
-          spellRitual: entry.type === "spell" && spellTags(document).has("ritual"),
+          spellRitual: entry.type === "spell" && spellIsRitual(document),
           spellVoid: entry.type === "spell" && spellIsVoid(document),
+          spellIdentity: entry.type === "spell" ? spellIdentity(document) : "",
           magicAttunement: category === "magicItems"
             ? String(foundry.utils.getProperty(entry, "system.attunement.value") ?? "none") || "none"
             : "",
@@ -926,7 +952,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       && (!entry.monster || multiMatches(entry.monster.damageImmunities, this.#monsterMulti.immunities))
       && (!entry.monster || multiMatches(entry.monster.damageVulnerabilities, this.#monsterMulti.vulnerabilities))
       && (!entry.monster || multiMatches(entry.monster.conditionImmunities, this.#monsterMulti.conditionImmunities))
-      && (!query || entry.name.toLocaleLowerCase(game.i18n.lang).includes(query))
+      && (!query || (entry.searchName ?? entry.lowerName).includes(query))
     ));
     const entries = deduplicateEntries(matchingEntries).map(entry => ({
       ...entry,

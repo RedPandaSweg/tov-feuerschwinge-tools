@@ -2,6 +2,7 @@ import { MODULE_ID } from "./constants.mjs";
 import { GMToolsService } from "./gm-tools-service.mjs?v=3.2.7-flag-database-2";
 import { actorLevel, highestMilestoneProgress, levelFromMilestones, sessionProgress } from "./session-service.mjs";
 import { openVoidTaintConfig } from "../void-taint/config-app.mjs";
+import { applyActorSpellMigration, previewActorSpellMigration } from "../spell-actor-migration.mjs?v=3.5.0-actor-spell-migration-10";
 import {
   addVoidTaint,
   drawVoidTaintEffect,
@@ -27,6 +28,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       unlockSession: GMToolsApp.#unlockSession,
       resetSession: GMToolsApp.#resetSession,
       repairSafe: GMToolsApp.#repairSafe,
+      migrateActorSpells: GMToolsApp.#migrateActorSpells,
       undo: GMToolsApp.#undo,
       exportCharacter: GMToolsApp.#exportCharacter,
       selectDatabaseDocument: GMToolsApp.#selectDatabaseDocument,
@@ -332,6 +334,59 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     await this.#execute(async () => {
       const count = await GMToolsService.repairSafeProblems();
       ui.notifications.info(game.i18n.format("DOWNTIME_MANAGER.GMTools.Notifications.Repaired", { count }));
+    });
+  }
+
+  static async #migrateActorSpells(event) {
+    event.preventDefault();
+    await this.#execute(async () => {
+      ui.notifications.info(game.i18n.localize("DOWNTIME_MANAGER.GMTools.SpellMigration.Scanning"));
+      const preview = await previewActorSpellMigration();
+      const escape = value => foundry.utils.escapeHTML(String(value ?? ""));
+      const rows = entries => {
+        const grouped = new Map();
+        for (const { actor, item } of entries) {
+          const key = `${actor.id}\u0000${item.name}`;
+          const current = grouped.get(key) ?? { actor: actor.name, item: item.name, count: 0 };
+          current.count += 1;
+          grouped.set(key, current);
+        }
+        return Array.from(grouped.values(), entry => `<li><strong>${escape(entry.actor)}</strong>: ${escape(entry.item)}${entry.count > 1 ? ` <small>×${entry.count}</small>` : ""}</li>`).join("");
+      };
+      const content = `<p>${game.i18n.format("DOWNTIME_MANAGER.GMTools.SpellMigration.Preview", {
+        items: preview.matches.length,
+        actors: preview.actors.size,
+        missing: preview.missing.length,
+        ambiguous: preview.ambiguous.length
+      })}</p>
+        <p class="notes">${game.i18n.localize("DOWNTIME_MANAGER.GMTools.SpellMigration.Scope")}</p>
+        ${preview.missing.length ? `<details><summary>${game.i18n.format("DOWNTIME_MANAGER.GMTools.SpellMigration.Missing", { count: preview.missing.length })}</summary><ul>${rows(preview.missing)}</ul></details>` : ""}
+        ${preview.ambiguous.length ? `<details><summary>${game.i18n.format("DOWNTIME_MANAGER.GMTools.SpellMigration.Ambiguous", { count: preview.ambiguous.length })}</summary><ul>${rows(preview.ambiguous)}</ul></details>` : ""}`;
+      if (!preview.matches.length) {
+        await foundry.applications.api.DialogV2.prompt({
+          window: { title: game.i18n.localize("DOWNTIME_MANAGER.GMTools.SpellMigration.Title") },
+          content,
+          ok: { label: game.i18n.localize("DOWNTIME_MANAGER.GMTools.SpellMigration.Close") }
+        });
+        return;
+      }
+      const confirmed = await foundry.applications.api.DialogV2.confirm({
+        window: { title: game.i18n.localize("DOWNTIME_MANAGER.GMTools.SpellMigration.Title") },
+        position: { width: 680 },
+        content: `${content}<p class="notification warning">${game.i18n.localize("DOWNTIME_MANAGER.GMTools.SpellMigration.Warning")}</p>`,
+        yes: { label: game.i18n.localize("DOWNTIME_MANAGER.GMTools.SpellMigration.Apply") },
+        no: { label: game.i18n.localize("DOWNTIME_MANAGER.GMTools.SpellMigration.Cancel") }
+      });
+      if (!confirmed) return;
+      const result = await applyActorSpellMigration(preview);
+      const failed = result.failures.length
+        ? `<details><summary>${game.i18n.format("DOWNTIME_MANAGER.GMTools.SpellMigration.Failed", { count: result.failures.length })}</summary><ul>${result.failures.map(entry => `<li><strong>${escape(entry.actor)}</strong>: ${escape(entry.item)} – ${escape(entry.message)}</li>`).join("")}</ul></details>`
+        : "";
+      await foundry.applications.api.DialogV2.prompt({
+        window: { title: game.i18n.localize("DOWNTIME_MANAGER.GMTools.SpellMigration.Title") },
+        content: `<p>${game.i18n.format("DOWNTIME_MANAGER.GMTools.SpellMigration.Complete", result)}</p>${failed}`,
+        ok: { label: game.i18n.localize("DOWNTIME_MANAGER.GMTools.SpellMigration.Close") }
+      });
     });
   }
 
