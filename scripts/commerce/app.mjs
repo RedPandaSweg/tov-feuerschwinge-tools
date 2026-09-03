@@ -255,20 +255,12 @@ async function openItemPreview(source, viewingActor = null) {
     delete data.folder;
     delete data.ownership;
     data._id = foundry.utils.randomID();
-    const actorData = viewingActor?.toObject ? foundry.utils.deepClone(viewingActor.toObject()) : {
-      name: `${data.name || "Item"} – Vorschau`, type: "npc", items: []
-    };
-    delete actorData.folder;
-    actorData._id = foundry.utils.randomID();
-    actorData.name = viewingActor?.name ?? actorData.name;
-    actorData.items = [...(actorData.items ?? []), data];
-    actorData.ownership = { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER };
-    // Construct the preview locally. Using Document.create with a temporary
-    // option is not reliable enough across Foundry versions and can persist a
-    // complete copy of the selected buyer in the world Actor directory.
-    const previewActor = new CONFIG.Actor.documentClass(actorData, { temporary: true });
-    const item = previewActor?.items.get(data._id);
-    if (!item) return false;
+    // The preview Item can use the selected Actor directly for derived values.
+    // Do not clone or construct an Actor here: no Actor document should exist
+    // that Foundry or the system could accidentally persist in the world.
+    const parentActor = viewingActor ?? source?.actor ?? null;
+    if (!parentActor) return false;
+    const item = new CONFIG.Item.documentClass(data, { parent: parentActor });
     item.sheet.render(true);
     return true;
   } catch (error) {

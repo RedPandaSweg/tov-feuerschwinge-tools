@@ -9,7 +9,7 @@ import {
   exportCompendiumFolder,
   importCompendiumBundle,
   importCompendiumFolder
-} from "./compendium-transfer.mjs";
+} from "./compendium-transfer.mjs?v=3.6.2-transfer-integrity-9";
 
 const SESSION_FORMAT = "tov-feuerschwinge-session";
 const RESULT_FORMAT = "tov-feuerschwinge-session-result";

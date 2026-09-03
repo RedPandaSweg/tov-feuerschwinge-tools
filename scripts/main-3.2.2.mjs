@@ -1,1 +1,1 @@
-import "./main.mjs?v=3.5.0-container-stock-1";
+import "./main.mjs?v=3.6.2-character-summon-folder-1";

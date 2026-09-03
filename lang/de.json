@@ -468,7 +468,8 @@
         "ConfirmTitle": "Ordnerbündel-Import bestätigen",
         "Confirm": "Bündel importieren",
         "Preview": "{folders} Ordner mit {packs} Compendien und {documents} Dokumenten werden importiert.",
-        "Complete": "Import abgeschlossen: {packs} Compendien, {create} Dokumente neu, {update} aktualisiert."
+        "Complete": "Import abgeschlossen: {packs} Compendien, {create} Dokumente neu, {update} vollständig ersetzt und geprüft.",
+        "Stale": "{count} zusätzliche lokale Dokumente bleiben im Ziel erhalten. Details stehen in der Konsole."
       },
       "Error": {
         "Format": "Die Datei ist kein unterstütztes Feuerschwinge-Ordnerbündel.",
@@ -480,7 +481,10 @@
         "FolderTree": "Der Ordnerbaum des Bündels ist ungültig.",
         "System": "Die Datei gehört zum System „{system}“ und kann in dieser Welt nicht importiert werden.",
         "PackType": "Das bestehende Ziel-Compendium „{pack}“ besitzt einen anderen Dokumenttyp.",
-        "Identity": "Mindestens einem Dokument fehlt die portable Transfer-ID."
+        "Identity": "Mindestens einem Dokument fehlt die portable Transfer-ID.",
+        "Integrity": "Integritätsprüfung fehlgeschlagen: Compendium {pack}, Dokument {document}, Pfad {path} ({count} Abweichungen).",
+        "DuplicateIdentity": "Das Transferbündel enthält im Compendium {pack} mehrfach dieselbe Transfer-ID, zuletzt bei {document}.",
+        "DuplicateTarget": "Die Dokumentzuordnung in Compendium {pack} ist nicht eindeutig: {document} und ein weiteres Quelldokument würden beide {target} überschreiben."
       }
     },
     "Session": {

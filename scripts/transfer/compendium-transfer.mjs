@@ -32,12 +32,17 @@ function bundleFolders(root) {
   return [...included.values()];
 }
 
-function transferIdFor(pack, document) {
-  const existing = document.getFlag(MODULE_ID, TRANSFER_FLAG)?.id;
-  if (existing) return existing;
+function generatedTransferIdFor(pack, document) {
   const packageName = pack.metadata.packageName ?? pack.metadata.package ?? "world";
   const source = packageName === "world" ? `world:${game.world.id}` : `package:${packageName}`;
   return `${source}:${pack.metadata.name ?? pack.collection}:${document.id}`;
+}
+
+function transferIdFor(pack, document, duplicateIds = new Set()) {
+  const existing = document.getFlag(MODULE_ID, TRANSFER_FLAG)?.id;
+  if (existing && !duplicateIds.has(existing)) return existing;
+  if (existing) return `${existing}:document:${document.id}`;
+  return generatedTransferIdFor(pack, document);
 }
 
 function folderTransferId(sourceWorld, folderId) {
@@ -52,10 +57,17 @@ async function shortHash(value) {
 
 async function exportPack(pack) {
   const exportedAt = new Date().toISOString();
-  const documents = (await pack.getDocuments()).map(document => {
+  const sourceDocuments = await pack.getDocuments();
+  const transferIdCounts = new Map();
+  for (const document of sourceDocuments) {
+    const id = document.getFlag(MODULE_ID, TRANSFER_FLAG)?.id;
+    if (id) transferIdCounts.set(id, (transferIdCounts.get(id) ?? 0) + 1);
+  }
+  const duplicateIds = new Set([...transferIdCounts].filter(([, count]) => count > 1).map(([id]) => id));
+  const documents = sourceDocuments.map(document => {
     const data = document.toObject();
     foundry.utils.setProperty(data, `flags.${MODULE_ID}.${TRANSFER_FLAG}`, {
-      id: transferIdFor(pack, document),
+      id: transferIdFor(pack, document, duplicateIds),
       exportedAt
     });
     return data;
@@ -214,6 +226,124 @@ function rewriteTransferredReferences(value, documentIds, collectionMapping) {
   return value;
 }
 
+function comparableActivities(value) {
+  if (!value || Array.isArray(value) || typeof value !== "object") return value;
+  const entries = Object.entries(value);
+  if (!entries.length || !entries.every(([, activity]) => (
+    activity && typeof activity === "object" && Number.isFinite(Number(activity.sort))
+  ))) return value;
+  const ordered = [...entries].sort(([leftId, left], [rightId, right]) => {
+    const leftSort = Number(left.sort);
+    const rightSort = Number(right.sort);
+    if (Number.isFinite(leftSort) && Number.isFinite(rightSort) && leftSort !== rightSort) return leftSort - rightSort;
+    return leftId.localeCompare(rightId);
+  });
+  const ranks = new Map(ordered.map(([id], index) => [id, (index + 1) * 100000]));
+  return Object.fromEntries(entries.map(([id, activity]) => [id, { ...activity, sort: ranks.get(id) }]));
+}
+
+function comparableDocument(value) {
+  if (typeof value === "string" && value.includes("<")) {
+    return value.replace(
+      /<(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)(\b[^>]*?)\s*\/>/gi,
+      "<$1$2>"
+    );
+  }
+  if (Array.isArray(value)) return value.map(comparableDocument);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(Object.keys(value).sort().flatMap(key => (
+    key === "_stats" || value[key] === undefined
+      ? []
+      : [[key, comparableDocument(key === "activities" ? comparableActivities(value[key]) : value[key])]]
+  )));
+}
+
+function firstDifference(expected, actual, path = "") {
+  if (Object.is(expected, actual)) return null;
+  if (Array.isArray(expected) || Array.isArray(actual)) {
+    if (!Array.isArray(expected) || !Array.isArray(actual)) return { path: path || "<document>", expected, actual };
+    if (expected.length !== actual.length) return {
+      path: `${path || "<document>"}.length`, expected: expected.length, actual: actual.length
+    };
+    for (let index = 0; index < expected.length; index++) {
+      const difference = firstDifference(expected[index], actual[index], `${path}[${index}]`);
+      if (difference) return difference;
+    }
+    return null;
+  }
+  if (expected && actual && typeof expected === "object" && typeof actual === "object") {
+    const keys = new Set([...Object.keys(expected), ...Object.keys(actual)]);
+    for (const key of [...keys].sort()) {
+      if (!(key in expected) || !(key in actual)) return {
+        path: path ? `${path}.${key}` : key,
+        expected: expected[key],
+        actual: actual[key]
+      };
+      const difference = firstDifference(expected[key], actual[key], path ? `${path}.${key}` : key);
+      if (difference) return difference;
+    }
+    return null;
+  }
+  return { path: path || "<document>", expected, actual };
+}
+
+function stringDifferenceDetails(expected, actual) {
+  if (typeof expected !== "string" || typeof actual !== "string") return {};
+  const length = Math.min(expected.length, actual.length);
+  let index = 0;
+  while (index < length && expected[index] === actual[index]) index++;
+  const start = Math.max(0, index - 80);
+  const end = index + 80;
+  return {
+    index,
+    expectedLength: expected.length,
+    actualLength: actual.length,
+    expectedExcerpt: JSON.stringify(expected.slice(start, end)),
+    actualExcerpt: JSON.stringify(actual.slice(start, end)),
+    expectedCodePoint: expected.codePointAt(index),
+    actualCodePoint: actual.codePointAt(index)
+  };
+}
+
+async function verifyDocumentSynchronization(pack, expectedDocuments) {
+  const documents = new Map((await pack.getDocuments()).map(document => [document.id, document]));
+  const failures = [];
+  for (const expectedSource of expectedDocuments) {
+    const expected = comparableDocument(expectedSource);
+    const actualDocument = documents.get(expectedSource._id);
+    if (!actualDocument) {
+      failures.push({ name: expectedSource.name ?? expectedSource._id, path: "<missing>" });
+      continue;
+    }
+    const actual = comparableDocument(actualDocument.toObject());
+    // Foundry grants the creating user explicit OWNER permission on newly
+    // created Documents. This world-local entry is not part of the portable
+    // source data and must not make an otherwise exact transfer fail.
+    const userId = game.user?.id;
+    if (userId && expected.ownership && actual.ownership && !(userId in expected.ownership)) {
+      delete actual.ownership[userId];
+    }
+    const difference = firstDifference(expected, actual);
+    if (difference) failures.push({
+      name: expectedSource.name ?? expectedSource._id,
+      ...difference,
+      details: stringDifferenceDetails(difference.expected, difference.actual)
+    });
+  }
+  if (!failures.length) return;
+  console.error(`${MODULE_ID} | Compendium transfer integrity failure`, {
+    pack: pack.collection,
+    failures
+  });
+  const first = failures[0];
+  throw new Error(game.i18n.format("TOVF.Transfer.Error.Integrity", {
+    pack: pack.title,
+    document: first.name,
+    path: first.path,
+    count: failures.length
+  }));
+}
+
 async function planDocumentSynchronization(pack, sourceDocuments, sourceCollection) {
   const existing = await pack.getDocuments();
   const byTransferId = new Map(existing.map(document => [
@@ -229,20 +359,68 @@ async function planDocumentSynchronization(pack, sourceDocuments, sourceCollecti
     byIdentity.set(key, matches);
   }
   const plans = [];
+  const claimedTargetIds = new Set();
+  const sourceTransferIds = new Set();
+  const transferIdCounts = new Map();
+  for (const source of sourceDocuments) {
+    const id = foundry.utils.getProperty(source, `flags.${MODULE_ID}.${TRANSFER_FLAG}.id`);
+    if (id) transferIdCounts.set(id, (transferIdCounts.get(id) ?? 0) + 1);
+  }
+  const duplicateTransferIds = new Set(
+    [...transferIdCounts].filter(([, count]) => count > 1).map(([id]) => id)
+  );
+  if (duplicateTransferIds.size) console.warn(`${MODULE_ID} | Repairing duplicate transfer identities`, {
+    pack: pack.collection,
+    identities: [...duplicateTransferIds]
+  });
   for (const source of sourceDocuments) {
     const data = foundry.utils.deepClone(source);
-    const transferId = foundry.utils.getProperty(data, `flags.${MODULE_ID}.${TRANSFER_FLAG}.id`);
+    let transferId = foundry.utils.getProperty(data, `flags.${MODULE_ID}.${TRANSFER_FLAG}.id`);
     if (!transferId) throw new Error(game.i18n.localize("TOVF.Transfer.Error.Identity"));
+    if (duplicateTransferIds.has(transferId)) {
+      transferId = `${transferId}:document:${data._id}`;
+      foundry.utils.setProperty(data, `flags.${MODULE_ID}.${TRANSFER_FLAG}.id`, transferId);
+    }
+    if (sourceTransferIds.has(transferId)) {
+      throw new Error(game.i18n.format("TOVF.Transfer.Error.DuplicateIdentity", {
+        pack: pack.title,
+        document: data.name
+      }));
+    }
+    sourceTransferIds.add(transferId);
     const identity = `${data.type ?? ""}\u0000${data.name}`;
-    const nameMatches = byIdentity.get(identity) ?? [];
-    const target = byTransferId.get(transferId)
-      ?? byId.get(data._id)
-      ?? (nameMatches.length === 1 ? nameMatches[0] : null);
-    plans.push({ data, targetId: target?.id ?? data._id, update: Boolean(target) });
+    const transferTarget = byTransferId.get(transferId) ?? null;
+    if (transferTarget && claimedTargetIds.has(transferTarget.id)) {
+      throw new Error(game.i18n.format("TOVF.Transfer.Error.DuplicateTarget", {
+        pack: pack.title,
+        document: data.name,
+        target: transferTarget.name
+      }));
+    }
+    const idTarget = byId.get(data._id);
+    const safeIdTarget = idTarget
+      && `${idTarget.type ?? ""}\u0000${idTarget.name}` === identity
+      && !claimedTargetIds.has(idTarget.id)
+      ? idTarget
+      : null;
+    const nameMatches = (byIdentity.get(identity) ?? [])
+      .filter(document => !claimedTargetIds.has(document.id));
+    const target = transferTarget ?? safeIdTarget ?? (nameMatches.length === 1 ? nameMatches[0] : null);
+    let targetId = target?.id ?? data._id;
+    while (!target && (byId.has(targetId) || claimedTargetIds.has(targetId))) {
+      targetId = foundry.utils.randomID();
+    }
+    claimedTargetIds.add(targetId);
+    plans.push({ data, targetId, update: Boolean(target) });
   }
+  const targetIds = new Set(plans.filter(plan => plan.update).map(plan => plan.targetId));
   return {
     plans,
-    ids: plans.map(plan => [`${sourceCollection}\u0000${plan.data._id}`, plan.targetId])
+    ids: plans.map(plan => [`${sourceCollection}\u0000${plan.data._id}`, plan.targetId]),
+    stale: existing.filter(document => !targetIds.has(document.id)).map(document => ({
+      id: document.id,
+      name: document.name
+    }))
   };
 }
 
@@ -267,16 +445,22 @@ async function applyDocumentSynchronization(pack, plans, sourceCollection, docum
       delete data._stats;
       update.push({ ...data, _id: plan.targetId });
     }
-    else create.push(data);
+    else create.push({ ...data, _id: plan.targetId });
   }
   // Suppress intermediate Black Flag renders: while a batch is only partly
   // synchronized, a contained Item can temporarily point at a missing parent.
-  if (update.length) await pack.documentClass.updateDocuments(update, { pack: pack.collection, render: false });
+  if (update.length) await pack.documentClass.updateDocuments(update, {
+    pack: pack.collection,
+    render: false,
+    diff: false,
+    recursive: false
+  });
   if (create.length) await pack.documentClass.createDocuments(create, {
     pack: pack.collection,
     keepId: true,
     render: false
   });
+  await verifyDocumentSynchronization(pack, [...update, ...create]);
   return { create: create.length, update: update.length };
 }
 
@@ -329,7 +513,8 @@ export async function importCompendiumBundle(bundle, destinationId = null, { con
   assertBundle(bundle);
   if (confirm && !await confirmImport(bundle)) return;
   const folderMapping = await synchronizeOuterFolders(bundle, destinationId);
-  const counts = { create: 0, update: 0 };
+  const counts = { create: 0, update: 0, stale: 0 };
+  const localOnlyDocuments = [];
   const prepared = [];
   try {
     for (const source of bundle.packs) {
@@ -342,6 +527,13 @@ export async function importCompendiumBundle(bundle, destinationId = null, { con
         entry.pack, entry.source.documents, entry.source.sourceCollection
       );
       for (const mapping of entry.documentPlan.ids) documentIds.set(...mapping);
+      counts.stale += entry.documentPlan.stale.length;
+      localOnlyDocuments.push(...entry.documentPlan.stale.map(document => ({
+        pack: entry.pack.collection,
+        packTitle: entry.pack.title,
+        name: document.name,
+        id: document.id
+      })));
     }
     for (const { source, pack, documentPlan } of prepared) {
       const packCounts = await applyDocumentSynchronization(
@@ -362,6 +554,11 @@ export async function importCompendiumBundle(bundle, destinationId = null, { con
     create: counts.create,
     update: counts.update
   }));
+  if (counts.stale) {
+    console.info(`${MODULE_ID} | Local-only compendium documents`, localOnlyDocuments);
+    console.table(localOnlyDocuments);
+    ui.notifications.info(game.i18n.format("TOVF.Transfer.Import.Stale", { count: counts.stale }));
+  }
   return counts;
 }
 

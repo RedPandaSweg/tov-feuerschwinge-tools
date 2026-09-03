@@ -35,7 +35,7 @@ function installExhaustionFormatNumberFix() {
     configurable: true,
     writable: true
   });
-  console.warn(`${MODULE_ID} | Applied Black Flag 3.0.077 exhaustion formatNumber compatibility fix.`);
+  console.debug(`${MODULE_ID} | Applied Black Flag 3.0.077 exhaustion formatNumber compatibility fix.`);
 }
 
 function currencyIdentifier(item) {
@@ -199,5 +199,5 @@ export function installBlackFlagCompatibility() {
     if (effects) foundry.utils.setProperty(messageConfig.data, "system.effects", effects);
   };
 
-  console.warn(`${MODULE_ID} | Applied Black Flag activity target compatibility fix.`);
+  console.debug(`${MODULE_ID} | Applied Black Flag activity target compatibility fix.`);
 }

@@ -5,9 +5,9 @@ import {
   migrateToolNamespace,
   registerNamespaceMigration
 } from "./core/namespace-migration.mjs";
-import { exposeTransferApi } from "./transfer/compendium-transfer.mjs?v=3.1.2";
+import { exposeTransferApi } from "./transfer/compendium-transfer.mjs?v=3.6.2-transfer-integrity-9";
 import { registerSessionTransfer, sessionTransferApi } from "./transfer/session-transfer.mjs";
-import { installBlackFlagCompatibility } from "./integrations/black-flag-compatibility.mjs?v=3.4.2-other-inventory-2";
+import { installBlackFlagCompatibility } from "./integrations/black-flag-compatibility.mjs?v=3.6.2-compat-log-1";
 import {
   characterCreationOverridesApi,
   installCharacterCreationOverrides
@@ -40,7 +40,8 @@ import { createMagicalDrinkWorldItems, effectGroupsApi, installEffectGroups } fr
 import { activateTokenPresetSocket, registerTokenPresets } from "./token-presets.mjs";
 import { activateTokenLightAuraSocket, toggleTokenLightAura } from "./token-light-aura.mjs";
 import { activateSimpleTileTriggers, registerSimpleTileTriggers } from "./simple-tile-triggers.mjs?v=3.2.2";
-import { activateCommerce, registerCommerce } from "./commerce/main.mjs?v=3.5.0-container-stock-1";
+import { activateSummonCompatibility } from "./summon-compat.mjs?v=3.6.2-character-summon-folder-1";
+import { activateCommerce, registerCommerce } from "./commerce/main.mjs?v=3.6.2-actorless-preview-1";
 import "./downtime/main.mjs?v=3.5.0-actor-spell-migration-10";
 import "./contested-activity.mjs";
 import "./void-taint/main.mjs?v=3.3.0-void-taint-1";
@@ -152,6 +153,7 @@ Hooks.once("init", () => {
 });
 
 Hooks.once("ready", async () => {
+  activateSummonCompatibility();
   if (game.system.id !== "black-flag") return;
   let namespaceMigrationSucceeded = true;
   try {

@@ -467,7 +467,8 @@
         "ConfirmTitle": "Confirm folder bundle import",
         "Confirm": "Import bundle",
         "Preview": "{folders} folders containing {packs} compendiums and {documents} documents will be imported.",
-        "Complete": "Import complete: {packs} compendiums, {create} documents created, {update} updated."
+        "Complete": "Import complete: {packs} compendiums, {create} documents created, {update} fully replaced and verified.",
+        "Stale": "{count} additional local documents remain in the destination. Details are available in the console."
       },
       "Error": {
         "Format": "This is not a supported Feuerschwinge folder bundle.",
@@ -479,7 +480,10 @@
         "FolderTree": "The bundle contains an invalid folder tree.",
         "System": "The file belongs to system “{system}” and cannot be imported into this world.",
         "PackType": "The existing target compendium “{pack}” uses a different document type.",
-        "Identity": "At least one document is missing its portable transfer ID."
+        "Identity": "At least one document is missing its portable transfer ID.",
+        "Integrity": "Integrity verification failed: compendium “{pack}”, document “{document}”, path “{path}” ({count} differences).",
+        "DuplicateIdentity": "The transfer bundle contains the same transfer ID more than once in compendium {pack}, most recently on {document}.",
+        "DuplicateTarget": "Document assignment in compendium {pack} is ambiguous: {document} and another source document would both overwrite {target}."
       }
     },
     "Session": {
