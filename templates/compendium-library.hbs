@@ -125,6 +125,9 @@
         <option value="">{{localize "TOVF.Library.Attunement.All"}}</option>
         {{selectOptions magicAttunementOptions selected=selectedMagicAttunement valueAttr="value" labelAttr="label"}}
       </select>
+      {{#if magicCategories}}<strong class="filter-label">{{localize "TOVF.Library.MagicItemFilters.Category"}}</strong><select data-library-filter="magicCategory"><option value="">{{localize "TOVF.Library.All"}}</option>{{#each magicCategories}}<option value="{{value}}" {{#if (eq value ../selectedMagicCategory)}}selected{{/if}}>{{label}} ({{count}})</option>{{/each}}</select>{{/if}}
+      {{#if magicTypes}}<strong class="filter-label">{{localize "TOVF.Library.MagicItemFilters.Type"}}</strong><select data-library-filter="magicType"><option value="">{{localize "TOVF.Library.All"}}</option>{{#each magicTypes}}<option value="{{value}}" {{#if (eq value ../selectedMagicType)}}selected{{/if}}>{{label}} ({{count}})</option>{{/each}}</select>{{/if}}
+      {{#if magicBases}}<strong class="filter-label">{{localize "TOVF.Library.MagicItemFilters.Base"}}</strong><select data-library-filter="magicBase"><option value="">{{localize "TOVF.Library.All"}}</option>{{#each magicBases}}<option value="{{value}}" {{#if (eq value ../selectedMagicBase)}}selected{{/if}}>{{label}} ({{count}})</option>{{/each}}</select>{{/if}}
       <strong class="filter-label">{{localize "TOVF.Library.Sort.Label"}}</strong>
       <select data-library-filter="magicItemSort">
         <option value="name" {{#if (eq selectedMagicItemSort "name")}}selected{{/if}}>{{localize "TOVF.Library.Sort.Name"}}</option>
@@ -159,42 +162,27 @@
         {{#if spellAdvancedFilterCount}}<small>{{localize "TOVF.Library.SpellFilters.Active" count=spellAdvancedFilterCount}}</small>{{/if}}
       </summary>
       <div class="tovf-library-spell-filter-grid">
-        <label><span>{{localize "TOVF.Library.SpellCastingTime.Label"}}</span>
-          <select data-library-filter="spellCastingTime">
-            <option value="">{{localize "TOVF.Library.All"}}</option>
-            {{selectOptions spellCastingTimes selected=selectedSpellCastingTime valueAttr="value" labelAttr="label"}}
-          </select>
-        </label>
-        <label><span>{{localize "TOVF.Library.SpellDuration.Label"}}</span>
-          <select data-library-filter="spellDuration">
-            <option value="">{{localize "TOVF.Library.All"}}</option>
-            {{selectOptions spellDurations selected=selectedSpellDuration valueAttr="value" labelAttr="label"}}
-          </select>
-        </label>
-        <label><span>{{localize "TOVF.Library.SpellResolution.Label"}}</span>
-          <select data-library-filter="spellResolution">
-            <option value="">{{localize "TOVF.Library.All"}}</option>
-            {{selectOptions spellResolutionOptions selected=selectedSpellResolution valueAttr="value" labelAttr="label"}}
-          </select>
-        </label>
-        <details class="tovf-library-spell-multi" {{#if selectedSpellDamageTypeCount}}open{{/if}}>
-          <summary>{{localize "TOVF.Library.DamageTypes"}}{{#if selectedSpellDamageTypeCount}} ({{selectedSpellDamageTypeCount}}){{/if}}</summary>
-          <div>{{#each spellDamageTypes}}<label><input type="checkbox" value="{{value}}" data-library-spell-multi="damage" {{checked selected}}><span>{{label}}</span><small>{{count}}</small></label>{{/each}}</div>
+        {{#*inline "spellFilter"}}
+        <details class="tovf-library-spell-multi" data-library-spell-filter="{{key}}" {{#if counts.open}}open{{/if}}>
+          <summary><span>{{label}}</span>{{#if counts.total}}<span class="tovf-library-filter-state">{{#if counts.include}}<small class="include">+{{counts.include}}</small>{{/if}}{{#if counts.exclude}}<small class="exclude">−{{counts.exclude}}</small>{{/if}}</span>{{/if}}</summary>
+          <div>
+            <div class="tovf-library-spell-multi-head" aria-hidden="true"><span></span><span>{{localize "TOVF.Library.SpellFilters.Include"}}</span><span>{{localize "TOVF.Library.SpellFilters.Exclude"}}</span><span></span></div>
+            {{#each options}}<label><span>{{label}}</span><input type="checkbox" value="{{value}}" data-library-spell-multi="{{../key}}" data-library-spell-mode="include" aria-label="{{localize 'TOVF.Library.SpellFilters.Include'}}: {{label}}" {{checked included}}><input type="checkbox" value="{{value}}" data-library-spell-multi="{{../key}}" data-library-spell-mode="exclude" aria-label="{{localize 'TOVF.Library.SpellFilters.Exclude'}}: {{label}}" {{checked excluded}}><small>{{count}}</small></label>{{/each}}
+          </div>
         </details>
-        <details class="tovf-library-spell-multi" {{#if selectedSpellConditionCount}}open{{/if}}>
-          <summary>{{localize "TOVF.Library.Conditions"}}{{#if selectedSpellConditionCount}} ({{selectedSpellConditionCount}}){{/if}}</summary>
-          <div>{{#each spellConditions}}<label><input type="checkbox" value="{{value}}" data-library-spell-multi="condition" {{checked selected}}><span>{{label}}</span><small>{{count}}</small></label>{{/each}}</div>
-        </details>
-        <details class="tovf-library-spell-multi" {{#if selectedSpellComponentCount}}open{{/if}}>
-          <summary>{{localize "TOVF.Library.Components"}}{{#if selectedSpellComponentCount}} ({{selectedSpellComponentCount}}){{/if}}</summary>
-          <div>{{#each spellComponents}}<label><input type="checkbox" value="{{value}}" data-library-spell-multi="component" {{checked selected}}><span>{{label}}</span><small>{{count}}</small></label>{{/each}}</div>
-        </details>
-      </div>
-      <div class="tovf-library-spell-toggles">
-        <button type="button" class="{{#if spellConcentration}}active{{/if}}" data-library-concentration>{{localize "TOVF.Library.Concentration"}} <small>{{spellConcentrationCount}}</small></button>
-        <button type="button" class="{{#if spellRitual}}active{{/if}}" data-library-ritual>{{localize "TOVF.Library.Ritual"}} <small>{{spellRitualCount}}</small></button>
-        <button type="button" class="{{#if spellVoid}}active{{/if}}" data-library-void>{{localize "TOVF.Library.VoidSpells"}} <small>{{spellVoidCount}}</small></button>
-        <button type="button" class="reset" data-library-spell-reset {{#unless spellAdvancedFilterCount}}disabled{{/unless}}><i class="fa-solid fa-rotate-left" inert></i> {{localize "TOVF.Library.SpellFilters.Reset"}}</button>
+        {{/inline}}
+        {{> spellFilter label=(localize "TOVF.Library.SpellCastingTime.Label") key="castingTime" options=spellCastingTimes counts=spellFilterCounts.castingTime}}
+        {{> spellFilter label=(localize "TOVF.Library.SpellDuration.Label") key="duration" options=spellDurations counts=spellFilterCounts.duration}}
+        {{> spellFilter label=(localize "TOVF.Library.SpellResolution.Label") key="resolution" options=spellResolutionOptions counts=spellFilterCounts.resolution}}
+        {{> spellFilter label=(localize "TOVF.Library.DamageTypes") key="damage" options=spellDamageTypes counts=spellFilterCounts.damage}}
+        {{> spellFilter label=(localize "TOVF.Library.Conditions") key="condition" options=spellConditions counts=spellFilterCounts.condition}}
+        {{> spellFilter label=(localize "TOVF.Library.Components") key="component" options=spellComponents counts=spellFilterCounts.component}}
+        {{> spellFilter label=(localize "TOVF.Library.SpellProperties") key="property" options=spellPropertyOptions counts=spellFilterCounts.property}}
+        {{> spellFilter label=(localize "TOVF.Library.SpellRange.Label") key="range" options=spellRanges counts=spellFilterCounts.range}}
+        <div class="tovf-library-spell-reset-slot">
+          <label><span>{{localize "TOVF.Library.Sort.Label"}}</span><select data-library-filter="spellSort"><option value="name" {{#if (eq selectedSpellSort "name")}}selected{{/if}}>{{localize "TOVF.Library.Sort.Name"}}</option><option value="circle" {{#if (eq selectedSpellSort "circle")}}selected{{/if}}>{{localize "TOVF.Library.Sort.Circle"}}</option></select></label>
+          <button type="button" class="reset" data-library-spell-reset {{#unless spellAdvancedFilterCount}}disabled{{/unless}}><i class="fa-solid fa-rotate-left" inert></i> {{localize "TOVF.Library.SpellFilters.Reset"}}</button>
+        </div>
       </div>
     </details>
     {{/if}}
@@ -203,7 +191,7 @@
 
     <ol class="tovf-library-results {{#if gridLayout}}grid{{/if}}">
       {{#each entries}}
-      <li class="{{#if @root.tableBuilder}}table-builder{{/if}} {{#if showPrice}}has-price{{/if}}" draggable="true" data-library-entry data-uuid="{{uuid}}" data-document-type="{{documentType}}"
+      <li class="{{#if @root.tableBuilder}}table-builder{{/if}} {{#if showPrice}}has-price{{/if}}{{#if (eq category 'spells')}}has-price{{/if}}" draggable="true" data-library-entry data-uuid="{{uuid}}" data-document-type="{{documentType}}"
           data-name="{{lowerName}}">
         {{#if @root.tableBuilder}}<span class="tovf-library-table-select-slot"><input class="tovf-library-table-select" type="checkbox"
           data-table-entry-select aria-label="{{name}} für Rolltable auswählen" {{checked tableSelected}}></span>{{/if}}
@@ -213,6 +201,7 @@
           <span title="{{packLabel}}">{{packLabel}}</span>
         </button>
         {{#if showPrice}}<span class="tovf-library-price"><i class="fa-solid fa-coins"></i> {{priceValue}} {{priceDenomination}}</span>{{/if}}
+        {{#if (eq category "spells")}}<span class="tovf-library-price tovf-library-circle"><i class="fa-solid fa-circle"></i> {{#if spellCircle}}{{localize "TOVF.Library.SpellCircle.Circle" circle=spellCircle}}{{else}}{{localize "TOVF.Library.SpellCircle.Cantrip"}}{{/if}}</span>{{/if}}
         <button type="button" class="source" data-action="openPack" data-pack="{{pack}}"
                 title="{{sourceSummary}} · {{packLabel}}">
           {{shortSourceLabel}}{{#if hasDuplicates}} · {{duplicateCount}}{{/if}}

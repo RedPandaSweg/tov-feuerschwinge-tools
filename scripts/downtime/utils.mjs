@@ -44,8 +44,11 @@ export function toolRequirementStatus(actor, requiredTool) {
     ? (globalThis.CONFIG?.BlackFlag?.tools?.localizedOptions ?? []).find(option => option.value === requiredTool.identifier)?.label
     : "";
   const identifier = String(requiredTool.identifier ?? "").trim().toLowerCase();
-  const actorProficiency = identifier
-    ? Number(actor.system?.proficiencies?.tools?.[identifier]?.proficiency?.multiplier ?? 0) > 0
+  // Item identifiers (e.g. "trapper-tools") need not be proficiency keys
+  // ("trapper"). An absent key must not override the owned item's result.
+  const toolProficiency = identifier ? actor.system?.proficiencies?.tools?.[identifier] : null;
+  const actorProficiency = toolProficiency != null
+    ? Number(toolProficiency.proficiency?.multiplier ?? 0) > 0
     : null;
   return {
     required: true,

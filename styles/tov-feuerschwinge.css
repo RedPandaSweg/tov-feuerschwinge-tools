@@ -386,15 +386,26 @@
 .tovf-library-number-range { display: grid; grid-template-columns: 1fr 1fr; gap: .3rem; }
 .tovf-library-number-range input { min-width: 0; width: 100%; font-size: var(--font-size-12); }
 .tovf-library-spell-multi { position: relative; min-width: 0; }
-.tovf-library-spell-multi > summary { min-height: 2rem; padding: .35rem .5rem; overflow: hidden; border: 1px solid var(--color-border-light-tertiary); border-radius: 3px; cursor: pointer; text-overflow: ellipsis; white-space: nowrap; }
-.tovf-library-spell-multi > div { position: absolute; z-index: 12; top: calc(100% + .2rem); left: 0; display: flex; flex-direction: column; min-width: 14rem; max-height: 15rem; overflow-y: auto; padding: .35rem; border: 1px solid var(--color-border-light-tertiary); border-radius: 3px; background: var(--color-cool-5-90); box-shadow: 0 2px 8px #0008; }
-.tovf-library-spell-multi label { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .4rem; align-items: center; padding: .2rem; font-size: var(--font-size-12); }
+.tovf-library-spell-multi > summary { display: flex; align-items: center; justify-content: space-between; gap: .35rem; min-height: 2rem; padding: .35rem .5rem; overflow: hidden; border: 1px solid var(--color-border-light-tertiary); border-radius: 3px; cursor: pointer; text-overflow: ellipsis; white-space: nowrap; }
+.tovf-library-filter-state { display: inline-flex; gap: .2rem; }
+.tovf-library-filter-state small { padding: .05rem .25rem; border-radius: 3px; color: var(--color-light-1); }
+.tovf-library-filter-state .include { background: var(--color-warm-2); }
+.tovf-library-filter-state .exclude { background: var(--color-level-error); }
+.tovf-library-spell-multi > div { position: absolute; z-index: 12; top: calc(100% + .2rem); left: 0; display: flex; flex-direction: column; min-width: 20rem; max-height: 15rem; overflow-y: auto; padding: .35rem; border: 1px solid var(--color-border-light-tertiary); border-radius: 3px; background: var(--color-cool-5-90); box-shadow: 0 2px 8px #0008; }
+.tovf-library-spell-multi label, .tovf-library-spell-multi-head { display: grid; grid-template-columns: minmax(8rem, 1fr) 4.5rem 4.5rem 2.5rem; gap: .4rem; align-items: center; box-sizing: border-box; width: 100%; padding: .2rem; font-size: var(--font-size-12); }
+.tovf-library-spell-multi-head { position: sticky; top: -.35rem; z-index: 1; padding-top: .35rem; background: var(--color-cool-5-90); color: var(--color-text-subtle); font-size: var(--font-size-10); text-align: center; }
+.tovf-library-spell-multi label > input { appearance: auto; justify-self: center; width: 1rem; height: 1rem; margin: 0; accent-color: var(--color-warm-2); }
+.tovf-library-spell-multi label > input[data-library-spell-mode="exclude"] { accent-color: var(--color-level-error); }
 .tovf-library-spell-multi input { flex: 0 0 auto; }
 .tovf-library-spell-multi small { opacity: .7; }
 .tovf-library-spell-toggles { display: flex; flex-wrap: wrap; gap: .3rem; padding: 0 .5rem .5rem; }
 .tovf-library-spell-toggles button { width: auto; min-height: 1.7rem; padding: .15rem .4rem; font-size: var(--font-size-12); }
 .tovf-library-spell-toggles button.active { background: var(--color-warm-2); color: var(--color-light-1); }
 .tovf-library-spell-toggles button.reset { margin-left: auto; }
+.tovf-library-spell-reset-slot { display: flex; align-items: end; justify-content: flex-end; gap: .4rem; min-width: 0; }
+.tovf-library-spell-reset-slot > label { display: flex; flex-direction: column; gap: .15rem; min-width: 9rem; color: var(--color-text-subtle); font-size: var(--font-size-10); }
+.tovf-library-spell-reset-slot select { width: 100%; min-height: 1.7rem; font-size: var(--font-size-12); }
+.tovf-library-spell-reset-slot button { width: auto; min-height: 1.7rem; padding: .15rem .4rem; font-size: var(--font-size-12); }
 @media (max-width: 850px) { .tovf-library-spell-filter-grid { grid-template-columns: repeat(2, minmax(10rem, 1fr)); } }
 .tovf-library-content > .hint { margin: .4rem 0; }
 .tovf-library-table-builder { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; padding: .4rem; border: 1px solid var(--color-border-light-2); border-radius: 4px; background: rgba(193,119,50,.1); }
@@ -434,6 +445,8 @@
 .tovf-library-results .tovf-spell-marker.ritual { color: #7d70bf; }
 .tovf-library-results .tovf-library-price { align-self: center; color: var(--color-warm-2); font-size: var(--font-size-12); font-weight: 600; white-space: nowrap; }
 .tovf-library-results .tovf-library-price i { margin-right: .15rem; }
+.tovf-library-results .tovf-library-circle { color: var(--color-text-primary); }
+.tovf-library-results .tovf-library-circle i { color: var(--color-warm-2); font-size: .65em; }
 .tovf-library-results button.source {
   overflow: hidden;
   width: 100%;

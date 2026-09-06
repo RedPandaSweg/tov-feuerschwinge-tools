@@ -14,6 +14,7 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
     position: { width: 780, height: 820 },
     window: { title: "DOWNTIME_MANAGER.Session.Title", icon: "fa-solid fa-scroll", resizable: true },
     actions: {
+      milestoneHistory: (event, target) => { event.preventDefault(); event.stopPropagation(); return SessionService.openMilestoneHistory(target.dataset.uuid); },
       selectConnected: this.#selectConnected,
       selectTokens: this.#selectTokens,
       selectAll: this.#selectAll,

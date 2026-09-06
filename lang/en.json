@@ -296,6 +296,7 @@
       "DamageTypes": "Damage types",
       "Conditions": "Conditions",
       "Components": "Components",
+      "SpellProperties": "Properties",
       "SpellFocus": "Spell Focus",
       "Yes": "Yes",
       "No": "No",
@@ -318,7 +319,9 @@
       "SpellFilters": {
         "Title": "Advanced spell filters",
         "Active": "{count} active",
-        "Reset": "Reset filters"
+        "Reset": "Reset filters",
+        "Include": "Include",
+        "Exclude": "Exclude"
       },
       "SpellDuration": {
         "Label": "Duration",
@@ -326,6 +329,10 @@
         "Special": "Special",
         "Unspecified": "Unspecified",
         "Variable": "{unit} (variable)"
+      },
+      "SpellRange": {
+        "Label": "Range",
+        "Unspecified": "Unspecified"
       },
       "SpellResolution": {
         "Label": "Attack or save",
@@ -340,10 +347,20 @@
         "optional": "Optional",
         "required": "Required"
       },
+      "MagicItemFilters": {
+        "Category": "Category",
+        "Type": "Type",
+        "Base": "Base"
+      },
       "Sort": {
         "Label": "Sort",
         "Name": "Alphabetical",
-        "Price": "Gold cost (ascending)"
+        "Price": "Gold cost (ascending)",
+        "Circle": "Circle (ascending)"
+      },
+      "SpellCircle": {
+        "Cantrip": "Cantrip",
+        "Circle": "Circle {circle}"
       },
       "SpellCastingTime": {
         "Label": "Casting Time",
@@ -1277,7 +1294,7 @@
       "HighestMilestone": "Highest guild progress: {milestones} milestones · level {level} · tier {tier} · {characters}.", "CatchUpActive": "Catch-up is active.",
       "PassiveConfig": "Passive downtime", "PassiveEnabled": "Grant passive downtime to non-participants", "PassivePeriod": "Accounting period", "Monthly": "Monthly", "Weekly": "Weekly", "PassiveRate": "Share per missed session", "PassiveCap": "Maximum per period", "PassiveHint": "The percentage and cap are based on the fixed downtime value for the character level derived from milestones. A cap of 4× allows at most four full regular downtime values per selected week or month.",
       "SelectConnected": "Select connected", "SelectTokens": "Use selected tokens", "SearchCharacters": "Search characters…", "Save": "Save session", "Saved": "Session saved.",
-      "Distribute": "Rewards to distribute", "DistributeMilestones": "Award weekly milestones", "RewardColumn": "Reward column {column}", "PlayerSelection": "Player selection",
+      "Distribute": "Rewards to distribute", "MilestoneOrigin": {"Source":"Source","Types":{"session":"Session","community":"Community","gm":"Game master","start":"Starting milestones (Westmarches export)","correction":"Correction"},"Title":"Milestone sources","Totals":"Current total: {total} ? Documented: {documented}","Difference":"Unexplained difference: {difference}. No matching evidence is available (e.g. legacy progress or older manual corrections).","Reason":"Reason for milestone change (optional)","Manual":"Manual change","NoReason":"No reason provided"}, "DistributeMilestones": "Award weekly milestones", "RewardColumn": "Reward column {column}", "PlayerSelection": "Player selection",
       "Award": "Award rewards", "AwardConfirm": "Award the configured rewards to {count} selected characters?", "Awarded": "Rewards awarded.",
       "AlreadyAwarded": "This session has already been awarded. Use New session below to prepare another session.", "New": "New session", "ConfigureRewards": "Configure rewards",
       "History": "History", "HistoryName": "Feuerschwinge – Adventure History", "HistoryEmpty": "No sessions have been awarded yet.", "NoActors": "No player characters found.",

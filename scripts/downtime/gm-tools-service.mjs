@@ -300,6 +300,15 @@ export class GMToolsService {
       lastMilestoneWeek: String(values.lastMilestoneWeek ?? "").trim() || null,
       passiveDowntime
     };
+    const milestoneDelta = milestones - Number(sessionProgress(actor).milestones || 0);
+    if (milestoneDelta) {
+      progress.milestoneAdjustments = [
+        ...(Array.isArray(progress.milestoneAdjustments) ? progress.milestoneAdjustments : []),
+        { delta: milestoneDelta, before: Number(sessionProgress(actor).milestones || 0), after: milestones,
+          source: ["community", "gm", "start", "correction"].includes(values.milestoneSource) ? values.milestoneSource : "correction",
+          reason: String(values.milestoneReason ?? "").trim(), timestamp: Date.now(), userId: game.user.id }
+      ];
+    }
     await storeUndo({ kind: "actor", actorUuid: actor.uuid, before });
     await actor.setFlag(MODULE_ID, FLAGS.DOWNTIME, downtime);
     await actor.setFlag(MODULE_ID, FLAGS.SESSION_PROGRESS, progress);

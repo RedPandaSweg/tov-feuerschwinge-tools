@@ -1,6 +1,6 @@
 import { MODULE_ID } from "./constants.mjs";
 import { GMToolsService } from "./gm-tools-service.mjs?v=3.2.7-flag-database-2";
-import { actorLevel, highestMilestoneProgress, levelFromMilestones, sessionProgress } from "./session-service.mjs";
+import { SessionService, actorLevel, highestMilestoneProgress, levelFromMilestones, sessionProgress } from "./session-service.mjs";
 import { openVoidTaintConfig } from "../void-taint/config-app.mjs";
 import { applyActorSpellMigration, previewActorSpellMigration } from "../spell-actor-migration.mjs?v=3.5.0-actor-spell-migration-10";
 import {
@@ -21,6 +21,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     position: { width: 980, height: 760 },
     window: { title: "DOWNTIME_MANAGER.GMTools.Title", resizable: true },
     actions: {
+      milestoneHistory: (event, target) => { event.preventDefault(); event.stopPropagation(); return SessionService.openMilestoneHistory(target.dataset.uuid); },
       selectTab: GMToolsApp.#selectTab,
       saveCharacter: GMToolsApp.#saveCharacter,
       saveProject: GMToolsApp.#saveProject,
@@ -254,6 +255,8 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       downtime: root.querySelector('[name="downtime"]')?.value,
       milestones: root.querySelector('[name="milestones"]')?.value,
       sessionsPlayed: root.querySelector('[name="sessionsPlayed"]')?.value,
+      milestoneSource: root.querySelector('[name="milestoneSource"]')?.value,
+      milestoneReason: root.querySelector('[name="milestoneReason"]')?.value,
       lastMilestoneWeek: root.querySelector('[name="lastMilestoneWeek"]')?.value,
       passiveDowntime: root.querySelector('[name="passiveDowntime"]')?.value
     };

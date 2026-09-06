@@ -204,11 +204,33 @@ async function createHistoryPage(record, settlement = false) {
   return page;
 }
 
+export function milestoneHistoryContent(record) {
+  const escape = value => foundry.utils.escapeHTML(String(value ?? ""));
+  const label = game.i18n.localize("DOWNTIME_MANAGER.Session.Milestones");
+  const rows = (record.participants ?? []).map(entry => `<li><strong>${escape(entry.actorName)}</strong>: ${entry.milestone == null ? "?" : escape(entry.milestone)} ${label}</li>`).join("");
+  return `<section data-tovf-milestones="1"><h3>${label}</h3><p>${escape(record.week)}</p><ul>${rows}</ul></section>`;
+}
+
+export function milestoneSources(actor, entries = structuredHistory().entries) {
+  const sources = entries.flatMap(record => (record.participants ?? [])
+    .filter(entry => entry.actorUuid === actor.uuid && Number(entry.milestone) > 0)
+    .map(entry => ({ title: record.title, week: record.week, timestamp: record.awardedAt, source: "session", milestone: Number(entry.milestone) })));
+  const adjustments = sessionProgress(actor).milestoneAdjustments;
+  for (const entry of Array.isArray(adjustments) ? adjustments : []) {
+    if (!Number.isFinite(Number(entry.delta))) continue;
+    sources.push({ source: entry.source || "correction", title: entry.reason || game.i18n.localize("DOWNTIME_MANAGER.Session.MilestoneOrigin.NoReason"), timestamp: entry.timestamp, milestone: Number(entry.delta) });
+  }
+  sources.sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
+  const documented = sources.reduce((sum, entry) => sum + entry.milestone, 0);
+  const total = Number(sessionProgress(actor).milestones) || 0;
+  return { sources, documented, total, difference: total - documented };
+}
+
 function historyPageContent(record, settlement = false) {
   const rows = (settlement ? record.recipients : record.participants).map(entry =>
     `<li><strong>${foundry.utils.escapeHTML(entry.actorName)}</strong>: ${settlement ? entry.amount : `${entry.downtime} ${game.i18n.localize("DOWNTIME_MANAGER.Session.Downtime")}, ${entry.gold} ${game.i18n.localize("DOWNTIME_MANAGER.Currency.GP")}`}</li>`
   ).join("");
-  return `<h2>${foundry.utils.escapeHTML(record.title)}</h2>${record.summary ? `<p>${foundry.utils.escapeHTML(record.summary)}</p>` : ""}<ul>${rows}</ul>`;
+  return `<h2>${foundry.utils.escapeHTML(record.title)}</h2>${record.summary ? `<p>${foundry.utils.escapeHTML(record.summary)}</p>` : ""}<ul>${rows}</ul>${settlement ? "" : milestoneHistoryContent(record)}`;
 }
 
 function structuredHistory() {
@@ -488,11 +510,44 @@ export class SessionService {
     }
   }
 
+  static async openMilestoneHistory(actorUuid) {
+    const actor = await fromUuid(actorUuid);
+    if (!actor || (!game.user.isGM && !actor.isOwner)) return;
+    const data = milestoneSources(actor);
+    const escape = value => foundry.utils.escapeHTML(String(value ?? ""));
+    const key = "DOWNTIME_MANAGER.Session.MilestoneOrigin";
+    const rows = data.sources.map(entry => {
+      const date = entry.timestamp ? new Date(entry.timestamp) : null;
+      const when = date && Number.isFinite(date.getTime()) ? date.toLocaleString(game.i18n.lang) : entry.week;
+      const source = game.i18n.localize(`${key}.Types.${entry.source}`);
+      return `<li><strong>${escape(source)}: ${escape(entry.title)}</strong> · ${escape(when)}: ${entry.milestone > 0 ? "+" : ""}${entry.milestone}</li>`;
+    }).join("");
+    return foundry.applications.api.DialogV2.wait({
+      window: { title: `${actor.name} · ${game.i18n.localize(key + ".Title")}` },
+      content: `<p>${game.i18n.format(key + ".Totals", data)}</p><ul>${rows}</ul>${data.difference ? `<p>${game.i18n.format(key + ".Difference", data)}</p>` : ""}`,
+      buttons: [{ action: "close", label: game.i18n.localize("Close"), default: true }],
+      rejectClose: false
+    });
+  }
+
   static async openHistory() {
-    if (game.settings.get(MODULE_ID, SETTINGS.SESSION_HISTORY_ENABLED)) return (await historyJournal()).sheet.render(true);
+    if (game.settings.get(MODULE_ID, SETTINGS.SESSION_HISTORY_ENABLED)) {
+      const journal = await historyJournal();
+      if (game.user.isGM) {
+        for (const record of structuredHistory().entries) {
+          if (!record.historyPageUuid) continue;
+          const page = journal.pages.find(page => page.uuid === record.historyPageUuid);
+          const content = page?.text?.content;
+          if (typeof content === "string" && !content.includes('data-tovf-milestones="1"')) {
+            await page.update({ "text.content": content + milestoneHistoryContent(record) });
+          }
+        }
+      }
+      return journal.sheet.render(true);
+    }
     const entries = structuredHistory().entries.slice().reverse();
     const content = entries.length
-      ? `<ol>${entries.map(entry => `<li><strong>${foundry.utils.escapeHTML(entry.title || game.i18n.localize("DOWNTIME_MANAGER.Session.Untitled"))}</strong><br><small>${new Date(entry.awardedAt).toLocaleString()}</small>${entry.summary ? `<p>${foundry.utils.escapeHTML(entry.summary)}</p>` : ""}</li>`).join("")}</ol>`
+      ? `<ol>${entries.map(entry => `<li><strong>${foundry.utils.escapeHTML(entry.title || game.i18n.localize("DOWNTIME_MANAGER.Session.Untitled"))}</strong><br><small>${new Date(entry.awardedAt).toLocaleString()}</small>${entry.summary ? `<p>${foundry.utils.escapeHTML(entry.summary)}</p>` : ""}${milestoneHistoryContent(entry)}</li>`).join("")}</ol>`
       : `<p>${game.i18n.localize("DOWNTIME_MANAGER.Session.HistoryEmpty")}</p>`;
     return foundry.applications.api.DialogV2.wait({
       window: { title: game.i18n.localize("DOWNTIME_MANAGER.Session.History") },

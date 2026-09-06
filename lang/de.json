@@ -297,6 +297,7 @@
       "DamageTypes": "Damage Types",
       "Conditions": "Conditions",
       "Components": "Components",
+      "SpellProperties": "Eigenschaften",
       "SpellFocus": "Spell Focus",
       "Yes": "Ja",
       "No": "Nein",
@@ -319,7 +320,9 @@
       "SpellFilters": {
         "Title": "Erweiterte Spell-Filter",
         "Active": "{count} aktiv",
-        "Reset": "Filter zurücksetzen"
+        "Reset": "Filter zurücksetzen",
+        "Include": "Enthalten",
+        "Exclude": "Ausschließen"
       },
       "SpellDuration": {
         "Label": "Duration",
@@ -327,6 +330,10 @@
         "Special": "Special",
         "Unspecified": "Nicht angegeben",
         "Variable": "{unit} (variabel)"
+      },
+      "SpellRange": {
+        "Label": "Range",
+        "Unspecified": "Nicht angegeben"
       },
       "SpellResolution": {
         "Label": "Attack oder Save",
@@ -341,10 +348,20 @@
         "optional": "Optional",
         "required": "Erforderlich"
       },
+      "MagicItemFilters": {
+        "Category": "Category",
+        "Type": "Type",
+        "Base": "Base"
+      },
       "Sort": {
         "Label": "Sortierung",
         "Name": "Alphabetisch",
-        "Price": "Goldkosten (aufsteigend)"
+        "Price": "Goldkosten (aufsteigend)",
+        "Circle": "Circle (aufsteigend)"
+      },
+      "SpellCircle": {
+        "Cantrip": "Cantrip",
+        "Circle": "Circle {circle}"
       },
       "SpellCastingTime": {
         "Label": "Casting Time",
@@ -1285,7 +1302,7 @@
                                              "HighestMilestone": "Höchster Gildenstand: {milestones} Meilensteine · Level {level} · Tier {tier} · {characters}.", "CatchUpActive": "Aufholjagd ist aktiv.",
                                              "PassiveConfig": "Passive Downtime", "PassiveEnabled": "Nichtteilnehmern passive Downtime gewähren", "PassivePeriod": "Abrechnungszeitraum", "Monthly": "Monatlich", "Weekly": "Wöchentlich", "PassiveRate": "Anteil pro verpasster Session", "PassiveCap": "Maximum pro Zeitraum", "PassiveHint": "Prozentsatz und Limit beziehen sich auf den festen Downtime-Grundwert des aus den Meilensteinen berechneten Charakterlevels. Ein Limit von 4× erlaubt höchstens vier vollständige reguläre Downtime-Werte pro ausgewählter Woche oder Monat.",
                                              "SelectConnected": "Verbundene auswählen", "SelectTokens": "Ausgewählte Tokens übernehmen", "SearchCharacters": "Charaktere suchen…", "Save": "Session speichern", "Saved": "Session gespeichert.",
-                                             "Distribute": "Zu verteilende Belohnungen", "DistributeMilestones": "Wöchentliche Meilensteine vergeben", "RewardColumn": "Belohnungsspalte {column}", "PlayerSelection": "Spielerauswahl",
+                                             "Distribute": "Zu verteilende Belohnungen", "MilestoneOrigin": {"Source":"Herkunft","Types":{"session":"Session","community":"Community","gm":"Spielleiter","start":"Startbestand (Westmarches-Export)","correction":"Korrektur"},"Title":"Herkunft der Meilensteine","Totals":"Aktueller Stand: {total} ? Belegt: {documented}","Difference":"Ungekl?rte Differenz: {difference}. Daf?r gibt es keinen passenden Nachweis (z. B. Altbestand oder ?ltere manuelle Korrektur).","Reason":"Grund der Meilenstein?nderung (optional)","Manual":"Manuelle ?nderung","NoReason":"Kein Grund angegeben"}, "DistributeMilestones": "Wöchentliche Meilensteine vergeben", "RewardColumn": "Belohnungsspalte {column}", "PlayerSelection": "Spielerauswahl",
                                              "Award": "Belohnungen vergeben", "AwardConfirm": "Die konfigurierten Belohnungen an {count} ausgewählte Charaktere vergeben?", "Awarded": "Belohnungen wurden vergeben.",
                                              "AlreadyAwarded": "Diese Session wurde bereits ausgezahlt. Über Neue Session kannst du unten eine neue Session vorbereiten.", "New": "Neue Session", "ConfigureRewards": "Belohnungen konfigurieren",
                                              "History": "Historie", "HistoryName": "Feuerschwinge – Abenteuerhistorie", "HistoryEmpty": "Es wurden noch keine Sessions ausgezahlt.", "NoActors": "Keine Spielercharaktere gefunden.",

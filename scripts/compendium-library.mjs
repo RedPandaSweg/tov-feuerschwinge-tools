@@ -13,7 +13,7 @@ const SOURCE_MODULES = packageId => (
 );
 const FALLBACK_ITEM_IMAGE = "icons/svg/item-bag.svg";
 const LIBRARY_INDEX_PACK = "tov-feuerschwinge-library-index";
-const LIBRARY_INDEX_VERSION = 5;
+const LIBRARY_INDEX_VERSION = 6;
 
 function libraryIndexPack() {
   return game.packs.get(`world.${LIBRARY_INDEX_PACK}`);
@@ -268,6 +268,30 @@ function challengeRatingLabel(value) {
 
 function spellCastingTime(entry) {
   return String(foundry.utils.getProperty(entry, "system.casting.type") ?? "").toLocaleLowerCase("en");
+}
+
+function spellRange(entry) {
+  const range = foundry.utils.getProperty(entry, "system.range") ?? {};
+  const unit = String(range.unit ?? "").trim().toLocaleLowerCase("en");
+  const rawValue = String(range.value ?? "").trim();
+  if (!unit) return { id: "unspecified", label: game.i18n.localize("TOVF.Library.SpellRange.Unspecified"), rank: Number.MAX_SAFE_INTEGER };
+  const distance = CONFIG.BlackFlag.distanceUnits?.[unit];
+  if (distance) {
+    const numeric = rawValue !== "" && Number.isFinite(Number(rawValue));
+    const value = numeric ? String(Number(rawValue)) : rawValue;
+    const abbreviation = game.i18n.localize(distance.abbreviation ?? distance.label);
+    return {
+      id: `${unit}|${value || "unspecified"}`,
+      label: value ? `${value} ${abbreviation}` : game.i18n.localize("TOVF.Library.SpellRange.Unspecified"),
+      rank: numeric ? Number(value) * (Number(distance.conversion) || 1) : Number.MAX_SAFE_INTEGER - 1
+    };
+  }
+  const config = CONFIG.BlackFlag.rangeTypes?.[unit];
+  return {
+    id: unit,
+    label: config?.label ? game.i18n.localize(config.label) : humanize(unit),
+    rank: { self: 0, touch: 1, sight: 1_000_000_000, any: 2_000_000_000, special: 3_000_000_000 }[unit] ?? 2_500_000_000
+  };
 }
 
 function collectionValues(value) {
@@ -682,16 +706,15 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
   #detail = "";
   #extra = "";
   #challengeRating = "";
-  #spellCastingTime = "";
-  #spellDuration = "";
-  #spellDamageTypes = new Set();
-  #spellConditions = new Set();
-  #spellComponents = new Set();
-  #spellResolution = "";
-  #spellConcentration = false;
-  #spellRitual = false;
-  #spellVoid = false;
+  #spellMulti = Object.fromEntries([
+    "castingTime", "duration", "range", "damage", "condition", "component", "resolution", "property"
+  ].map(key => [key, { include: new Set(), exclude: new Set() }]));
+  #openSpellFilter = "";
+  #spellSort = "name";
   #magicAttunement = "";
+  #magicCategory = "";
+  #magicType = "";
+  #magicBase = "";
   #magicItemSort = "name";
   #monsterType = "";
   #monsterSize = "";
@@ -745,6 +768,9 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           "system.casting.type",
           "system.duration.unit",
           "system.duration.value",
+          "system.range.unit",
+          "system.range.value",
+          "system.range.special",
           "system.tags",
           "system.duration.concentration",
           "system.components.required",
@@ -764,6 +790,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
         const classification = classificationFor(pack, entry, category);
         const activityData = entry.type === "spell" ? spellActivityData(document) : null;
         const duration = entry.type === "spell" ? spellDuration(document) : null;
+        const range = entry.type === "spell" ? spellRange(document) : null;
         const monster = pack.documentName === "Actor" ? monsterData(document) : null;
         const showPrice = category === "magicItems" || category === "items";
         const priceValue = Math.max(0, Number(foundry.utils.getProperty(entry, "system.price.value")) || 0);
@@ -787,6 +814,8 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           spellCastingTime: entry.type === "spell" ? spellCastingTime(document) : "",
           spellDuration: duration?.id ?? "",
           spellDurationData: duration,
+          spellRange: range?.id ?? "",
+          spellRangeData: range,
           spellDamageTypes: activityData?.damageTypes ?? [],
           spellConditions: activityData?.conditions ?? [],
           spellComponents: entry.type === "spell"
@@ -801,6 +830,9 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           magicAttunement: category === "magicItems"
             ? String(foundry.utils.getProperty(entry, "system.attunement.value") ?? "none") || "none"
             : "",
+          magicItemCategory: category === "magicItems" ? String(foundry.utils.getProperty(entry, "system.type.category") ?? "") : "",
+          magicItemType: category === "magicItems" ? String(foundry.utils.getProperty(entry, "system.type.value") ?? "") : "",
+          magicItemBase: category === "magicItems" ? String(foundry.utils.getProperty(entry, "system.type.base") ?? "") : "",
           showPrice,
           priceGold,
           priceValue: new Intl.NumberFormat(game.i18n.lang, { maximumFractionDigits: 6 }).format(priceValue),
@@ -870,7 +902,25 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       ? this.#filterOptions(detailEntries, "extra", true)
       : [];
     if (this.#extra && !extras.some(option => option.value === this.#extra)) this.#extra = "";
-    const spellFilterEntries = detailEntries.filter(entry => this.#matchesFilter(entry.extra, this.#extra));
+    const extraEntries = detailEntries.filter(entry => this.#matchesFilter(entry.extra, this.#extra));
+    const magicLabel = (entries, field, value) => {
+      const itemType = entries.find(entry => entry[field] === value)?.itemType ?? "";
+      if (field === "magicItemCategory") return configuredItemCategoryLabel(itemType, value);
+      const configName = field === "magicItemType" ? `${itemType}Types` : `${itemType}s`;
+      return configLabel(CONFIG.BlackFlag?.[configName], value);
+    };
+    const magicOptions = (entries, field) => this.#spellOptionCounts(entries, entry => [entry[field]], value => magicLabel(entries, field, value));
+    const magicCategories = this.#category === "magicItems" && this.#detail ? magicOptions(extraEntries, "magicItemCategory") : [];
+    if (this.#magicCategory && !magicCategories.some(option => option.value === this.#magicCategory)) {
+      this.#magicCategory = this.#magicType = this.#magicBase = "";
+    }
+    const magicCategoryEntries = extraEntries.filter(entry => !this.#magicCategory || entry.magicItemCategory === this.#magicCategory);
+    const magicTypes = this.#category === "magicItems" && this.#detail ? magicOptions(magicCategoryEntries, "magicItemType") : [];
+    if (this.#magicType && !magicTypes.some(option => option.value === this.#magicType)) this.#magicType = this.#magicBase = "";
+    const magicTypeEntries = magicCategoryEntries.filter(entry => !this.#magicType || entry.magicItemType === this.#magicType);
+    const magicBases = this.#category === "magicItems" && this.#detail ? magicOptions(magicTypeEntries, "magicItemBase") : [];
+    if (this.#magicBase && !magicBases.some(option => option.value === this.#magicBase)) this.#magicBase = "";
+    const spellFilterEntries = magicTypeEntries.filter(entry => !this.#magicBase || entry.magicItemBase === this.#magicBase);
     const spellCastingTimes = this.#spellOptionCounts(spellFilterEntries, entry => [entry.spellCastingTime], value => (
       game.i18n.localize(`TOVF.Library.SpellCastingTime.${value}`) !== `TOVF.Library.SpellCastingTime.${value}`
         ? game.i18n.localize(`TOVF.Library.SpellCastingTime.${value}`)
@@ -885,6 +935,14 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       const rightRank = spellFilterEntries.find(entry => entry.spellDuration === right.value)?.spellDurationData?.rank ?? Number.MAX_SAFE_INTEGER;
       return leftRank - rightRank || left.label.localeCompare(right.label, game.i18n.lang);
     });
+    const spellRanges = this.#spellOptionCounts(spellFilterEntries, entry => [entry.spellRange], value => (
+      spellFilterEntries.find(entry => entry.spellRange === value)?.spellRangeData?.label ?? humanize(value)
+    ));
+    spellRanges.sort((left, right) => {
+      const leftRank = spellFilterEntries.find(entry => entry.spellRange === left.value)?.spellRangeData?.rank ?? Number.MAX_SAFE_INTEGER;
+      const rightRank = spellFilterEntries.find(entry => entry.spellRange === right.value)?.spellRangeData?.rank ?? Number.MAX_SAFE_INTEGER;
+      return leftRank - rightRank || left.label.localeCompare(right.label, game.i18n.lang);
+    });
     const spellDamageTypes = this.#spellOptionCounts(spellFilterEntries, entry => entry.spellDamageTypes, value => (
       CONFIG.BlackFlag.damageTypes?.localized?.[value] ?? humanize(value)
     ));
@@ -894,14 +952,18 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
         ? game.i18n.localize(CONFIG.BlackFlag.spellComponents[value].label)
         : humanize(value)
     ));
-    if (this.#spellCastingTime && !spellCastingTimes.some(option => option.value === this.#spellCastingTime)) this.#spellCastingTime = "";
-    if (this.#spellDuration && !spellDurations.some(option => option.value === this.#spellDuration)) this.#spellDuration = "";
-    const availableDamageTypes = new Set(spellDamageTypes.map(option => option.value));
-    const availableConditions = new Set(spellConditions.map(option => option.value));
-    const availableComponents = new Set(spellComponents.map(option => option.value));
-    this.#spellDamageTypes = new Set([...this.#spellDamageTypes].filter(value => availableDamageTypes.has(value)));
-    this.#spellConditions = new Set([...this.#spellConditions].filter(value => availableConditions.has(value)));
-    this.#spellComponents = new Set([...this.#spellComponents].filter(value => availableComponents.has(value)));
+    const pruneSpellSelection = (key, options) => {
+      const available = new Set(options.map(option => option.value));
+      for (const mode of ["include", "exclude"]) {
+        this.#spellMulti[key][mode] = new Set([...this.#spellMulti[key][mode]].filter(value => available.has(value)));
+      }
+    };
+    pruneSpellSelection("castingTime", spellCastingTimes);
+    pruneSpellSelection("duration", spellDurations);
+    pruneSpellSelection("range", spellRanges);
+    pruneSpellSelection("damage", spellDamageTypes);
+    pruneSpellSelection("condition", spellConditions);
+    pruneSpellSelection("component", spellComponents);
     const monsterOptions = (field, labelFor = humanize) => this.#spellOptionCounts(
       spellFilterEntries,
       entry => Array.isArray(entry.monster?.[field]) ? entry.monster[field] : [entry.monster?.[field]],
@@ -917,19 +979,32 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     const monsterConditionImmunities = monsterOptions("conditionImmunities", conditionLabel);
     const numberMatches = (value, minimum, maximum) => (!minimum || value >= Number(minimum)) && (!maximum || value <= Number(maximum));
     const multiMatches = (values, selected) => !selected.size || values.some(value => selected.has(value));
-    const matchingEntries = spellFilterEntries.filter(entry => (
-      (!this.#spellCastingTime || entry.spellCastingTime === this.#spellCastingTime)
-      && (!this.#spellDuration || entry.spellDuration === this.#spellDuration)
-      && (!this.#spellDamageTypes.size || entry.spellDamageTypes.some(type => this.#spellDamageTypes.has(type)))
-      && (!this.#spellConditions.size || entry.spellConditions.some(condition => this.#spellConditions.has(condition)))
-      && (!this.#spellComponents.size || [...this.#spellComponents].every(component => entry.spellComponents.includes(component)))
-      && (!this.#spellResolution
-        || (this.#spellResolution === "attack" && entry.spellAttack)
-        || (this.#spellResolution === "save" && entry.spellSave)
-        || (this.#spellResolution === "neither" && !entry.spellAttack && !entry.spellSave))
-      && (!this.#spellConcentration || entry.spellConcentration)
-      && (!this.#spellRitual || entry.spellRitual)
-      && (!this.#spellVoid || entry.spellVoid)
+    const matchesSpellMulti = (values, key) => {
+      const list = Array.isArray(values) ? values : [values];
+      const { include, exclude } = this.#spellMulti[key];
+      return (!include.size || list.some(value => include.has(value)))
+        && !list.some(value => exclude.has(value));
+    };
+    const matchingEntries = spellFilterEntries.filter(entry => {
+      const resolutions = [
+        ...(entry.spellAttack ? ["attack"] : []),
+        ...(entry.spellSave ? ["save"] : []),
+        ...(!entry.spellAttack && !entry.spellSave ? ["neither"] : [])
+      ];
+      const properties = [
+        ...(entry.spellConcentration ? ["concentration"] : []),
+        ...(entry.spellRitual ? ["ritual"] : []),
+        ...(entry.spellVoid ? ["void"] : [])
+      ];
+      return (
+      matchesSpellMulti(entry.spellCastingTime, "castingTime")
+      && matchesSpellMulti(entry.spellDuration, "duration")
+      && matchesSpellMulti(entry.spellRange, "range")
+      && matchesSpellMulti(entry.spellDamageTypes, "damage")
+      && matchesSpellMulti(entry.spellConditions, "condition")
+      && matchesSpellMulti(entry.spellComponents, "component")
+      && matchesSpellMulti(resolutions, "resolution")
+      && matchesSpellMulti(properties, "property")
       && (!this.#magicAttunement || entry.magicAttunement === this.#magicAttunement)
       && (!this.#monsterType || entry.monster?.creatureType === this.#monsterType)
       && (!this.#monsterSize || entry.monster?.size === this.#monsterSize)
@@ -945,7 +1020,8 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       && (!entry.monster || multiMatches(entry.monster.damageVulnerabilities, this.#monsterMulti.vulnerabilities))
       && (!entry.monster || multiMatches(entry.monster.conditionImmunities, this.#monsterMulti.conditionImmunities))
       && (!query || (entry.searchName ?? entry.lowerName).includes(query))
-    ));
+      );
+    });
     const entries = deduplicateEntries(matchingEntries).map(entry => ({
       ...entry,
       tableSelectable: true,
@@ -953,6 +1029,9 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     }));
     if (this.#category === "magicItems" && this.#magicItemSort === "price") {
       entries.sort((left, right) => left.priceGold - right.priceGold || left.name.localeCompare(right.name, game.i18n.lang));
+    } else if (this.#category === "spells" && this.#spellSort === "circle") {
+      entries.sort((left, right) => (left.spellCircle ?? Number.MAX_SAFE_INTEGER) - (right.spellCircle ?? Number.MAX_SAFE_INTEGER)
+        || left.name.localeCompare(right.name, game.i18n.lang));
     } else {
       entries.sort((left, right) => left.name.localeCompare(right.name, game.i18n.lang));
     }
@@ -998,6 +1077,12 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
         count: deduplicateEntries(spellFilterEntries.filter(entry => entry.magicAttunement === value)).length
       })),
       selectedMagicAttunement: this.#magicAttunement,
+      magicCategories,
+      magicTypes,
+      magicBases,
+      selectedMagicCategory: this.#magicCategory,
+      selectedMagicType: this.#magicType,
+      selectedMagicBase: this.#magicBase,
       selectedMagicItemSort: this.#magicItemSort,
       monsterTypes,
       monsterSizes,
@@ -1019,42 +1104,29 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       monsterLegendary: this.#monsterLegendary,
       monsterFilterCount: [this.#monsterType, this.#monsterSize, this.#monsterCrMin, this.#monsterCrMax, this.#monsterAcMin, this.#monsterAcMax, this.#monsterHpMin, this.#monsterHpMax, this.#monsterSpellcaster, this.#monsterLegendary]
         .filter(Boolean).length + Object.values(this.#monsterMulti).reduce((count, set) => count + set.size, 0),
-      spellCastingTimes,
-      selectedSpellCastingTime: this.#spellCastingTime,
-      spellDurations,
-      selectedSpellDuration: this.#spellDuration,
-      spellDamageTypes: spellDamageTypes.map(option => ({ ...option, selected: this.#spellDamageTypes.has(option.value) })),
-      selectedSpellDamageTypeCount: this.#spellDamageTypes.size,
-      spellConditions: spellConditions.map(option => ({ ...option, selected: this.#spellConditions.has(option.value) })),
-      selectedSpellConditionCount: this.#spellConditions.size,
-      spellComponents: spellComponents.map(option => ({ ...option, selected: this.#spellComponents.has(option.value) })),
-      selectedSpellComponentCount: this.#spellComponents.size,
-      spellResolutionOptions: ["attack", "save", "neither"].map(value => ({
+      spellCastingTimes: this.#spellFilterOptions("castingTime", spellCastingTimes),
+      spellDurations: this.#spellFilterOptions("duration", spellDurations),
+      spellRanges: this.#spellFilterOptions("range", spellRanges),
+      spellDamageTypes: this.#spellFilterOptions("damage", spellDamageTypes),
+      spellConditions: this.#spellFilterOptions("condition", spellConditions),
+      spellComponents: this.#spellFilterOptions("component", spellComponents),
+      spellResolutionOptions: this.#spellFilterOptions("resolution", ["attack", "save", "neither"].map(value => ({
         value,
         label: game.i18n.localize(`TOVF.Library.SpellResolution.${value}`)
-      })),
-      selectedSpellResolution: this.#spellResolution,
-      spellConcentration: this.#spellConcentration,
-      spellConcentrationCount: deduplicateEntries(spellFilterEntries.filter(entry => (
-        (!this.#spellCastingTime || entry.spellCastingTime === this.#spellCastingTime)
-        && entry.spellConcentration
-      ))).length,
-      spellRitual: this.#spellRitual,
-      spellRitualCount: deduplicateEntries(spellFilterEntries.filter(entry => entry.spellRitual)).length,
-      spellVoid: this.#spellVoid,
-      spellVoidCount: deduplicateEntries(spellFilterEntries.filter(entry => (
-        (!this.#spellCastingTime || entry.spellCastingTime === this.#spellCastingTime)
-        && (!this.#spellConcentration || entry.spellConcentration)
-        && entry.spellVoid
-      ))).length,
-      spellAdvancedFilterCount: [
-        this.#spellCastingTime,
-        this.#spellDuration,
-        this.#spellResolution,
-        this.#spellConcentration,
-        this.#spellRitual,
-        this.#spellVoid
-      ].filter(Boolean).length + this.#spellDamageTypes.size + this.#spellConditions.size + this.#spellComponents.size,
+      }))),
+      spellPropertyOptions: this.#spellFilterOptions("property", [
+        { value: "concentration", label: game.i18n.localize("TOVF.Library.Concentration"), count: deduplicateEntries(spellFilterEntries.filter(entry => entry.spellConcentration)).length },
+        { value: "ritual", label: game.i18n.localize("TOVF.Library.Ritual"), count: deduplicateEntries(spellFilterEntries.filter(entry => entry.spellRitual)).length },
+        { value: "void", label: game.i18n.localize("TOVF.Library.VoidSpells"), count: deduplicateEntries(spellFilterEntries.filter(entry => entry.spellVoid)).length }
+      ]),
+      spellFilterCounts: Object.fromEntries(Object.entries(this.#spellMulti).map(([key, selection]) => [key, {
+        total: selection.include.size + selection.exclude.size,
+        include: selection.include.size,
+        exclude: selection.exclude.size,
+        open: this.#openSpellFilter === key
+      }])),
+      spellAdvancedFilterCount: Object.values(this.#spellMulti).reduce((count, selection) => count + selection.include.size + selection.exclude.size, 0),
+      selectedSpellSort: this.#spellSort,
       subcategoryLabel: this.#category === "spells" ? "Circle" : "Subcategory",
       detailLabel: this.#category === "spells" ? "Source of Magic" : classFeatures ? "Class" : "Type",
       extraLabel: this.#category === "spells" ? "School of Magic" : "Feature Type",
@@ -1122,6 +1194,15 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       .sort((left, right) => left.label.localeCompare(right.label, game.i18n.lang));
   }
 
+  #spellFilterOptions(key, options) {
+    const selection = this.#spellMulti[key];
+    return options.map(option => ({
+      ...option,
+      included: selection.include.has(option.value),
+      excluded: selection.exclude.has(option.value)
+    }));
+  }
+
   #matchesFilter(value, selected) {
     if (!selected) return true;
     return Array.isArray(value) ? value.includes(selected) : value === selected;
@@ -1166,9 +1247,11 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           this.#subcategory = event.currentTarget.value;
           this.#detail = "";
           this.#extra = "";
+          this.#magicCategory = this.#magicType = this.#magicBase = "";
         } else if (property === "detail") {
           this.#detail = event.currentTarget.value;
           this.#extra = "";
+          this.#magicCategory = this.#magicType = this.#magicBase = "";
         } else if (property === "extra") {
           this.#extra = event.currentTarget.value;
         } else if (property === "challengeRating") {
@@ -1180,18 +1263,22 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           this.#magicAttunement = event.currentTarget.value;
         } else if (property === "magicItemSort") {
           this.#magicItemSort = event.currentTarget.value;
+        } else if (property === "magicCategory") {
+          this.#magicCategory = event.currentTarget.value;
+          this.#magicType = this.#magicBase = "";
+        } else if (property === "magicType") {
+          this.#magicType = event.currentTarget.value;
+          this.#magicBase = "";
+        } else if (property === "magicBase") {
+          this.#magicBase = event.currentTarget.value;
+        } else if (property === "spellSort") {
+          this.#spellSort = event.currentTarget.value;
         } else if (property === "monsterType") {
           this.#monsterType = event.currentTarget.value;
         } else if (property === "monsterSize") {
           this.#monsterSize = event.currentTarget.value;
         } else if (property === "monsterSpellcaster") {
           this.#monsterSpellcaster = event.currentTarget.value;
-        } else if (property === "spellCastingTime") {
-          this.#spellCastingTime = event.currentTarget.value;
-        } else if (property === "spellDuration") {
-          this.#spellDuration = event.currentTarget.value;
-        } else if (property === "spellResolution") {
-          this.#spellResolution = event.currentTarget.value;
         }
         this.render();
       });
@@ -1199,15 +1286,28 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     for (const checkbox of this.element.querySelectorAll("[data-library-spell-multi]")) {
       checkbox.addEventListener("change", event => {
         const target = event.currentTarget;
-        const selection = {
-          damage: this.#spellDamageTypes,
-          condition: this.#spellConditions,
-          component: this.#spellComponents
-        }[target.dataset.librarySpellMulti];
+        this.#openSpellFilter = target.dataset.librarySpellMulti;
+        const selection = this.#spellMulti[target.dataset.librarySpellMulti];
         if (!selection) return;
-        if (target.checked) selection.add(target.value);
-        else selection.delete(target.value);
+        const mode = target.dataset.librarySpellMode;
+        const opposite = mode === "include" ? "exclude" : "include";
+        if (target.checked) {
+          selection[mode].add(target.value);
+          selection[opposite].delete(target.value);
+        } else selection[mode].delete(target.value);
         this.render();
+      });
+    }
+    for (const details of this.element.querySelectorAll("[data-library-spell-filter]")) {
+      details.addEventListener("toggle", event => {
+        const target = event.currentTarget;
+        if (target.open) {
+          for (const other of this.element.querySelectorAll("[data-library-spell-filter][open]")) {
+            if (other !== target) other.open = false;
+          }
+          this.#openSpellFilter = target.dataset.librarySpellFilter;
+        }
+        else if (this.#openSpellFilter === target.dataset.librarySpellFilter) this.#openSpellFilter = "";
       });
     }
     for (const checkbox of this.element.querySelectorAll("[data-library-monster-multi]")) {
@@ -1257,21 +1357,6 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     for (const checkbox of this.element.querySelectorAll('[data-table-entry-select]')) {
       checkbox.addEventListener("change", event => this.#toggleTableEntry(event.currentTarget));
     }
-    this.element.querySelector("[data-library-void]")?.addEventListener("click", event => {
-      event.preventDefault();
-      this.#spellVoid = !this.#spellVoid;
-      this.render();
-    });
-    this.element.querySelector("[data-library-concentration]")?.addEventListener("click", event => {
-      event.preventDefault();
-      this.#spellConcentration = !this.#spellConcentration;
-      this.render();
-    });
-    this.element.querySelector("[data-library-ritual]")?.addEventListener("click", event => {
-      event.preventDefault();
-      this.#spellRitual = !this.#spellRitual;
-      this.render();
-    });
     this.element.querySelector("[data-library-spell-reset]")?.addEventListener("click", event => {
       event.preventDefault();
       this.#resetSpellFilters();
@@ -1309,16 +1394,9 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#detail = "";
     this.#extra = "";
     this.#challengeRating = "";
-    this.#spellCastingTime = "";
-    this.#spellDuration = "";
-    this.#spellDamageTypes.clear();
-    this.#spellConditions.clear();
-    this.#spellComponents.clear();
-    this.#spellResolution = "";
-    this.#spellConcentration = false;
-    this.#spellRitual = false;
-    this.#spellVoid = false;
+    this.#resetSpellFilters();
     this.#magicAttunement = "";
+    this.#magicCategory = this.#magicType = this.#magicBase = "";
     this.render();
   }
 
@@ -1326,12 +1404,14 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#subcategory = target.dataset.subcategory;
     this.#detail = "";
     this.#extra = "";
+    this.#magicCategory = this.#magicType = this.#magicBase = "";
     this.render();
   }
 
   static #selectDetail(_event, target) {
     this.#detail = target.dataset.detail;
     this.#extra = "";
+    this.#magicCategory = this.#magicType = this.#magicBase = "";
     this.render();
   }
 
@@ -1341,15 +1421,11 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   #resetSpellFilters() {
-    this.#spellCastingTime = "";
-    this.#spellDuration = "";
-    this.#spellDamageTypes.clear();
-    this.#spellConditions.clear();
-    this.#spellComponents.clear();
-    this.#spellResolution = "";
-    this.#spellConcentration = false;
-    this.#spellRitual = false;
-    this.#spellVoid = false;
+    this.#openSpellFilter = "";
+    for (const selection of Object.values(this.#spellMulti)) {
+      selection.include.clear();
+      selection.exclude.clear();
+    }
   }
 
   #resetMonsterFilters() {
