@@ -8,6 +8,18 @@ import { actorKnowsSpell, categoriesMatch, getStationData, recipeData, round, to
 import { getSystemAdapter } from "./system-adapter.mjs";
 
 export class ProjectService {
+  /** End the ordered batch after rewards have been granted successfully. */
+  static finishState(states, state, definition) {
+    state.completed = true;
+    state.active = false;
+    state.pendingRoll = false;
+    state.awaitingCompletionCheck = false;
+    if (definition.repeatable) {
+      const index = states.indexOf(state);
+      if (index >= 0) states.splice(index, 1);
+    }
+  }
+
   static get(actor) {
     const stored = actor.getFlag(MODULE_ID, FLAGS.PROJECTS);
     return Array.isArray(stored) ? foundry.utils.deepClone(stored) : [];
@@ -36,10 +48,10 @@ export class ProjectService {
     }
     const toolRequirements = [station.requiredTool, ...(definition.requiredTools ?? [])]
       .map(tool => toolRequirementStatus(actor, tool)).filter(status => status.required);
+    const missingTools = toolRequirements.filter(status => !status.present);
+    if (missingTools.length) throw new Error(game.i18n.format("DOWNTIME_MANAGER.Errors.RequiredToolMissing", { tools: missingTools.map(status => status.name).join(", ") }));
     const lackingProficiency = toolRequirements.filter(status => !status.proficient);
     if (lackingProficiency.length) throw new Error(game.i18n.format("DOWNTIME_MANAGER.Errors.ToolProficiencyMissing", { tools: lackingProficiency.map(status => status.name).join(", ") }));
-    const missingTools = toolRequirements.filter(status => status.proficient && !status.present);
-    if (missingTools.length) throw new Error(game.i18n.format("DOWNTIME_MANAGER.Errors.RequiredToolMissing", { tools: missingTools.map(status => status.name).join(", ") }));
     const resultUuid = definition.resultUuid || definition.rewards?.[0]?.uuid || "";
     const resultItem = definition.isCustom && resultUuid
       ? await fromUuid(resultUuid).catch(() => null)
@@ -330,12 +342,7 @@ export class ProjectService {
         station,
         Number(station.actorValue?.completionChange ?? 0)
       );
-      if (definition.repeatable) {
-        state.progress = 0;
-        completed = true;
-      } else {
-        state.completed = true;
-      }
+      this.finishState(states, state, definition);
     }
     const actorValueAfter = RewardService.getStationValue(actor, stationActor, station);
     const actorValueChange = round(actorValueAfter - actorValueBefore, 6);
@@ -410,8 +417,7 @@ export class ProjectService {
     delete state.completionRow;
     state.lastResult ??= {};
     state.lastResult.rewards = rewardSummary;
-    if (definition.repeatable) state.progress = 0;
-    else state.completed = true;
+    this.finishState(states, state, definition);
     await actor.setFlag(MODULE_ID, FLAGS.PROJECTS, states);
     return { rolled, dc, success: true, retryCost, rewards: rewardNames, state };
   }

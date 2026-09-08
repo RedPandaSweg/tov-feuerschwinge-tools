@@ -469,7 +469,7 @@
 .downtime-manager [data-character-selection][hidden],
 .downtime-manager [data-player-selection][hidden],
 .downtime-manager [data-actor-search-text][hidden] { display: none; }
-.downtime-manager .sc-session-actor { display: grid; grid-template-columns: 24px 42px minmax(150px, 1fr) minmax(220px, 1fr); align-items: center; gap: .55rem; padding: .45rem .55rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
+.downtime-manager .sc-session-actor { display: grid; grid-template-columns: 24px 42px minmax(150px, 1fr) minmax(220px, 1.6fr); align-items: center; gap: .55rem; padding: .45rem .55rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
 .downtime-manager .sc-session-player { display: grid; grid-template-columns: 24px 18px minmax(0, 1fr); align-items: center; gap: .55rem; padding: .55rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
 .downtime-manager .sc-session-player span,
 .downtime-manager .sc-session-player small { display: block; }
@@ -478,6 +478,7 @@
 .downtime-manager .sc-session-actor span,
 .downtime-manager .sc-session-actor small { display: block; }
 .downtime-manager .sc-session-reward { text-align: right; }
+.downtime-manager .sc-session-reward > small { margin-top: .4rem; }
 .downtime-manager .sc-session-reward-items { display: flex !important; flex-wrap: wrap; justify-content: flex-end; gap: .3rem; }
 .downtime-manager .sc-session-reward-chip { display: inline-flex !important; flex: 0 0 auto; align-items: center; gap: .3rem; width: max-content; max-width: 100%; padding: .2rem .35rem; border: 1px solid var(--color-border-light-2); border-radius: 5px; white-space: nowrap; }
 .downtime-manager .sc-session-reward-chip img { width: 22px; height: 22px; border: 0; border-radius: 3px; object-fit: cover; }

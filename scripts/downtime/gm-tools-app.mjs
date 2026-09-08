@@ -1,6 +1,6 @@
 import { MODULE_ID } from "./constants.mjs";
 import { GMToolsService } from "./gm-tools-service.mjs?v=3.2.7-flag-database-2";
-import { SessionService, actorLevel, highestMilestoneProgress, levelFromMilestones, sessionProgress } from "./session-service.mjs";
+import { milestoneEntries, actorLevel, highestMilestoneProgress, levelFromMilestones, sessionProgress } from "./session-service.mjs";
 import { openVoidTaintConfig } from "../void-taint/config-app.mjs";
 import { applyActorSpellMigration, previewActorSpellMigration } from "../spell-actor-migration.mjs?v=3.5.0-actor-spell-migration-10";
 import {
@@ -18,10 +18,12 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
     id: "tovf-gm-tools",
     classes: ["downtime-manager", "tovf-gm-tools"],
-    position: { width: 980, height: 760 },
+    position: { width: 980, height: "auto" },
     window: { title: "DOWNTIME_MANAGER.GMTools.Title", resizable: true },
     actions: {
-      milestoneHistory: (event, target) => { event.preventDefault(); event.stopPropagation(); return SessionService.openMilestoneHistory(target.dataset.uuid); },
+      addMilestoneRow: GMToolsApp.#addMilestoneRow,
+      removeMilestoneRow: GMToolsApp.#removeMilestoneRow,
+      moveMilestoneRow: GMToolsApp.#moveMilestoneRow,
       selectTab: GMToolsApp.#selectTab,
       saveCharacter: GMToolsApp.#saveCharacter,
       saveProject: GMToolsApp.#saveProject,
@@ -77,6 +79,8 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   _onRender(context, options) {
     super._onRender(context, options);
+    this.element.classList.toggle("tovf-gm-character-view", this.tab === "characters");
+    this.#numberMilestones();
     if (!this._milestoneAuditInitialized) {
       const audit = this.element.querySelector(".tovf-gm-milestone-audit");
       if (audit) {
@@ -84,6 +88,10 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
         this._milestoneAuditInitialized = true;
       }
     }
+    this.setPosition({ height: this.tab === "characters" ? "auto" : 760 });
+    this.element.querySelector(".tovf-gm-milestone-audit")?.addEventListener("toggle", () => {
+      if (this.tab === "characters") this.setPosition({ height: "auto" });
+    });
     this.element.querySelectorAll("select[data-character-select]").forEach(select => {
       select.addEventListener("change", event => {
         this.actorUuid = String(event.currentTarget.value ?? "");
@@ -197,6 +205,8 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
         img: selected.actor.img,
         downtime: selected.downtime,
         milestones: selected.progress.milestones,
+        milestoneLevel: levelFromMilestones(selected.progress.milestones),
+        milestoneEntries: milestoneEntries(selected.actor).map((entry, index) => ({ ...entry, number: index + 1, originalIndex: index })),
         sessionsPlayed: selected.progress.sessionsPlayed,
         lastMilestoneWeek: selected.progress.lastMilestoneWeek ?? "",
         passiveDowntime: JSON.stringify(selected.progress.passiveDowntime ?? {}, null, 2),
@@ -246,6 +256,43 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this.render();
   }
 
+  static #addMilestoneRow(event) {
+    event.preventDefault();
+    const template = this.element.querySelector('template[data-milestone-template]');
+    const list = this.element.querySelector('[data-milestone-changes]');
+    list.append(template.content.cloneNode(true));
+    this.#numberMilestones();
+    list.lastElementChild.querySelector('select')?.focus();
+  }
+
+  #numberMilestones() {
+    const rows = Array.from(this.element.querySelectorAll('[data-milestone-row]'));
+    rows.forEach((row, index) => {
+      row.querySelector('[data-milestone-number]').textContent = String(index + 1);
+      row.querySelector('[data-direction="up"]').disabled = index === 0;
+      row.querySelector('[data-direction="down"]').disabled = index === rows.length - 1;
+    });
+    const total = this.element.querySelector('[data-milestone-total]');
+    if (total) total.textContent = String(rows.length);
+    const level = this.element.querySelector('[data-milestone-level]');
+    if (level) level.textContent = String(levelFromMilestones(rows.length));
+    if (this.tab === "characters") this.setPosition({ height: "auto" });
+  }
+
+  static #removeMilestoneRow(event, target) {
+    event.preventDefault();
+    target.closest('[data-milestone-row]')?.remove();
+    this.#numberMilestones();
+  }
+
+  static #moveMilestoneRow(event, target) {
+    event.preventDefault();
+    const row = target.closest('[data-milestone-row]');
+    if (target.dataset.direction === 'up' && row.previousElementSibling) row.previousElementSibling.before(row);
+    else if (target.dataset.direction === 'down' && row.nextElementSibling) row.nextElementSibling.after(row);
+    this.#numberMilestones();
+  }
+
   static async #saveCharacter(event) {
     event.preventDefault();
     const root = this.element.querySelector("[data-character-editor]");
@@ -253,10 +300,13 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const current = await GMToolsService.characterData(this.actorUuid);
     const values = {
       downtime: root.querySelector('[name="downtime"]')?.value,
-      milestones: root.querySelector('[name="milestones"]')?.value,
+      milestoneEntries: Array.from(root.querySelectorAll('[data-milestone-row]'), row => ({
+        originalIndex: row.dataset.originalIndex,
+        source: row.querySelector('[name="milestoneSource"]').value,
+        note: row.querySelector('[name="milestoneNote"]').value,
+        week: row.querySelector('[name="milestoneWeek"]').value
+      })),
       sessionsPlayed: root.querySelector('[name="sessionsPlayed"]')?.value,
-      milestoneSource: root.querySelector('[name="milestoneSource"]')?.value,
-      milestoneReason: root.querySelector('[name="milestoneReason"]')?.value,
       lastMilestoneWeek: root.querySelector('[name="lastMilestoneWeek"]')?.value,
       passiveDowntime: root.querySelector('[name="passiveDowntime"]')?.value
     };
@@ -265,7 +315,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       content: `<p>${game.i18n.localize("DOWNTIME_MANAGER.GMTools.ConfirmChangeHint")}</p>
         <table><tr><th></th><th>${game.i18n.localize("DOWNTIME_MANAGER.GMTools.Before")}</th><th>${game.i18n.localize("DOWNTIME_MANAGER.GMTools.After")}</th></tr>
         <tr><td>${game.i18n.localize("DOWNTIME_MANAGER.GMTools.Downtime")}</td><td>${current.downtime}</td><td>${foundry.utils.escapeHTML(String(values.downtime))}</td></tr>
-        <tr><td>${game.i18n.localize("DOWNTIME_MANAGER.GMTools.Milestones")}</td><td>${current.progress.milestones}</td><td>${foundry.utils.escapeHTML(String(values.milestones))}</td></tr>
+        <tr><td>${game.i18n.localize("DOWNTIME_MANAGER.GMTools.Milestones")}</td><td>${current.progress.milestones}</td><td>${foundry.utils.escapeHTML(String(values.milestoneEntries.length))}</td></tr>
         <tr><td>${game.i18n.localize("DOWNTIME_MANAGER.GMTools.SessionsPlayed")}</td><td>${current.progress.sessionsPlayed}</td><td>${foundry.utils.escapeHTML(String(values.sessionsPlayed))}</td></tr></table>`
     });
     if (!confirmed) return;

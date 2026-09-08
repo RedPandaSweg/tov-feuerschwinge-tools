@@ -13,10 +13,10 @@ export class SharedProjectService {
     if (!station.enabled) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.StationDisabled"));
     const requirements = [station.requiredTool, ...(definition.requiredTools ?? [])]
       .map(tool => toolRequirementStatus(actor, tool)).filter(status => status.required);
+    const missingTools = requirements.filter(status => !status.present);
+    if (missingTools.length) throw new Error(game.i18n.format("DOWNTIME_MANAGER.Errors.RequiredToolMissing", { tools: missingTools.map(status => status.name).join(", ") }));
     const lackingProficiency = requirements.filter(status => !status.proficient);
     if (lackingProficiency.length) throw new Error(game.i18n.format("DOWNTIME_MANAGER.Errors.ToolProficiencyMissing", { tools: lackingProficiency.map(status => status.name).join(", ") }));
-    const missingTools = requirements.filter(status => status.proficient && !status.present);
-    if (missingTools.length) throw new Error(game.i18n.format("DOWNTIME_MANAGER.Errors.RequiredToolMissing", { tools: missingTools.map(status => status.name).join(", ") }));
   }
 
   static async #assertSpellUnknown(actor, item, definition) {
@@ -264,7 +264,6 @@ export class SharedProjectService {
     await RewardService.grantItems(leader, rewardItems); await RewardService.grantCharacterRewards(leader, definition.characterRewards ?? []);
     await RewardService.changeStationValue(leader, stationActor, station, Number(station.actorValue?.completionChange ?? 0));
     state.awaitingCompletionCheck = false; state.completionCheckFailed = false;
-    if (definition.repeatable) state.progress = 0;
-    else state.completed = true;
+    ProjectService.finishState(states, state, definition);
   }
 }

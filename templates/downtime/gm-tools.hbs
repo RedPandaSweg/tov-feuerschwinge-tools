@@ -21,18 +21,50 @@
     </details>
     {{#if selected}}
     <div data-character-editor>
-      <div class="tovf-gm-character-title"><img src="{{selected.img}}" alt=""><select data-character-select aria-label="{{localize 'DOWNTIME_MANAGER.GMTools.Character'}}">{{#each actors}}<option value="{{uuid}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select><button type="button" data-action="openDocument" data-uuid="{{selected.uuid}}"><i class="fa-solid fa-user"></i> {{localize "DOWNTIME_MANAGER.GMTools.OpenSheet"}}</button></div>
-      <fieldset>
-        <legend>{{localize "DOWNTIME_MANAGER.GMTools.CharacterValues"}}</legend>
-        <div class="tovf-gm-field-grid">
-          <label><span>{{localize "DOWNTIME_MANAGER.GMTools.Downtime"}}</span><input type="number" name="downtime" min="0" step="any" value="{{selected.downtime}}"></label>
-          <label><span>{{localize "DOWNTIME_MANAGER.GMTools.Milestones"}}</span><input type="number" name="milestones" min="0" step="1" value="{{selected.milestones}}"></label><label><span>{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Source"}}</span><select name="milestoneSource"><option value="community">{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.community"}}</option><option value="gm">{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.gm"}}</option><option value="start">{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.start"}}</option><option value="correction">{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.correction"}}</option></select></label><label><span>{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Reason"}}</span><input type="text" name="milestoneReason"></label><button type="button" data-action="milestoneHistory" data-uuid="{{selected.uuid}}">{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Title"}}</button>
+      <div class="tovf-gm-character-title"><img src="{{selected.img}}" alt=""><label class="tovf-gm-character-name"><span>{{localize "DOWNTIME_MANAGER.GMTools.Player"}}</span><select data-character-select aria-label="{{localize 'DOWNTIME_MANAGER.GMTools.Character'}}">{{#each actors}}<option value="{{uuid}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label><button type="button" data-action="openDocument" data-uuid="{{selected.uuid}}"><i class="fa-solid fa-user"></i> {{localize "DOWNTIME_MANAGER.GMTools.OpenSheet"}}</button>
+        <div class="tovf-gm-header-session-fields">
           <label><span>{{localize "DOWNTIME_MANAGER.GMTools.SessionsPlayed"}}</span><input type="number" name="sessionsPlayed" min="0" step="1" value="{{selected.sessionsPlayed}}"></label>
-          <label><span>{{localize "DOWNTIME_MANAGER.GMTools.LastMilestoneWeek"}}</span><input type="text" name="lastMilestoneWeek" value="{{selected.lastMilestoneWeek}}" placeholder="2026-W31"></label>
+          <label><span>{{localize "DOWNTIME_MANAGER.GMTools.LastMilestoneWeek"}}</span><input type="text" name="lastMilestoneWeek" value="{{selected.lastMilestoneWeek}}" placeholder="2026-W32"></label>
         </div>
-        <label class="tovf-gm-json-field"><span>{{localize "DOWNTIME_MANAGER.GMTools.PassiveDowntime"}}</span><textarea name="passiveDowntime" rows="5">{{selected.passiveDowntime}}</textarea></label>
-      </fieldset>
-      <footer class="form-footer"><button type="button" data-action="exportCharacter"><i class="fa-solid fa-download"></i> {{localize "DOWNTIME_MANAGER.GMTools.Export"}}</button><button type="button" data-action="saveCharacter"><i class="fa-solid fa-floppy-disk"></i> {{localize "DOWNTIME_MANAGER.GMTools.SaveCharacter"}}</button></footer>
+      </div>
+      <div class="tovf-gm-character-overview">
+        <fieldset class="tovf-gm-milestones">
+          <legend>{{localize "DOWNTIME_MANAGER.GMTools.Milestones"}} <span class="tovf-gm-milestone-total" data-milestone-total>{{selected.milestones}}</span><span class="tovf-gm-milestone-level-label">&nbsp;– {{localize "DOWNTIME_MANAGER.Session.Level"}}</span><span class="tovf-gm-milestone-total" data-milestone-level>{{selected.milestoneLevel}}</span></legend>
+          <div class="tovf-gm-milestone-scroll">
+            <table class="tovf-gm-milestone-table">
+              <colgroup><col class="milestone-number"><col class="milestone-source"><col><col class="milestone-week"><col class="milestone-actions"></colgroup>
+              <thead><tr><th scope="col">#</th><th scope="col">{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Source"}}</th><th scope="col">{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Reason"}}</th><th scope="col">{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Week"}}</th><th scope="col"><span class="tovf-gm-sr-only">{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Actions"}}</span></th></tr></thead>
+              <tbody data-milestone-changes>
+                {{#each selected.milestoneEntries}}
+                  <tr data-milestone-row data-original-index="{{originalIndex}}">
+                    <td class="tovf-gm-milestone-number" data-milestone-number>{{number}}</td>
+                    <td><select name="milestoneSource" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Source"}}"><option value="start" {{#if (eq source "start")}}selected{{/if}}>{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.start"}}</option><option value="session" {{#if (eq source "session")}}selected{{/if}}>{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.session"}}</option><option value="community" {{#if (eq source "community")}}selected{{/if}}>{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.community"}}</option><option value="gm" {{#if (eq source "gm")}}selected{{/if}}>{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.gm"}}</option><option value="correction" {{#if (eq source "correction")}}selected{{/if}}>{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.correction"}}</option></select></td>
+                    <td><input type="text" name="milestoneNote" value="{{note}}" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Reason"}}"></td>
+                    <td><input type="text" name="milestoneWeek" value="{{week}}" placeholder="2026-W32" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Week"}}"></td>
+                    <td><div class="tovf-gm-milestone-actions"><button type="button" data-action="moveMilestoneRow" data-direction="up" title="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.MoveUp"}}" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.MoveUp"}}"><i class="fa-solid fa-arrow-up"></i></button><button type="button" data-action="moveMilestoneRow" data-direction="down" title="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.MoveDown"}}" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.MoveDown"}}"><i class="fa-solid fa-arrow-down"></i></button><button type="button" data-action="removeMilestoneRow" title="{{localize 'DOWNTIME_MANAGER.GMTools.Remove'}}" aria-label="{{localize 'DOWNTIME_MANAGER.GMTools.Remove'}}"><i class="fa-solid fa-trash"></i></button></div></td>
+                  </tr>
+                {{/each}}
+              </tbody>
+            </table>
+          </div>
+          <template data-milestone-template>                <tr data-milestone-row data-original-index="">
+                    <td class="tovf-gm-milestone-number" data-milestone-number></td>
+                    <td><select name="milestoneSource" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Source"}}"><option value="start" >{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.start"}}</option><option value="session" >{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.session"}}</option><option value="community" >{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.community"}}</option><option value="gm" >{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.gm"}}</option><option value="correction" >{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.correction"}}</option></select></td>
+                    <td><input type="text" name="milestoneNote" value="" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Reason"}}"></td>
+                    <td><input type="text" name="milestoneWeek" value="" placeholder="2026-W32" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Week"}}"></td>
+                    <td><div class="tovf-gm-milestone-actions"><button type="button" data-action="moveMilestoneRow" data-direction="up" title="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.MoveUp"}}" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.MoveUp"}}"><i class="fa-solid fa-arrow-up"></i></button><button type="button" data-action="moveMilestoneRow" data-direction="down" title="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.MoveDown"}}" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.MoveDown"}}"><i class="fa-solid fa-arrow-down"></i></button><button type="button" data-action="removeMilestoneRow" title="{{localize 'DOWNTIME_MANAGER.GMTools.Remove'}}" aria-label="{{localize 'DOWNTIME_MANAGER.GMTools.Remove'}}"><i class="fa-solid fa-trash"></i></button></div></td>
+                  </tr></template>
+          <button type="button" data-action="addMilestoneRow"><i class="fa-solid fa-plus"></i> {{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.AddRow"}}</button>
+        </fieldset>
+        <div class="tovf-gm-character-sidebar">
+        <fieldset class="tovf-gm-downtime-card">
+          <legend>{{localize "DOWNTIME_MANAGER.GMTools.Downtime"}}</legend>
+          <label><span>{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.AvailableDowntime"}}</span><input type="number" name="downtime" min="0" step="any" value="{{selected.downtime}}"></label>
+            <label class="tovf-gm-json-field"><span>{{localize "DOWNTIME_MANAGER.GMTools.PassiveDowntime"}}</span><textarea name="passiveDowntime" rows="4">{{selected.passiveDowntime}}</textarea></label>
+        </fieldset>
+        </div>
+      </div>
+      <footer class="form-footer tovf-gm-character-footer"><button type="button" data-action="exportCharacter"><i class="fa-solid fa-download"></i> {{localize "DOWNTIME_MANAGER.GMTools.Export"}}</button><button type="button" data-action="saveCharacter"><i class="fa-solid fa-floppy-disk"></i> {{localize "DOWNTIME_MANAGER.GMTools.SaveCharacter"}}</button></footer>
     </div>
     {{else}}<p class="notes">{{localize "DOWNTIME_MANAGER.GMTools.NoCharacters"}}</p>{{/if}}
   </section>

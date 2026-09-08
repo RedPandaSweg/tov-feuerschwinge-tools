@@ -212,18 +212,45 @@ export function milestoneHistoryContent(record) {
 }
 
 export function milestoneSources(actor, entries = structuredHistory().entries) {
+  const saved = sessionProgress(actor).milestoneEntries;
+  if (Array.isArray(saved)) {
+    const sources = milestoneEntries(actor, entries).map(entry => ({ ...entry, title: entry.note, milestone: 1 }));
+    return { sources, documented: sources.length, total: sources.length, difference: 0 };
+  }
   const sources = entries.flatMap(record => (record.participants ?? [])
     .filter(entry => entry.actorUuid === actor.uuid && Number(entry.milestone) > 0)
-    .map(entry => ({ title: record.title, week: record.week, timestamp: record.awardedAt, source: "session", milestone: Number(entry.milestone) })));
+    .map(entry => ({ title: record.title, week: record.week, historyId: String(record.id), timestamp: record.awardedAt, source: "session", milestone: Number(entry.milestone) })));
   const adjustments = sessionProgress(actor).milestoneAdjustments;
   for (const entry of Array.isArray(adjustments) ? adjustments : []) {
     if (!Number.isFinite(Number(entry.delta))) continue;
-    sources.push({ source: entry.source || "correction", title: entry.reason || game.i18n.localize("DOWNTIME_MANAGER.Session.MilestoneOrigin.NoReason"), timestamp: entry.timestamp, milestone: Number(entry.delta) });
+    sources.push({ source: entry.source || "correction", title: entry.reason || game.i18n.localize("DOWNTIME_MANAGER.Session.MilestoneOrigin.NoReason"), week: entry.week || "", timestamp: entry.timestamp, milestone: Number(entry.delta) });
   }
   sources.sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
   const documented = sources.reduce((sum, entry) => sum + entry.milestone, 0);
   const total = Number(sessionProgress(actor).milestones) || 0;
   return { sources, documented, total, difference: total - documented };
+}
+
+/** One editable entry per milestone; legacy sources are expanded only until first save. */
+export function milestoneEntries(actor, entries = structuredHistory().entries) {
+  const progress = sessionProgress(actor);
+  const total = Math.max(0, Math.floor(Number(progress.milestones) || 0));
+  if (Array.isArray(progress.milestoneEntries)) {
+    const rows = foundry.utils.deepClone(progress.milestoneEntries).slice(0, total);
+    while (rows.length < total) rows.push({ source: "start", note: "", week: "" });
+    return rows;
+  }
+  const history = milestoneSources(actor, entries);
+  const rows = Array.from({ length: Math.max(0, history.difference) }, () => ({ source: "start", note: "", week: "" }));
+  for (const source of history.sources) {
+    if (source.milestone < 0) rows.splice(Math.max(0, rows.length + source.milestone));
+    else for (let i = 0; i < Math.floor(source.milestone); i++) rows.push({
+      source: source.source || "start", note: source.title === game.i18n.localize("DOWNTIME_MANAGER.Session.MilestoneOrigin.NoReason") ? "" : (source.title || ""),
+      week: source.week || "", historyId: source.historyId || "", timestamp: source.timestamp
+    });
+  }
+  while (rows.length < total) rows.unshift({ source: "start", note: "", week: "" });
+  return rows.slice(0, total);
 }
 
 function historyPageContent(record, settlement = false) {
@@ -302,7 +329,13 @@ export class SessionService {
           const actorTier = tierOfPlay(levelFromMilestones(progress.milestones));
           const mayCatchUp = catchUpEnabled && actorTier < guildProgress.tier;
           const milestone = awardMilestones && (progress.lastMilestoneWeek !== week || mayCatchUp) ? 1 : 0;
-          await setProgress(actor, { ...progress, milestones: Number(progress.milestones) + milestone, sessionsPlayed: Number(progress.sessionsPlayed) + 1, lastMilestoneWeek: milestone ? week : progress.lastMilestoneWeek });
+          const rows = milestoneEntries(actor);
+          if (milestone) rows.push({ source: "session", note: active.title || "", week, historyId: String(active.id), timestamp: Date.now() });
+          await setProgress(actor, {
+            ...progress, milestoneEntries: rows, milestones: rows.length,
+            sessionsPlayed: Number(progress.sessionsPlayed) + 1,
+            lastMilestoneWeek: milestone ? week : progress.lastMilestoneWeek
+          });
           participants.push({ actorUuid: actor.uuid, actorName: actor.name, gold: details.gold, downtime: details.downtime, rewards: details.items, milestone });
         } else {
           const passiveLevel = levelFromMilestones(progress.milestones);
@@ -438,9 +471,11 @@ export class SessionService {
         const progress = sessionProgress(actor);
         if (oldEntry && !shouldParticipate) {
           await RewardService.adjustItems(actor, (oldEntry.rewards ?? []).map(reward => ({ ...reward, quantity: -Number(reward.quantity ?? 0) })));
+          const rows = milestoneEntries(actor).filter(entry => entry.historyId !== String(record.id));
           await setProgress(actor, {
             ...progress,
-            milestones: Math.max(0, Number(progress.milestones) - Number(oldEntry.milestone ?? 0)),
+            milestoneEntries: rows,
+            milestones: rows.length,
             sessionsPlayed: Math.max(0, Number(progress.sessionsPlayed) - 1),
             lastMilestoneWeek: Number(oldEntry.milestone ?? 0) > 0 && progress.lastMilestoneWeek === record.week
               ? (otherMilestoneWeeks(actor.uuid)[0] ?? null)
@@ -475,7 +510,12 @@ export class SessionService {
           const lastMilestoneWeek = milestone && (!progress.lastMilestoneWeek || record.week > progress.lastMilestoneWeek)
             ? record.week
             : progress.lastMilestoneWeek;
-          await setProgress(actor, { ...progress, passiveDowntime, milestones: Number(progress.milestones) + milestone, sessionsPlayed: Number(progress.sessionsPlayed) + 1, lastMilestoneWeek });
+          const rows = milestoneEntries(actor);
+          if (milestone) rows.push({ source: "session", note: record.title || "", week: record.week || "", historyId: String(record.id), timestamp: Date.now() });
+          await setProgress(actor, {
+            ...progress, passiveDowntime, milestoneEntries: rows, milestones: rows.length,
+            sessionsPlayed: Number(progress.sessionsPlayed) + 1, lastMilestoneWeek
+          });
           nextEntry = { actorUuid: actor.uuid, actorName: actor.name, gold: desiredGold, downtime: Number(defaultsByUuid.get(actor.uuid)?.downtime ?? 0), rewards, milestone };
           passive.delete(actor.uuid);
         } else {

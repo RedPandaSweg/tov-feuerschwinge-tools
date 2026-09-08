@@ -6,7 +6,7 @@ import {
 } from "./constants.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
 import { ProjectService } from "./project-service.mjs";
-import { playerCharacters, sessionProgress } from "./session-service.mjs";
+import { milestoneEntries, playerCharacters, sessionProgress } from "./session-service.mjs";
 import { round } from "./utils.mjs";
 
 function requireGM() {
@@ -279,7 +279,22 @@ export class GMToolsService {
       sessionProgress: actor.getFlag(MODULE_ID, FLAGS.SESSION_PROGRESS) ?? null
     };
     const downtime = finiteNumber(values.downtime, game.i18n.localize("DOWNTIME_MANAGER.GMTools.Downtime"));
-    const milestones = finiteNumber(values.milestones, game.i18n.localize("DOWNTIME_MANAGER.GMTools.Milestones"), { integer: true });
+    const milestoneLabel = game.i18n.localize('DOWNTIME_MANAGER.GMTools.Milestones');
+    const existingEntries = milestoneEntries(actor);
+    const rows = Array.isArray(values.milestoneEntries) ? values.milestoneEntries : existingEntries.map((entry, originalIndex) => ({ ...entry, originalIndex }));
+    const used = new Set();
+    const entries = rows.map(entry => {
+      const index = Number(entry.originalIndex);
+      const original = entry.originalIndex !== "" && Number.isInteger(index) && index >= 0 && !used.has(index) ? existingEntries[index] : null;
+      if (original) used.add(index);
+      return {
+        ...(original || {}),
+        source: ["session", "community", "gm", "start", "correction"].includes(entry.source) ? entry.source : "start",
+        note: String(entry.note ?? "").trim(),
+        week: String(entry.week ?? "").trim()
+      };
+    });
+    const milestones = finiteNumber(entries.length, milestoneLabel, { integer: true });
     const sessionsPlayed = finiteNumber(values.sessionsPlayed, game.i18n.localize("DOWNTIME_MANAGER.GMTools.SessionsPlayed"), { integer: true });
     let passiveDowntime;
     try {
@@ -296,19 +311,11 @@ export class GMToolsService {
       ...foundry.utils.deepClone(DEFAULT_SESSION_PROGRESS),
       ...sessionProgress(actor),
       milestones,
+      milestoneEntries: entries,
       sessionsPlayed,
       lastMilestoneWeek: String(values.lastMilestoneWeek ?? "").trim() || null,
       passiveDowntime
     };
-    const milestoneDelta = milestones - Number(sessionProgress(actor).milestones || 0);
-    if (milestoneDelta) {
-      progress.milestoneAdjustments = [
-        ...(Array.isArray(progress.milestoneAdjustments) ? progress.milestoneAdjustments : []),
-        { delta: milestoneDelta, before: Number(sessionProgress(actor).milestones || 0), after: milestones,
-          source: ["community", "gm", "start", "correction"].includes(values.milestoneSource) ? values.milestoneSource : "correction",
-          reason: String(values.milestoneReason ?? "").trim(), timestamp: Date.now(), userId: game.user.id }
-      ];
-    }
     await storeUndo({ kind: "actor", actorUuid: actor.uuid, before });
     await actor.setFlag(MODULE_ID, FLAGS.DOWNTIME, downtime);
     await actor.setFlag(MODULE_ID, FLAGS.SESSION_PROGRESS, progress);
