@@ -7,6 +7,7 @@ import {
 import { DowntimeService } from "./downtime-service.mjs";
 import { ProjectService } from "./project-service.mjs";
 import { milestoneEntries, playerCharacters, sessionProgress } from "./session-service.mjs";
+import { assignMilestoneEvidence, milestoneEvidence } from "../campaign/milestone-evidence.mjs";
 import { round } from "./utils.mjs";
 
 function requireGM() {
@@ -278,12 +279,13 @@ export class GMToolsService {
       downtime: actor.getFlag(MODULE_ID, FLAGS.DOWNTIME) ?? null,
       sessionProgress: actor.getFlag(MODULE_ID, FLAGS.SESSION_PROGRESS) ?? null
     };
-    const downtime = finiteNumber(values.downtime, game.i18n.localize("DOWNTIME_MANAGER.GMTools.Downtime"));
+    const downtime = values.downtime === undefined ? DowntimeService.get(actor) : finiteNumber(values.downtime, game.i18n.localize("DOWNTIME_MANAGER.GMTools.Downtime"));
     const milestoneLabel = game.i18n.localize('DOWNTIME_MANAGER.GMTools.Milestones');
     const existingEntries = milestoneEntries(actor);
+    if (values.milestoneSignature && values.milestoneSignature !== JSON.stringify(existingEntries)) throw new Error("Meilensteine wurden inzwischen geändert. Editor neu öffnen.");
     const rows = Array.isArray(values.milestoneEntries) ? values.milestoneEntries : existingEntries.map((entry, originalIndex) => ({ ...entry, originalIndex }));
     const used = new Set();
-    const entries = rows.map(entry => {
+    let entries = rows.map(entry => {
       const index = Number(entry.originalIndex);
       const original = entry.originalIndex !== "" && Number.isInteger(index) && index >= 0 && !used.has(index) ? existingEntries[index] : null;
       if (original) used.add(index);
@@ -294,11 +296,12 @@ export class GMToolsService {
         week: String(entry.week ?? "").trim()
       };
     });
+    entries = assignMilestoneEvidence(entries, rows, existingEntries, milestoneEvidence(actor.uuid));
     const milestones = finiteNumber(entries.length, milestoneLabel, { integer: true });
     const sessionsPlayed = finiteNumber(values.sessionsPlayed, game.i18n.localize("DOWNTIME_MANAGER.GMTools.SessionsPlayed"), { integer: true });
     let passiveDowntime;
     try {
-      passiveDowntime = JSON.parse(String(values.passiveDowntime ?? "{}"));
+      passiveDowntime = values.passiveDowntime === undefined ? sessionProgress(actor).passiveDowntime ?? {} : JSON.parse(String(values.passiveDowntime));
     } catch {
       throw new Error(game.i18n.localize("DOWNTIME_MANAGER.GMTools.Errors.InvalidPassive"));
     }
@@ -316,10 +319,26 @@ export class GMToolsService {
       lastMilestoneWeek: String(values.lastMilestoneWeek ?? "").trim() || null,
       passiveDowntime
     };
-    await storeUndo({ kind: "actor", actorUuid: actor.uuid, before });
-    await actor.setFlag(MODULE_ID, FLAGS.DOWNTIME, downtime);
+    await storeUndo({ kind: "actor", tab: "characters", actorUuid: actor.uuid, before });
+    if (values.downtime !== undefined) await actor.setFlag(MODULE_ID, FLAGS.DOWNTIME, downtime);
     await actor.setFlag(MODULE_ID, FLAGS.SESSION_PROGRESS, progress);
     return { actor, downtime, progress };
+  }
+
+  static async updateDowntime(actorUuid, values) {
+    requireGM();
+    const actor = await actorFromUuid(actorUuid);
+    const progress = sessionProgress(actor);
+    const current = { downtime: DowntimeService.get(actor), passiveDowntime: progress.passiveDowntime ?? {} };
+    if (values.signature !== JSON.stringify(current)) throw new Error("Downtime wurde inzwischen geändert. Ansicht aktualisieren.");
+    const downtime = finiteNumber(values.downtime, "Downtime");
+    let passive;
+    try { passive = JSON.parse(values.passiveDowntime); } catch { throw new Error("Ungültige passive Downtime."); }
+    if (!passive || typeof passive !== "object" || Array.isArray(passive)) throw new Error("Ungültige passive Downtime.");
+    for (const value of Object.values(passive)) finiteNumber(value, "Passive Downtime");
+    await storeUndo({ kind: "actor", tab: "downtime", actorUuid: actor.uuid, before: { downtime: actor.getFlag(MODULE_ID, FLAGS.DOWNTIME) ?? null, sessionProgress: actor.getFlag(MODULE_ID, FLAGS.SESSION_PROGRESS) ?? null } });
+    await actor.setFlag(MODULE_ID, FLAGS.DOWNTIME, downtime);
+    await actor.setFlag(MODULE_ID, FLAGS.SESSION_PROGRESS, { ...progress, passiveDowntime: Object.fromEntries(Object.entries(passive).map(([key, value]) => [key, Number(value)])) });
   }
 
   static async updateProject(actorUuid, stateId, values) {
@@ -341,7 +360,7 @@ export class GMToolsService {
       state.pendingRoll = false;
       state.awaitingCompletionCheck = false;
     }
-    await storeUndo({ kind: "actor", actorUuid: actor.uuid, before });
+    await storeUndo({ kind: "actor", tab: "projects", actorUuid: actor.uuid, before });
     await actor.setFlag(MODULE_ID, FLAGS.PROJECTS, projects);
     return state;
   }
@@ -353,7 +372,7 @@ export class GMToolsService {
     const projects = ProjectService.get(actor);
     const filtered = projects.filter(entry => String(entry.id ?? "") !== String(stateId ?? ""));
     if (filtered.length === projects.length) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.GMTools.Errors.ProjectMissing"));
-    await storeUndo({ kind: "actor", actorUuid: actor.uuid, before });
+    await storeUndo({ kind: "actor", tab: "projects", actorUuid: actor.uuid, before });
     await actor.setFlag(MODULE_ID, FLAGS.PROJECTS, filtered);
   }
 

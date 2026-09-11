@@ -4,6 +4,8 @@ import {
   WORLD_ROLES
 } from "../core/constants.mjs";
 import { SETTINGS } from "../downtime/constants.mjs";
+import { createSessionUserBundle, importUserBundle, applyUserAssignments, remapUserOwnership, knownUserMapping } from "./user-transfer.mjs";
+import { reviewSessionUsers } from "./user-transfer-app.mjs";
 import {
   createCompendiumBundle,
   exportCompendiumFolder,
@@ -120,6 +122,8 @@ async function replaceActorFromSessionResult(actor, source) {
   delete data.effects;
   data._id = actor.id;
   data.folder = actor.folder?.id ?? null;
+  // Session-world user IDs must never replace the live world's ownership.
+  data.ownership = foundry.utils.deepClone(actor.ownership);
   removeProperty(data, `flags.${MODULE_ID}.${TRANSFER_FLAG}.baselineHash`);
   await actor.update(data, { noHook: true });
 
@@ -195,8 +199,9 @@ function originalActorIdFromTransferId(transferId) {
   return actorIndex >= 0 ? String(parts[actorIndex + 1] ?? "") : "";
 }
 
-async function createActorFromSessionResult(entry) {
+async function createActorFromSessionResult(entry, userMapping = new Map()) {
   const data = normalizeLegacyActiveEffects(foundry.utils.deepClone(entry.data));
+  data.ownership = remapUserOwnership(data.ownership, userMapping);
   const originalId = originalActorIdFromTransferId(entry.transferId);
   const canRestoreId = /^[A-Za-z0-9]{16}$/.test(originalId) && !game.actors.has(originalId);
   if (canRestoreId) data._id = originalId;
@@ -528,6 +533,7 @@ export async function exportSession(actorIds, {
     macros,
     actorFolders,
     actors: actorEntries,
+    users: createSessionUserBundle(actors, chosenActors),
     compendiums,
     session: session ? {
       id: String(session.id ?? foundry.utils.randomID()),
@@ -624,11 +630,12 @@ async function createSessionParticipantFolders(bundle, sessionRootId) {
   return { extrasFolders, extrasFolderMappings, createdIds };
 }
 
-async function updateOrCreateActor(entry, replacements, folderMapping = new Map(), sessionRootId = null, targetFolderId = undefined) {
+async function updateOrCreateActor(entry, replacements, folderMapping = new Map(), sessionRootId = null, targetFolderId = undefined, userMapping = new Map()) {
   const data = normalizeLegacyActiveEffects(
     replaceReferences(foundry.utils.deepClone(entry.data), replacements)
   );
   data.folder = targetFolderId ?? folderMapping.get(entry.sourceFolderId) ?? sessionRootId;
+  data.ownership = remapUserOwnership(data.ownership, userMapping);
   foundry.utils.setProperty(data, `flags.${MODULE_ID}.${TRANSFER_FLAG}.baselineHash`, entry.baselineHash);
   const target = game.actors.find(actor =>
     actor.getFlag(MODULE_ID, TRANSFER_FLAG)?.id === entry.transferId
@@ -661,6 +668,13 @@ export async function importSession(file) {
   });
   if (!accepted) return;
 
+  let userImport = null;
+  if (bundle.users?.users?.length && game.user.role === CONST.USER_ROLES.GAMEMASTER) {
+    const selection = await reviewSessionUsers(bundle.users);
+    if (!selection) return;
+    if (!selection.skip) userImport = await importUserBundle(bundle.users, { choices: selection.choices, applyActors: false, sessionPlayers: true });
+  }
+  const userMapping = userImport?.mapping ?? knownUserMapping(bundle.users);
   await game.settings.set(MODULE_ID, WEAPON_SETTING, bundle.configuration?.weaponDefinitions ?? {
     properties: [],
     options: []
@@ -692,7 +706,11 @@ export async function importSession(file) {
             ?? extrasFolders.get(entry.participantTransferId)
             ?? sessionRoot.id)
       : undefined;
-    counts[await updateOrCreateActor(entry, replacements, folderMapping, sessionRoot.id, targetFolderId)]++;
+    counts[await updateOrCreateActor(entry, replacements, folderMapping, sessionRoot.id, targetFolderId, userMapping)]++;
+  }
+  if (userImport) {
+    const actorMap = new Map(game.actors.map(a => [a.getFlag(MODULE_ID, TRANSFER_FLAG)?.id, a]));
+    await applyUserAssignments(bundle.users, userImport.identityMap, actorMap);
   }
   if (bundle.compendiums) await importCompendiumBundle(bundle.compendiums, null, { confirm: false });
   const importedActorUuids = game.actors
@@ -710,7 +728,7 @@ export async function importSession(file) {
       actorUuids,
       participantTransferIds: [...participantIds],
       sourceWorld: bundle.metadata.sourceWorld,
-      importedContent: { actorUuids: importedActorUuids, actorFolderIds, sessionRootFolderId: sessionRoot.id },
+      importedContent: { actorUuids: importedActorUuids, actorFolderIds, sessionRootFolderId: sessionRoot.id, userIds: [...(userImport?.identityMap.values() ?? [])].filter(id => game.users.get(id)?.getFlag(MODULE_ID, "sessionImportedUser")) },
       startedAt: Date.now(),
       status: "imported"
     });
@@ -735,6 +753,13 @@ export async function cleanupSessionImport() {
   });
   if (!confirmed) return false;
 
+  const importedUsers = [...new Set(manifest.userIds ?? [])].map(id => game.users.get(id)).filter(u => u && u.id !== game.user.id && u.role === 1 && u.getFlag(MODULE_ID, "sessionImportedUser"));
+  const deleteUsers = importedUsers.length && await foundry.applications.api.DialogV2.confirm({
+    window: { title: "Sessionbenutzer entfernen" },
+    content: `<p>Auch die ${importedUsers.length} durch den Sessiontransfer angelegten Player-Benutzer löschen?</p><ul>${importedUsers.map(u => `<li>${foundry.utils.escapeHTML(u.name)}</li>`).join("")}</ul><p>Bestehende Benutzer und Spielleiterzugänge bleiben erhalten.</p>`,
+    yes: { label: "Benutzer löschen" }, no: { label: "Benutzer behalten" }
+  });
+
   for (const uuid of actorUuids) await (await fromUuid(uuid).catch(() => null))?.delete();
   const folderIds = [...new Set(manifest.actorFolderIds ?? [])];
   const folders = folderIds.map(id => game.folders.get(id)).filter(Boolean)
@@ -743,6 +768,14 @@ export async function cleanupSessionImport() {
     const hasDocuments = game.actors.some(actor => actor.folder?.id === folder.id);
     const hasChildren = game.folders.some(candidate => folderParentId(candidate) === folder.id);
     if (!hasDocuments && !hasChildren) await folder.delete();
+  }
+  if (deleteUsers) {
+    for (const user of importedUsers) await user.delete();
+    const state = foundry.utils.deepClone(game.settings.get(MODULE_ID, "campaignLedger") ?? {});
+    const removed = new Set(importedUsers.map(u => u.id));
+    for (const [personId, userId] of Object.entries(state.personLinks ?? {})) if (removed.has(userId)) delete state.personLinks[personId];
+    state.revision = Number(state.revision ?? 0) + 1;
+    await game.settings.set(MODULE_ID, "campaignLedger", state);
   }
   await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, {});
   ui.notifications.info(game.i18n.localize("DOWNTIME_MANAGER.Session.Workflow.CleanupComplete"));
@@ -778,6 +811,7 @@ export async function exportSessionResult() {
     formatVersion: TRANSFER_FORMAT_VERSION,
     metadata: baseMetadata(),
     actors: entries,
+    users: createSessionUserBundle(actors),
     session: active.id ? {
       id: active.id,
       title: active.title ?? "",
@@ -826,12 +860,12 @@ export async function importSessionResult(file) {
       const skipped = row.actor
         ? await replaceActorFromSessionResult(row.actor, row.importedData)
         : [];
-      row.actor ??= await createActorFromSessionResult(row.entry);
+      row.actor ??= await createActorFromSessionResult(row.entry, knownUserMapping(bundle.users));
       importedRows.push(row);
       skippedChanges.push(...skipped.map(entry => ({ ...entry, actor: row.name })));
     } catch (error) {
-      skippedChanges.push({ actor: row.name, documentName: "Actor", id: row.actor.id, action: "update", error });
-      console.warn(`${MODULE_ID} | Skipping failed session-result Actor`, { actor: row.actor.uuid, error });
+      skippedChanges.push({ actor: row.name, documentName: "Actor", id: row.actor?.id, action: "update", error });
+      console.warn(`${MODULE_ID} | Skipping failed session-result Actor`, { actor: row.actor?.uuid, error });
     }
   }
   if (!importedRows.length) throw new Error(game.i18n.localize("TOVF.Session.Error.NoImportableActors"));

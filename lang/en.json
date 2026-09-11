@@ -12,6 +12,25 @@
     }
   },
   "TOVF": {
+    "Concentration": {
+      "Title": "Concentration",
+      "EffectName": "Concentration: {spell}",
+      "Damage": "Damage",
+      "Save": "CON Save",
+      "DC": "DC",
+      "Roll": "Roll CON Save",
+      "Maintained": "Concentration maintained",
+      "Ended": "Concentration ended",
+      "Resolved": "Resolved / Concentration ended",
+      "RollFlavor": "Concentration: CON Save DC {dc}",
+      "ProcessingError": "Could not process concentration.",
+      "SaveError": "Concentration save failed.",
+      "SettingName": "Automatically manage concentration",
+      "SettingHint": "Tracks concentration on activation and requests a CON save in chat when HP (including temporary HP) are lost. Active Effects applied through the spell's chat card are removed when concentration ends. Pauses while bf-qol concentration automation is enabled.",
+      "CleanupError": "Could not remove all linked concentration effects. Please check the targets.",
+      "LinkingUnavailable": "Concentration effect linking is unavailable with this system version.",
+      "CastEnded": "Concentration for this cast has already ended. Please cast the spell again."
+    },
     "Chat": { "Timestamp": { "JustNow": "Just now" } },
     "Inventory": {
       "Other": "Other"
@@ -1294,7 +1313,7 @@
       "HighestMilestone": "Highest guild progress: {milestones} milestones · level {level} · tier {tier} · {characters}.", "CatchUpActive": "Catch-up is active.",
       "PassiveConfig": "Passive downtime", "PassiveEnabled": "Grant passive downtime to non-participants", "PassivePeriod": "Accounting period", "Monthly": "Monthly", "Weekly": "Weekly", "PassiveRate": "Share per missed session", "PassiveCap": "Maximum per period", "PassiveHint": "The percentage and cap are based on the fixed downtime value for the character level derived from milestones. A cap of 4× allows at most four full regular downtime values per selected week or month.",
       "SelectConnected": "Select connected", "SelectTokens": "Use selected tokens", "SearchCharacters": "Search characters…", "Save": "Save session", "Saved": "Session saved.",
-      "Distribute": "Rewards to distribute", "MilestoneOrigin": {"Source":"Source","Types":{"session":"Session","community":"Community","gm":"Game master","start":"Starting balance","correction":"Correction"},"Title":"Milestone sources","Totals":"Current total: {total} · Documented: {documented}","Difference":"Unexplained difference: {difference}. No matching evidence is available (e.g. legacy progress or older manual corrections).","Reason":"Note (optional)","Manual":"Manual change","NoReason":"No note","Change":"Change","ChangeHint":"Enter positive or negative changes. Save the character to apply all new rows.","AddRow":"Add row","Week":"Week (optional)","MoveUp":"Move up","MoveDown":"Move down","Actions":"Actions","AvailableDowntime":"Available downtime","PassiveDetails":"Passive downtime by period","SessionProgress":"Session progress"}, "DistributeMilestones": "Award weekly milestones", "RewardColumn": "Reward column {column}", "PlayerSelection": "Player selection",
+      "Distribute": "Rewards to distribute", "MilestoneOrigin": {"Source":"Source","Types":{"session":"Session","community":"Server team reward","gm":"GM reward","start":"Starting balance","correction":"Correction"},"Title":"Milestone sources","Totals":"Current total: {total} · Documented: {documented}","Difference":"Unexplained difference: {difference}. No matching evidence is available (e.g. legacy progress or older manual corrections).","Reason":"Note (optional)","Manual":"Manual change","NoReason":"No note","Change":"Change","ChangeHint":"Enter positive or negative changes. Save the character to apply all new rows.","AddRow":"Add row","Week":"Week (optional)","MoveUp":"Move up","MoveDown":"Move down","Actions":"Actions","AvailableDowntime":"Available downtime","PassiveDetails":"Passive downtime by period","SessionProgress":"Session progress"}, "DistributeMilestones": "Award weekly milestones", "RewardColumn": "Reward column {column}", "PlayerSelection": "Player selection",
       "Award": "Award rewards", "AwardConfirm": "Award the configured rewards to {count} selected characters?", "Awarded": "Rewards awarded.",
       "AlreadyAwarded": "This session has already been awarded. Use New session below to prepare another session.", "New": "New session", "ConfigureRewards": "Configure rewards",
       "History": "History", "HistoryName": "Feuerschwinge – Adventure History", "HistoryEmpty": "No sessions have been awarded yet.", "NoActors": "No player characters found.",

@@ -350,10 +350,16 @@ export class SessionService {
         }
       }
 
-      const record = { title: active.title, summary: active.summary, id: active.id, week, periodKey, passivePeriod: passiveConfig.period, multiplier, rewardColumns: Array.isArray(rewardColumns) ? rewardColumns.map(Number) : null, awardMilestones: Boolean(awardMilestones), participants, passiveRecipients, awardedAt: Date.now() };
+      const record = { title: active.title, summary: active.summary, id: active.id, gmUserId: active.gmUserId || null, week, periodKey, passivePeriod: passiveConfig.period, multiplier, rewardColumns: Array.isArray(rewardColumns) ? rewardColumns.map(Number) : null, awardMilestones: Boolean(awardMilestones), participants, passiveRecipients, awardedAt: Date.now() };
       const page = game.settings.get(MODULE_ID, SETTINGS.SESSION_HISTORY_ENABLED) ? await createHistoryPage(record) : null;
       await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, { ...active, status: "awarded", awardedAt: record.awardedAt, historyPageUuid: page?.uuid ?? null });
       await storeHistoryRecord(record, page?.uuid ?? null);
+      if (game.settings.get(MODULE_ID, "worldRole") === "primary") {
+        try {
+          const { campaignAction, campaignState } = await import("../campaign/service.mjs");
+          await campaignAction("completedGM", { revision: campaignState().revision, historyId: String(record.id) });
+        } catch (error) { ui.notifications.warn("Session abgeschlossen; SL-Belohnung muss nachgetragen werden: " + error.message); }
+      }
       Hooks.callAll("downtimeManager.sessionCompleted", foundry.utils.deepClone(record));
       return record;
     } catch (error) {
@@ -558,12 +564,17 @@ export class SessionService {
     const key = "DOWNTIME_MANAGER.Session.MilestoneOrigin";
     const rows = data.sources.map(entry => {
       const date = entry.timestamp ? new Date(entry.timestamp) : null;
-      const when = date && Number.isFinite(date.getTime()) ? date.toLocaleString(game.i18n.lang) : entry.week;
+      // Earlier reconciliations stored synthetic noon UTC, never an award time.
+      const importedDate = entry.sessionDate || (entry.westmarchesSessionId && date && Number.isFinite(date.getTime()) ? date.toISOString().slice(0, 10) : "");
+      const when = entry.westmarchesSessionId
+        ? `${importedDate ? `Sessiondatum: ${importedDate}` : entry.week || ""} · Vergabezeitpunkt unbekannt`
+        : date && Number.isFinite(date.getTime()) ? `Foundry-Eintrag: ${date.toLocaleString(game.i18n.lang)}` : entry.week;
       const source = game.i18n.localize(`${key}.Types.${entry.source}`);
       return `<li><strong>${escape(source)}: ${escape(entry.title)}</strong> · ${escape(when)}: ${entry.milestone > 0 ? "+" : ""}${entry.milestone}</li>`;
     }).join("");
     return foundry.applications.api.DialogV2.wait({
       window: { title: `${actor.name} · ${game.i18n.localize(key + ".Title")}` },
+      classes: ["downtime-manager", "tovf-milestone-history"],
       content: `<p>${game.i18n.format(key + ".Totals", data)}</p><ul>${rows}</ul>${data.difference ? `<p>${game.i18n.format(key + ".Difference", data)}</p>` : ""}`,
       buttons: [{ action: "close", label: game.i18n.localize("Close"), default: true }],
       rejectClose: false

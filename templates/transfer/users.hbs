@@ -1,0 +1,21 @@
+<div class="tovf-campaign-body">
+  <h3>Benutzer exportieren</h3>
+  <p>Profile, Rollen, gewählter Charakter, Charakterrechte und Kampagnen-Personenzuordnungen. Passwörter, Berechtigungs-Sonderregeln und Makroleisten werden nicht übertragen.</p>
+  <details><summary>Benutzer auswählen</summary>{{#each users}}<label style="display:block"><input type="checkbox" name="exportUsers" value="{{id}}" checked> {{name}} · {{role}}</label>{{/each}}</details>
+  <button type="button" data-action="export">Ausgewählte Benutzer exportieren</button>
+  <h3>Benutzer importieren</h3>
+  <input type="file" name="usersFile" accept=".json,application/json">
+  <button type="button" data-action="preview">Importvorschau öffnen</button>
+  {{#if plan}}
+    <p>Vorhandene Zugänge gezielt zuordnen. Namensvorschläge bitte prüfen. Neue Benutzer erhalten die angezeigte Rolle; bestehende Rollen und Zugangsdaten werden nicht überschrieben.</p>
+    <table><thead><tr><th>Quellbenutzer</th><th>Rolle bei Neuanlage</th><th>Ziel / Aktion</th></tr></thead><tbody>
+      {{#each plan.rows}}<tr><td>{{source.name}}</td><td>{{role}}</td><td><select name="user.{{source.id}}"><option value="new" {{#if create}}selected{{/if}}>Neu anlegen</option><option value="skip">Überspringen</option>{{#each targets}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select><small>{{reason}}</small></td></tr>{{/each}}
+    </tbody></table>
+    <h4>Charakterrechte und gewählter Charakter</h4>
+    <p>Fehlende Charaktere werden nicht angelegt. Nach ihrem Transfer kannst du denselben Benutzerexport erneut importieren und die Zuordnungen ergänzen.</p>
+    <table><thead><tr><th>Quellcharakter</th><th>Zielcharakter</th></tr></thead><tbody>
+      {{#each plan.actors}}<tr><td>{{source.name}}</td><td><select name="actor.{{source.id}}"><option value="skip" {{#if skipped}}selected{{/if}}>Nicht übertragen / Charakter fehlt</option>{{#each targets}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select><small>{{reason}}</small></td></tr>{{/each}}
+    </tbody></table>
+    <button type="button" data-action="import">Zuordnungen prüfen und importieren</button>
+  {{/if}}
+</div>

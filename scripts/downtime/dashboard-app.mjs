@@ -16,14 +16,14 @@ export class DowntimeDashboardApp extends HandlebarsApplicationMixin(Application
     position: { width: 900, height: 720 },
     window: { title: "DOWNTIME_MANAGER.Dashboard.Title", resizable: true },
     actions: {
-      openStation: DowntimeDashboardApp.#openStation,
-      removeProject: DowntimeDashboardApp.#removeProject,
-      refresh: DowntimeDashboardApp.#refresh,
-      openSessions: DowntimeDashboardApp.#openSessions,
-      openProjectLibrary: DowntimeDashboardApp.#openProjectLibrary,
-      openStationPresets: DowntimeDashboardApp.#openStationPresets,
-      grantSelectedDowntime: DowntimeDashboardApp.#grantSelectedDowntime,
-      grantAllDowntime: DowntimeDashboardApp.#grantAllDowntime
+      openStation: DowntimeDashboardApp.openStation,
+      removeProject: DowntimeDashboardApp.removeProject,
+      refresh: DowntimeDashboardApp.refresh,
+      openSessions: DowntimeDashboardApp.openSessions,
+      openProjectLibrary: DowntimeDashboardApp.openProjectLibrary,
+      openStationPresets: DowntimeDashboardApp.openStationPresets,
+      grantSelectedDowntime: DowntimeDashboardApp.grantSelectedDowntime,
+      grantAllDowntime: DowntimeDashboardApp.grantAllDowntime
     }
   };
 
@@ -103,12 +103,12 @@ export class DowntimeDashboardApp extends HandlebarsApplicationMixin(Application
     };
   }
 
-  static async #openStation(event, target) {
+  static async openStation(event, target) {
     const actor = await fromUuid(target.dataset.uuid);
     if (actor) new StationApp(actor).render(true);
   }
 
-  static async #removeProject(event, target) {
+  static async removeProject(event, target) {
     const actor = await fromUuid(target.dataset.actorUuid);
     if (!actor) return;
     const confirmed = await foundry.applications.api.DialogV2.confirm({
@@ -132,20 +132,20 @@ export class DowntimeDashboardApp extends HandlebarsApplicationMixin(Application
     this.render();
   }
 
-  static #refresh() { this.render(); }
-  static #openSessions() { new SessionApp().render(true); }
-  static #openProjectLibrary() { new ProjectLibraryApp().render(true); }
-  static #openStationPresets() { new StationPresetApp().render(true); }
-  static async #grantSelectedDowntime(event) {
+  static refresh() { this.render(); }
+  static openSessions() { new SessionApp().render(true); }
+  static openProjectLibrary() { new ProjectLibraryApp().render(true); }
+  static openStationPresets() { new StationPresetApp().render(true); }
+  static async grantSelectedDowntime(event) {
     event.preventDefault();
     const uuids = Array.from(this.element.querySelectorAll('[name="directDowntimeActors"]:checked')).map(input => input.value);
-    await this.#grantDowntime(uuids, false);
+    await DowntimeDashboardApp.prototype.grantDowntime.call(this, uuids, false);
   }
-  static async #grantAllDowntime(event) {
+  static async grantAllDowntime(event) {
     event.preventDefault();
-    await this.#grantDowntime(playerCharacters().map(actor => actor.uuid), true);
+    await DowntimeDashboardApp.prototype.grantDowntime.call(this, playerCharacters().map(actor => actor.uuid), true);
   }
-  async #grantDowntime(uuids, allCharacters) {
+  async grantDowntime(uuids, allCharacters) {
     const amount = Number(this.element.querySelector('[name="directDowntimeAmount"]')?.value);
     if (!uuids.length) return ui.notifications.warn(game.i18n.localize("DOWNTIME_MANAGER.Dashboard.Errors.NoCharacters"));
     if (!Number.isFinite(amount) || amount <= 0) return ui.notifications.warn(game.i18n.localize("DOWNTIME_MANAGER.Dashboard.Errors.InvalidDowntime"));

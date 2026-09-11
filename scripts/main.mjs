@@ -1,4 +1,5 @@
 import { MODULE_ID } from "./core/constants.mjs";
+import { installConcentration } from "./concentration.mjs";
 import { registerMigrationSettings, runMigrations } from "./core/migrations.mjs";
 import {
   installLegacyNamespaceGuard,
@@ -135,6 +136,7 @@ Hooks.once("init", () => {
   installActiveEffectChangesUi();
   installSpellScrollTools();
   installSpellNameMarkers();
+  installConcentration();
   installEffectGroups();
   registerTokenPresets();
   installArgonBlackFlagCompatibility();

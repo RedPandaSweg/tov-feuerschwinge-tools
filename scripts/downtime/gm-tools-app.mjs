@@ -1,4 +1,7 @@
 import { MODULE_ID } from "./constants.mjs";
+import { DowntimeDashboardApp } from "./dashboard-app.mjs";
+import { DowntimeService } from "./downtime-service.mjs";
+import { evidenceKey, milestoneEvidence } from "../campaign/milestone-evidence.mjs";
 import { GMToolsService } from "./gm-tools-service.mjs?v=3.2.7-flag-database-2";
 import { milestoneEntries, actorLevel, highestMilestoneProgress, levelFromMilestones, sessionProgress } from "./session-service.mjs";
 import { openVoidTaintConfig } from "../void-taint/config-app.mjs";
@@ -21,6 +24,14 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     position: { width: 980, height: "auto" },
     window: { title: "DOWNTIME_MANAGER.GMTools.Title", resizable: true },
     actions: {
+      openStation: DowntimeDashboardApp.openStation,
+      openProjectLibrary: DowntimeDashboardApp.openProjectLibrary,
+      openStationPresets: DowntimeDashboardApp.openStationPresets,
+      openSessions: DowntimeDashboardApp.openSessions,
+      removeDashboardProject: DowntimeDashboardApp.removeProject,
+      grantSelectedDowntime: DowntimeDashboardApp.grantSelectedDowntime,
+      grantAllDowntime: DowntimeDashboardApp.grantAllDowntime,
+      saveDowntime: GMToolsApp.#saveDowntime,
       addMilestoneRow: GMToolsApp.#addMilestoneRow,
       removeMilestoneRow: GMToolsApp.#removeMilestoneRow,
       moveMilestoneRow: GMToolsApp.#moveMilestoneRow,
@@ -68,7 +79,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this.databaseSelectedUuids = new Set();
     this._milestoneAuditInitialized = false;
     this._updateHook = Hooks.on("updateActor", actor => {
-      if (this.rendered && (!this.actorUuid || actor.uuid === this.actorUuid)) this.render();
+      if (this.rendered && (["projects", "downtime"].includes(this.tab) || !this.actorUuid || actor.uuid === this.actorUuid)) this.render();
     });
   }
 
@@ -79,6 +90,10 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   _onRender(context, options) {
     super._onRender(context, options);
+    const actor = game.actors.find(a => a.uuid === this.actorUuid);
+    this._milestoneSignature = actor ? JSON.stringify(milestoneEntries(actor)) : "";
+    this._milestoneEvidence = actor ? milestoneEvidence(actor.uuid) : [];
+    this._downtimeSignature = actor ? JSON.stringify({ downtime: DowntimeService.get(actor), passiveDowntime: sessionProgress(actor).passiveDowntime ?? {} }) : "";
     this.element.classList.toggle("tovf-gm-character-view", this.tab === "characters");
     this.#numberMilestones();
     if (!this._milestoneAuditInitialized) {
@@ -190,13 +205,15 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       return { uuid: actor.uuid, name: actor.name, img: actor.img, milestones, actualLevel, expectedLevel };
     }).filter(entry => entry.actualLevel !== entry.expectedLevel);
     const undo = GMToolsService.undoData();
+    const undoTab = undo.tab ?? (undo.kind === "flags" ? "database" : undo.kind === "setting" ? "session" : undo.before?.projects ? "projects" : "diagnostics");
     return {
       ...context,
       tab: this.tab,
-      tabs: ["characters", "projects", "session", "voidTaint", "database", "diagnostics"].map(id => ({
+      dashboard: ["projects", "downtime"].includes(this.tab) ? await DowntimeDashboardApp.prototype._prepareContext.call(this) : null,
+      tabs: ["characters", "projects", "downtime", "session", "voidTaint", "database", "diagnostics"].map(id => ({
         id,
         active: this.tab === id,
-        label: game.i18n.localize(`DOWNTIME_MANAGER.GMTools.Tabs.${id}`)
+        label: id === "characters" ? "Meilensteine" : id === "projects" ? "Projektübersicht" : id === "downtime" ? "Downtime" : game.i18n.localize(`DOWNTIME_MANAGER.GMTools.Tabs.${id}`)
       })),
       actors: actors.map(actor => ({ uuid: actor.uuid, name: actor.name, img: actor.img, selected: actor.uuid === this.actorUuid })),
       selected: selected ? {
@@ -206,7 +223,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
         downtime: selected.downtime,
         milestones: selected.progress.milestones,
         milestoneLevel: levelFromMilestones(selected.progress.milestones),
-        milestoneEntries: milestoneEntries(selected.actor).map((entry, index) => ({ ...entry, number: index + 1, originalIndex: index })),
+        milestoneEntries: milestoneEntries(selected.actor).map((entry, index) => ({ ...entry, evidenceKey: evidenceKey(entry), number: index + 1, originalIndex: index })),
         sessionsPlayed: selected.progress.sessionsPlayed,
         lastMilestoneWeek: selected.progress.lastMilestoneWeek ?? "",
         passiveDowntime: JSON.stringify(selected.progress.passiveDowntime ?? {}, null, 2),
@@ -243,8 +260,9 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       })) : [],
       hasDiagnostics: diagnostics.length > 0,
       database,
-      undo: undo.kind ? {
+      undo: undo.kind && undoTab === this.tab ? {
         available: true,
+        subject: undo.actorUuid ? `Letzte Korrektur: ${game.actors.find(a => a.uuid === undo.actorUuid)?.name ?? "Charakter"}` : "Letzte Korrektur in diesem Bereich",
         date: new Intl.DateTimeFormat(game.i18n.lang, { dateStyle: "medium", timeStyle: "short" }).format(new Date(undo.timestamp))
       } : { available: false }
     };
@@ -265,7 +283,48 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     list.lastElementChild.querySelector('select')?.focus();
   }
 
+  #bindMilestoneEvidence() {
+    for (const row of this.element.querySelectorAll('[data-milestone-row]')) {
+      const select = row.querySelector('[name="milestoneEvidence"]');
+      if (!select || select.dataset.bound) continue;
+      select.dataset.bound = "true";
+      const source = row.querySelector('[name="milestoneSource"]');
+      const fill = key => {
+        select.replaceChildren(new Option("Ohne Verknüpfung / bestehende Notiz", ""));
+        const options = (this._milestoneEvidence ?? []).filter(c => c.source === source.value);
+        for (const c of options) select.add(new Option(c.label, c.key));
+        const match = options.find(c => c.key === key || c.aliases?.includes(key));
+        if (key && !match) select.add(new Option("Bestehender Nachweis (Quelldaten fehlen)", key));
+        select.value = match?.key ?? key ?? "";
+      };
+      fill(select.dataset.evidenceKey);
+      source.addEventListener("change", () => { fill(""); this.#refreshEvidenceUsage(); });
+      select.addEventListener("change", () => {
+        const match = this._milestoneEvidence.find(c => c.key === select.value);
+        if (match) {
+          const note = row.querySelector('[name="milestoneNote"]');
+          if (!note.value) note.value = match.fields.note;
+          row.querySelector('[name="milestoneWeek"]').value = match.fields.week || "";
+        }
+        this.#refreshEvidenceUsage();
+      });
+    }
+  }
+
+  #refreshEvidenceUsage() {
+    const selects = [...this.element.querySelectorAll('[data-milestone-row] [name="milestoneEvidence"]')];
+    for (const select of selects) for (const option of select.options) {
+      const evidence = this._milestoneEvidence?.find(c => c.key === option.value);
+      if (!evidence) continue;
+      const used = selects.filter(other => other !== select && other.value === option.value).length;
+      option.disabled = used >= evidence.capacity && select.value !== option.value;
+      option.textContent = evidence.label + (option.disabled ? " · bereits zugeordnet" : "");
+    }
+  }
+
   #numberMilestones() {
+    this.#bindMilestoneEvidence();
+    this.#refreshEvidenceUsage();
     const rows = Array.from(this.element.querySelectorAll('[data-milestone-row]'));
     rows.forEach((row, index) => {
       row.querySelector('[data-milestone-number]').textContent = String(index + 1);
@@ -293,28 +352,38 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#numberMilestones();
   }
 
+  static async #saveDowntime(event) {
+    event.preventDefault();
+    const root = this.element.querySelector('[data-downtime-editor]');
+    if (!root || !this.actorUuid) return;
+    const values = { downtime: root.querySelector('[name="downtime"]').value, passiveDowntime: root.querySelector('[name="passiveDowntime"]').value, signature: this._downtimeSignature };
+    if (!await foundry.applications.api.DialogV2.confirm({ window: { title: "Downtime korrigieren" }, content: `<p>Downtime auf ${foundry.utils.escapeHTML(values.downtime)} setzen und die passive Downtime übernehmen?</p>`, rejectClose: false })) return;
+    await this.#execute(() => GMToolsService.updateDowntime(this.actorUuid, values), "DOWNTIME_MANAGER.GMTools.Notifications.CharacterSaved");
+  }
+
   static async #saveCharacter(event) {
     event.preventDefault();
     const root = this.element.querySelector("[data-character-editor]");
     if (!root || !this.actorUuid) return;
     const current = await GMToolsService.characterData(this.actorUuid);
     const values = {
-      downtime: root.querySelector('[name="downtime"]')?.value,
+      milestoneSignature: this._milestoneSignature,
+      downtime: undefined,
       milestoneEntries: Array.from(root.querySelectorAll('[data-milestone-row]'), row => ({
         originalIndex: row.dataset.originalIndex,
         source: row.querySelector('[name="milestoneSource"]').value,
+        evidenceKey: row.querySelector('[name="milestoneEvidence"]')?.value ?? "",
         note: row.querySelector('[name="milestoneNote"]').value,
         week: row.querySelector('[name="milestoneWeek"]').value
       })),
       sessionsPlayed: root.querySelector('[name="sessionsPlayed"]')?.value,
       lastMilestoneWeek: root.querySelector('[name="lastMilestoneWeek"]')?.value,
-      passiveDowntime: root.querySelector('[name="passiveDowntime"]')?.value
+      passiveDowntime: undefined
     };
     const confirmed = await foundry.applications.api.DialogV2.confirm({
       window: { title: game.i18n.localize("DOWNTIME_MANAGER.GMTools.ConfirmChange") },
       content: `<p>${game.i18n.localize("DOWNTIME_MANAGER.GMTools.ConfirmChangeHint")}</p>
         <table><tr><th></th><th>${game.i18n.localize("DOWNTIME_MANAGER.GMTools.Before")}</th><th>${game.i18n.localize("DOWNTIME_MANAGER.GMTools.After")}</th></tr>
-        <tr><td>${game.i18n.localize("DOWNTIME_MANAGER.GMTools.Downtime")}</td><td>${current.downtime}</td><td>${foundry.utils.escapeHTML(String(values.downtime))}</td></tr>
         <tr><td>${game.i18n.localize("DOWNTIME_MANAGER.GMTools.Milestones")}</td><td>${current.progress.milestones}</td><td>${foundry.utils.escapeHTML(String(values.milestoneEntries.length))}</td></tr>
         <tr><td>${game.i18n.localize("DOWNTIME_MANAGER.GMTools.SessionsPlayed")}</td><td>${current.progress.sessionsPlayed}</td><td>${foundry.utils.escapeHTML(String(values.sessionsPlayed))}</td></tr></table>`
     });

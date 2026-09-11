@@ -1,0 +1,182 @@
+<div class="tovf-campaign-body">
+  <nav class="tovf-campaign-tabs">
+    {{#each tabs}}<button type="button" data-action="command" data-command="tab" data-tab="{{id}}" class="{{#if active}}active{{/if}}">{{label}}</button>{{/each}}
+    <button type="button" data-action="command" data-command="refresh" title="Aktualisieren"><i class="fa-solid fa-rotate"></i></button>
+  </nav>
+  <p class="hint">{{summary}}{{#if exportedAt}} · Datenstand: {{exportedAt}}{{/if}}</p>
+
+  {{#if rewardsTab}}
+    {{#if admin}}<p>Wähle die Person, deren Guthaben du verwalten möchtest. Als Spielleiter kannst du für sie eine Belohnung auf einen ihrer Charaktere einlösen.</p>
+      <div class="form-group"><label>Guthaben von</label><select name="rewardPerson">{{#each rewardPeople}}<option value="{{id}}" {{#if rewardSelected}}selected{{/if}}>{{name}}</option>{{else}}<option value="">Keine zugeordneten Spielleiter oder Serverteam-Mitglieder</option>{{/each}}</select></div>
+    {{else}}<p>Hier kannst du dein Guthaben auf deine Charaktere verteilen.</p>
+      <div class="form-group"><label>Guthaben von</label><select disabled>{{#each rewardPeople}}<option selected>{{name}}</option>{{else}}<option selected>Dein Benutzer ist noch keiner Person zugeordnet</option>{{/each}}</select></div>
+    {{/if}}
+    <p class="hint">Gold richtet sich nach dem Charakterlevel vor der Einlösung.</p>
+    {{#if rewardUnlinked}}<p class="hint">Dieser Foundry-Benutzer ist noch keiner Kampagnenperson zugeordnet. Unter „Spielerzuordnung“ den Benutzer auswählen, damit vorhandene Ansprüche und Charaktere angezeigt werden.</p>{{/if}}
+    <div class="form-group"><label>Charakter für die Einlösung</label><select name="redeemActor"><option value="">Bitte wählen</option>{{#each ownCharacters}}<option value="{{actorUuid}}">{{name}} · {{foundryMilestones}} Meilensteine · Level {{expectedLevel}}</option>{{/each}}</select></div>
+    {{#unless ownCharacters.length}}<p class="hint">Für diese Person ist noch kein Charakter zugeordnet. Spielerbenutzer und Charakterzuordnung unter „Spielerzuordnung“ beziehungsweise „Charaktere“ prüfen.</p>{{/unless}}
+    <table><thead><tr><th>Nutzer</th><th>Herkunft</th><th>Inhalt</th><th>Offen / Gesamt</th><th></th></tr></thead><tbody>
+      {{#each claims}}<tr><td>{{name}}</td><td>{{kindLabel}}<br><small>{{sourceLabel}}</small></td><td>{{rewardLabel}}</td><td>{{remaining}} / {{count}}</td><td>{{#if canRedeem}}<button type="button" data-action="command" data-command="redeem" data-id="{{id}}">Einlösen</button>{{/if}}</td></tr>{{else}}<tr><td colspan="5">Noch keine Belohnungsansprüche gebucht.</td></tr>{{/each}}
+    </tbody></table>
+    {{#if admin}}
+    <details><summary>Guthaben korrigieren</summary>
+      <p>Gesamtanspruch und bereits außerhalb des Moduls verwendete Belohnungen berichtigen. Tatsächliche Einlösungen bleiben erhalten. Es werden keine Charakterwerte geändert.</p>
+      {{#each claims}}<fieldset><legend>{{kindLabel}} · {{sourceLabel}}</legend>
+        <label>Gesamtanspruch <input type="number" name="claimTotal.{{id}}" value="{{count}}" min="0" step="1"></label>
+        <label>Bereits außerhalb des Moduls verwendet <input type="number" name="claimUsed.{{id}}" value="{{historicalUsed}}" min="0" step="1"></label>
+        <label>Begründung <input type="text" name="claimReason.{{id}}"></label>
+        <button type="button" data-action="command" data-command="correctClaim" data-id="{{id}}">Korrektur speichern</button>
+      </fieldset>{{/each}}
+      {{#each corrections}}<p>{{date}} · {{userName}}: Gesamt {{before.total}} → {{after.total}}, extern verwendet {{before.historicalUsed}} → {{after.historicalUsed}}. {{reason}}</p>{{/each}}
+    </details>
+    {{/if}}
+    <h3>Einlösungen</h3>
+    {{#each redemptions}}
+      <details><summary>{{date}} · {{actorName}} · {{kindLabel}} · {{statusLabel}}</summary>
+        <p>Level {{level}} vor Einlösung · {{milestones}} Meilensteine · {{gold}} Gold · Quelle: {{sourceId}}</p>
+        {{#if requestedByName}}<p>Ausgeführt von: {{requestedByName}}</p>{{/if}}
+        {{#each items}}<p>{{name}} × {{quantity}}</p>{{/each}}
+        {{#if needsReview}}<p>Bestätigte Schritte: {{stepsLabel}}. Nach einer Unterbrechung kann auch der unmittelbar nächste Schritt bereits erfolgt sein. Charakterstand prüfen.</p><p>{{error}}</p>
+          <select name="resolveStatus.{{id}}"><option value="redeemed">Vergabe vollständig abgeschlossen</option><option value="void">Vergabe vollständig zurückgenommen, Guthaben freigeben</option></select>
+          <input name="resolveReason.{{id}}" type="text" placeholder="Prüfung und manuelle Korrekturen dokumentieren">
+          <button type="button" data-action="command" data-command="resolve" data-id="{{id}}">Prüfung abschließen</button>
+        {{/if}}
+      </details>
+    {{else}}<p class="hint">Noch keine Einlösungen.</p>{{/each}}
+  {{/if}}
+
+  {{#if charactersTab}}
+    <details open>
+    <summary>Charakterübersicht & Zuordnungen</summary>
+    <input type="search" name="search" placeholder="Charakter oder Nutzer suchen">
+    <p class="hint">Westmarches-Werte sind ein Ausgangsstand. Der Import überschreibt keine Meilensteine, kein Gold und keine Gegenstände in Foundry.</p>
+    <div class="tovf-character-table-scroll"><table class="tovf-character-table"><colgroup><col style="width:17%"><col style="width:19%"><col style="width:47%"><col style="width:17%"></colgroup><thead><tr><th>Charakter / Nutzer</th><th>Westmarches</th><th>Foundry</th><th>Zuordnung</th></tr></thead><tbody>
+      {{#each characters}}<tr data-search="{{name}} {{personName}}"><td>{{name}}<br><small>{{personName}}</small></td><td>{{milestones}} Meilensteine · Level {{level}}</td><td>{{#if actorUuid}}<div class="tovf-character-foundry"><span>{{foundryMilestones}} Meilensteine · Level {{expectedLevel}}</span><button type="button" data-action="command" data-command="history" data-uuid="{{actorUuid}}" title="Herkunft der Meilensteine anzeigen">Herkunft</button>{{#if ../admin}}<button type="button" data-action="command" data-command="milestoneEditor" data-uuid="{{actorUuid}}" title="Meilensteine zuordnen">Zuordnen</button>{{/if}}</div>{{#if mismatch}}<strong>Abweichung prüfen</strong>{{/if}}{{else}}Nicht zugeordnet{{/if}}</td><td>{{#if ../admin}}<select name="character.{{id}}"><option value="">Nicht zugeordnet</option>{{#each actorOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select>{{else}}{{actorName}}{{/if}}</td></tr>{{/each}}
+    </tbody></table>
+    </div>
+    {{#if admin}}<button type="button" data-action="command" data-command="links" title="Charakterzuordnungen speichern">Speichern</button>{{/if}}
+    </details>
+    {{#if admin}}
+    <h3>Meilensteinnachweise abgleichen</h3>
+    <p class="hint">Für zugeordnete Charaktere: vorhandene ungeklärte Meilensteine mit Westmarches-Sessions belegen. Anmeldungen sind Vorschläge, keine bestätigte Teilnahme. Pro Woche ist höchstens ein Sessionmeilenstein möglich. Leere Starteinträge werden erst nach deiner Bestätigung ersetzt; bewusst vergebene Startmeilensteine bitte frei lassen.</p>
+    {{#each reconciliation}}
+      <details><summary>{{name}} · {{empty}} ungeklärte Einträge · Foundry {{total}} / Westmarches {{remoteTotal}}</summary>
+        {{#each groups}}
+          <div class="form-group"><label>{{week}}{{#if documented}} · bereits dokumentiert{{/if}}</label>
+          <select name="evidence.{{../characterId}}" {{#if documented}}disabled{{/if}}>
+            <option value="">Nicht übernehmen</option>
+            {{#each candidates}}<option value="{{id}}">{{date}} · {{title}} · Anmeldung: {{registration}}{{#if played}} · Session als gespielt bestätigt{{/if}}</option>{{/each}}
+          </select></div>
+        {{else}}<p>Keine vergangenen Sessionanmeldungen gefunden. Herkunft manuell prüfen.</p>{{/each}}
+        {{#if empty}}<button type="button" data-action="command" data-command="reconcile" data-id="{{characterId}}">Ausgewählte Nachweise übernehmen</button>{{else}}<p>Keine leeren Herkunftseinträge verfügbar. Bestehende Einträge werden nicht überschrieben.</p>{{/if}}
+      </details>
+    {{/each}}
+    {{/if}}
+  {{/if}}
+
+  {{#if sessionsTab}}
+    <details><summary>Foundry-Sessions mit Westmarches verknüpfen</summary>
+      <p>Gesamte Foundry-Historie, unabhängig vom Abrechnungsmonat. Zuerst fehlende Spielleiter zuordnen und „Spielleiter speichern & Vorschläge berechnen“ wählen. Danach Sessionpaare prüfen und speichern. Foundry-Zeiten sind Eintragszeiten und dürfen vom Termin abweichen.</p>
+      {{#each sessionMatches}}
+        <fieldset><legend>{{title}}</legend>
+          <p>Foundry-Eintrag: {{dateLabel}} · {{reason}}{{#if missingRemote}} · Verknüpfte Westmarches-Session fehlt im Export{{/if}}</p>
+          <label>Spielleiter <select name="historyGm.{{id}}"><option value="">Bitte zuordnen</option>{{#each gmOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
+          <label>Westmarches-Session <select name="historyLink.{{id}}"><option value="">Nicht verknüpft</option>{{#if missingRemote}}<option value="{{link.westmarchesId}}" selected>Gespeicherte Verbindung beibehalten</option>{{/if}}{{#each options}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{date}} · {{title}}</option>{{/each}}</select></label>
+        </fieldset>
+      {{else}}<p>In dieser Welt ist noch keine strukturierte Sessionhistorie vorhanden.</p>{{/each}}
+      <button type="button" data-action="command" data-command="sessionGms">Spielleiter speichern & Vorschläge berechnen</button>
+      <button type="button" data-action="command" data-command="sessionLinks">Ausgewählte Sessionverbindungen speichern</button>
+    </details>
+    <div class="form-group"><label>Abrechnungsmonat</label><input type="month" name="month" value="{{month}}"></div>
+    <p>Zum Exportzeitpunkt beendete Westmarches-Sessions gelten automatisch als gespielt. Abgesagte oder ausdrücklich ausgeschlossene Termine zählen nicht. Für neue, verschobene oder entfernte Termine bitte einen aktuellen Export importieren.</p>
+    {{#each sessions}}
+      <details><summary>{{displayDate}} · {{title}}</summary>
+        <p><strong>Spielleiter:</strong> {{name}} · <strong>Durchführung:</strong> {{statusLabel}}</p>
+        <div class="form-group"><label>Session berücksichtigen</label><select name="session.{{id}}"><option value="">Automatisch nach Export</option><option value="excluded" {{#if excluded}}selected{{/if}}>Ausgeschlossen</option></select></div>
+        <ul>{{#each participants}}<li>{{name}} · Anmeldung: {{registrationStatus}}</li>{{/each}}</ul>
+        {{#if gmBooked}}<p>SL-Belohnung bereits gebucht.</p>{{else}}{{#if played}}<label>Bereits außerhalb des Moduls verwendet <input type="number" name="gmUsed.{{id}}" value="0" min="0" step="1"></label><button type="button" data-action="command" data-command="grantGM" data-id="{{id}}">SL-Belohnung prüfen und buchen</button>{{/if}}{{/if}}
+      </details>
+    {{else}}<p>Keine Sessions in diesem Monat.</p>{{/each}}
+    <button type="button" data-action="command" data-command="review">Sessionausnahmen speichern</button>
+    <h3>Serverteam wochenweise buchen</h3>
+    <p>Das dauerhaft aktive Serverteam ist vorausgewählt. Die Auswahl kann für jede Wochenbuchung angepasst werden.</p>
+    {{#each weeks}}<details><summary>{{week}} · {{count}} Belohnungen je Mitglied{{#if booked}} · Bereits abgerechnet{{/if}}</summary>
+      {{#if historical}}<p>Nachtrag: Bitte die damaligen Serverteam-Mitglieder prüfen.</p>{{/if}}
+      {{#each options}}<label><input type="checkbox" name="weekRecipients.{{../week}}" value="{{id}}" {{#if selected}}checked{{/if}} {{#if ../booked}}disabled{{/if}}> {{name}}</label>{{/each}}
+      {{#unless booked}}{{#if closed}}<button type="button" data-action="command" data-command="settleWeek" data-week="{{week}}">Woche buchen</button>{{else}}<p>Woche läuft noch.</p>{{/if}}{{/unless}}
+    </details>{{else}}<p>Keine passenden Wochen; Datenstand und Regelkonfiguration prüfen.</p>{{/each}}
+    <h3>Serverteam-Monatsvorschau</h3>
+    {{#if previewError}}<p>{{previewError}}</p>{{/if}}
+    {{#if preview}}<p>{{preview.sessions}} gespielte Sessions / {{preview.gms}} unterschiedliche aktive Spielleiter.</p>
+      {{#if preview.weekly}}<p><strong>{{preview.activeWeeks}} aktive Meilensteinwochen:</strong> {{#each preview.weeks}}{{this}} {{/each}}</p><p class="hint">Montag bis Sonntag. Eine Woche zählt im Monat ihres Sonntags, auch wenn eine zugehörige Session im Vormonat stattfand.</p>{{/if}}
+      <p>Serverteam-Belohnungen: {{preview.community.base}} vor Faktor und Rundung → <strong>{{preview.community.amount}}</strong>. Aktive Serverteam-Mitglieder: {{preview.recipients.length}}.</p>
+      <p>Sessions mit unklaren Datumsangaben: {{preview.unresolved.length}}.{{#if poolMode}} Nicht zugewiesener Pool: {{preview.community.unassigned}}.{{/if}}</p>
+      <table><thead><tr><th>Herkunft</th><th>Empfänger</th><th>Anzahl</th><th>Status</th></tr></thead><tbody>{{#each preview.claims}}<tr><td>{{kindLabel}} · {{sourceLabel}}</td><td>{{personName}}</td><td>{{count}}</td><td>{{#if booked}}Bereits gebucht{{else}}Neu{{/if}}</td></tr>{{/each}}</tbody></table>
+      {{#if settled}}<p><strong>Dieser Monat wurde bereits gebucht.</strong> Die Vorschau zeigt den aktuellen Prüfstand; die gespeicherte Abrechnung bleibt unverändert.</p>{{else}}<button type="button" data-action="command" data-command="settle">Monatsabrechnung prüfen und buchen</button>{{/if}}
+    {{/if}}
+  {{/if}}
+
+  {{#if peopleTab}}
+    <button type="button" data-action="command" data-command="userTransfer">Benutzer importieren / exportieren</button>
+    {{#if poolMode}}<div class="form-group"><label>Monat der Poolverteilung</label><input type="month" name="month" value="{{month}}"></div>{{/if}}
+    <button type="button" data-action="command" data-command="autoLinks">Zuordnungen erneut erkennen</button>
+    <table><thead><tr><th>Spieler</th><th>Foundry-Benutzer</th><th>Serverteam</th>{{#if poolMode}}<th>Anzahl aus Pool</th>{{/if}}</tr></thead><tbody>
+      {{#each people}}<tr><td><input type="text" name="personName.{{id}}" value="{{displayName}}" placeholder="{{name}}" aria-label="Anzeigename"><small>Charaktere: {{characterNames}}</small></td><td><select name="person.{{id}}"><option value="">Nicht zugeordnet</option>{{#each users}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></td><td class="tovf-serverteam-cell"><input type="checkbox" name="recipients" value="{{id}}" {{#if recipient}}checked{{/if}}></td>{{#if ../poolMode}}<td><input type="number" name="allocation.{{id}}" value="{{allocation}}" min="0" step="1"></td>{{/if}}</tr>{{/each}}
+    </tbody></table>
+    {{#if poolMode}}<p class="hint">Der gemeinsame Pool wird auf die aktiven Serverteam-Mitglieder verteilt. „Anzahl aus Pool“ legt fest, wie viele Belohnungen das jeweilige Mitglied daraus erhält.</p>{{/if}}
+    {{#if localUsers.length}}<details><summary>Weitere Foundry-Nutzer als Empfänger eintragen</summary>{{#each localUsers}}<label><input type="checkbox" name="localUsers" value="{{id}}"> {{name}}</label>{{/each}}</details>{{/if}}
+    <button type="button" data-action="command" data-command="links">Spielerzuordnung & Serverteam speichern</button>
+  {{/if}}
+
+  {{#if rulesTab}}
+    <p>Regelversionen gelten ab dem gewählten Datum. Serverteamberechnungen verwenden die am Monatsersten gültige Version. Ansprüche speichern ihre Inhaltsquelle. Bei Sessionkopplung wird die aktuelle Sessiontabelle beim Einlösen verwendet; eigene Inhalte werden im Anspruch gespeichert.</p>
+    <div class="form-group"><label>Gültig ab</label><input type="date" name="effectiveFrom" value="{{rules.effectiveFrom}}"></div>
+    <fieldset><legend>SL-Belohnungen für geleitete Sessions</legend><label><input type="checkbox" name="gm.enabled" {{#if rules.gm.enabled}}checked{{/if}}> Aktiviert</label><div class="form-group"><label>Belohnungen pro geleiteter Session</label><input type="number" name="gm.count" value="{{rules.gm.count}}" min="0" step="1"></div></fieldset>
+    <fieldset><legend>Serverteam-Belohnungen für aktive Mitarbeit</legend>
+      <label><input type="checkbox" name="community.enabled" {{#if rules.community.enabled}}checked{{/if}}> Aktiviert</label>
+      <div class="form-group"><label>Berechnung</label><select name="community.mode">{{#each modes}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+      <p class="hint">Standard: eine Belohnung pro Woche mit mindestens einer gespielten Gildensession. Ohne aktive Woche gibt es keine Belohnung. Wochen laufen von Montag bis Sonntag und zählen im Monat ihres Sonntags.</p>
+      <div class="form-group"><label>Feste Anzahl</label><input type="number" name="community.fixed" value="{{rules.community.fixed}}" min="0" step="1"></div>
+      <div class="form-group"><label>Faktor</label><input type="number" name="community.factor" value="{{rules.community.factor}}" min="0" step="any"></div>
+      <div class="form-group"><label>Rundung</label><select name="community.rounding">{{#each roundings}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+      <div class="form-group"><label>Mindestanzahl</label><input type="number" name="community.minimum" value="{{rules.community.minimum}}" min="0" step="1"></div>
+      <div class="form-group"><label>Höchstanzahl (leer = unbegrenzt)</label><input type="number" name="community.maximum" value="{{rules.community.maximum}}" min="0" step="1"></div>
+      <div class="form-group"><label>Verteilung</label><select name="community.distribution">{{#each distributions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+    </fieldset>
+    {{#each rewards}}<fieldset data-reward-drop="{{kind}}"><legend>Inhalt: {{label}}</legend>
+      <div class="form-group"><label>Belohnungsinhalt</label><select name="{{kind}}.rewardMode" data-reward-mode><option value="session" {{#if sessionLinked}}selected{{/if}}>Wie normale Sessionbelohnung</option><option value="custom" {{#unless sessionLinked}}selected{{/unless}}>Eigener Inhalt</option></select></div>
+      <p class="hint">Die Sessionkopplung vergibt einen Meilenstein und alle für das Charakterlevel konfigurierten Sessiongegenstände einschließlich Gold und Downtime. Maßgeblich ist das Level vor der Einlösung.</p>
+      <div data-custom-reward {{#if sessionLinked}}hidden{{/if}}>
+      <div class="form-group"><label>Meilensteine</label><input type="number" name="{{kind}}.milestones" value="{{milestones}}" min="0" max="1000" step="1"></div>
+      <div class="form-group"><label>Goldberechnung</label><select name="{{kind}}.goldMode">{{#each goldModes}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+      <div class="form-group"><label>Fester Goldbetrag</label><input type="number" name="{{kind}}.gold" value="{{gold}}" min="0" step="any"></div>
+      <div class="form-group"><label>Goldfaktor</label><input type="number" name="{{kind}}.goldFactor" value="{{goldFactor}}" min="0" step="any"></div>
+      <p class="hint">Zusätzliche Gegenstände hier hineinziehen. Die Levelberechnung verwendet ausschließlich den Goldanteil der bestehenden Session-Belohnungstabelle.</p>
+      {{#each items}}<div class="form-group"><label>{{name}}</label><input type="number" name="{{../kind}}.item.{{@index}}" value="{{quantity}}" min="0" step="any"><button type="button" data-action="command" data-command="removeItem" data-kind="{{../kind}}" data-index="{{@index}}">Entfernen</button></div>{{/each}}
+      </div>
+    </fieldset>{{/each}}
+    <button type="button" data-action="command" data-command="rules">Regelversion speichern</button>
+    <details><summary>Offene Guthaben auf neue Inhalte umstellen</summary>
+      <p>Die Anzahl bleibt erhalten. Bereits eingelöste oder reservierte Belohnungen bleiben unverändert.</p>
+      <select name="applyKind"><option value="gm">SL-Belohnung</option><option value="community">Serverteam-Belohnung</option></select>
+      <select name="applyRule">{{#each versions}}<option value="{{id}}">{{name}}</option>{{/each}}</select>
+      <button type="button" data-action="command" data-command="openRewards">Änderung prüfen</button>
+    </details>
+  {{/if}}
+
+  {{#if importTab}}
+    <p>Wähle die Datei campaign.json aus dem Exporter. Zuerst werden die Änderungen angezeigt. Die Übernahme speichert die Quelldaten in dieser Welt und vergibt keine Belohnungen.</p>
+    <input name="snapshot" type="file" accept=".json,application/json">
+    <button type="button" data-action="command" data-command="loadImport">Export prüfen</button>
+    {{#if importPreview}}<h3>Änderungsvorschau</h3><p>Export: {{importPreview.exportedAt}}</p>
+      <table><thead><tr><th>Daten</th><th>Neu</th><th>Geändert</th><th>Im neuen Export nicht enthalten</th></tr></thead><tbody>
+        <tr><td>Charaktere</td><td>{{importPreview.characters.added.length}}</td><td>{{importPreview.characters.changed.length}}</td><td>{{importPreview.characters.absent.length}}</td></tr>
+        <tr><td>Personen</td><td>{{importPreview.people.added.length}}</td><td>{{importPreview.people.changed.length}}</td><td>{{importPreview.people.absent.length}}</td></tr>
+        <tr><td>Sessions</td><td>{{importPreview.sessions.added.length}}</td><td>{{importPreview.sessions.changed.length}}</td><td>{{importPreview.sessions.absent.length}}</td></tr>
+      </tbody></table><p>Geänderte Sessions müssen erneut geprüft werden. Bereits gebuchte Belohnungen bleiben bestehen. Der bisherige Quellbestand wird durch diesen Export ersetzt.</p>
+      <button type="button" data-action="command" data-command="import">Geprüften Datenbestand übernehmen</button>
+    {{/if}}
+    <h3>Prüfhinweise</h3><ul>{{#each issues}}<li>{{code}} · Session {{sessionId}} · Charakter {{characterId}}</li>{{else}}<li>Keine strukturellen Zuordnungsfehler im Export.</li>{{/each}}</ul>
+    <p class="hint">Der API-Client liefert keinen vollständigen Mitgliederbestand, kein ausdrückliches „gespielt“-Kennzeichen und kein vollständiges Belohnungsjournal. Historische Bestände sind deshalb kein Nachweis offener Ansprüche.</p>
+  {{/if}}
+</div>

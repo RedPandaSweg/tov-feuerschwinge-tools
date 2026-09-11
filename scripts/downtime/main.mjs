@@ -16,9 +16,11 @@ import { PlayerActorFolderSettingsApp } from "./player-actor-folder-settings-app
 import { SessionRewardConfigApp } from "./session-reward-config-app.mjs";
 import { HelpApp } from "./help-app.mjs";
 import { ProjectLibraryApp } from "./project-library-app.mjs";
-import { DowntimeDashboardApp } from "./dashboard-app.mjs";
 import { getSystemAdapter, registerSystemAdapter } from "./system-adapter.mjs";
 import { SessionApp } from "./session-app.mjs";
+import { openCampaign } from "../campaign/app.mjs";
+import { registerCampaignService, isCampaignWorld } from "../campaign/service.mjs";
+import { UserTransferApp } from "../transfer/user-transfer-app.mjs";
 import { DowntimeItemApp } from "./downtime-item-app.mjs";
 import { StationPresetApp } from "./station-preset-app.mjs";
 import { playerCharacters, sessionProgress, SessionService } from "./session-service.mjs";
@@ -60,7 +62,7 @@ function openStation(actor) {
 }
 
 function openDashboard() {
-  if (game.user.isGM) new DowntimeDashboardApp().render(true);
+  if (game.user.isGM) { const app = new GMToolsApp(); app.tab = "projects"; app.render(true); }
 }
 
 function openSessionManager() {
@@ -164,6 +166,12 @@ function registerTokenDoubleClick() {
 Hooks.once("init", async () => {
   if (game.system.id !== "black-flag") return;
   registerTokenDoubleClick();
+  registerCampaignService();
+  game.settings.registerMenu(MODULE_ID, "userTransfer", {
+    name: "Benutzer importieren / exportieren", label: "Benutzertransfer öffnen",
+    hint: "Benutzerprofile und Charakterzuordnungen zwischen Live-, Test- und Sessionwelt übertragen.",
+    icon: "fa-solid fa-users", type: UserTransferApp, restricted: true
+  });
 
   await loadTemplates();
 
@@ -312,6 +320,8 @@ Hooks.once("ready", async () => {
     createRecipeFromBaseItem,
     openDashboard,
     openSessionManager,
+    openCampaign,
+    openUserTransfer: () => new UserTransferApp().render({ force: true }),
     openProjectLibrary,
     openGMTools,
     openStationPresets: () => game.user.isGM && new StationPresetApp().render(true),
@@ -450,7 +460,8 @@ Hooks.on("getHeaderControlsApplicationV2", (app, controls) => {
 });
 
 Hooks.on("getSceneControlButtons", controls => {
-  if (game.system.id !== "black-flag" || !game.user.isGM) return;
+  if (game.system.id !== "black-flag") return;
+  if (!game.user.isGM) return;
 
   controls.feuerschwinge = {
     name: "feuerschwinge",
@@ -474,14 +485,6 @@ Hooks.on("getSceneControlButtons", controls => {
         button: true,
         onChange: openChallengeManager
       },
-      dashboard: {
-        name: "dashboard",
-        order: 3,
-        title: "DOWNTIME_MANAGER.Controls.OpenDashboard",
-        icon: "fa-solid fa-chart-simple",
-        button: true,
-        onChange: openDashboard
-      },
       gmTools: {
         name: "gmTools",
         order: 4,
@@ -498,9 +501,10 @@ Hooks.on("getSceneControlButtons", controls => {
         button: true,
         onChange: openCompendiumLibrary
       },
+      ...(isCampaignWorld() ? { campaign: { name: "campaign", order: 6, title: "Belohnungsverwaltung", icon: "fa-solid fa-gift", button: true, onChange: openCampaign } } : {}),
       settings: {
         name: "settings",
-        order: 6,
+        order: 7,
         title: "TOVF.Controls.OpenSettings",
         icon: "fa-solid fa-gear",
         button: true,
@@ -508,7 +512,7 @@ Hooks.on("getSceneControlButtons", controls => {
       },
       help: {
         name: "help",
-        order: 7,
+        order: 8,
         title: "TOVF.Help.Label",
         icon: "fa-solid fa-circle-question",
         button: true,

@@ -145,6 +145,7 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }).filter(player => player.actorUuids);
     return {
       active,
+      gmUsers: game.users.filter(u => u.role >= CONST.USER_ROLES.ASSISTANT).map(u => ({ id: u.id, name: u.name, selected: u.id === active.gmUserId })),
       isPrimaryWorld: worldRole === WORLD_ROLES.PRIMARY,
       isSessionWorld: worldRole === WORLD_ROLES.SESSION,
       workflowStatus: game.i18n.localize(`DOWNTIME_MANAGER.Session.Workflow.Statuses.${workflowStatusKey}`),
@@ -203,6 +204,7 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
   #formState() {
     return {
       title: this.element.querySelector('[name="title"]')?.value.trim() ?? "",
+      gmUserId: this.element.querySelector('[name="sessionGm"]')?.value ?? "",
       summary: this.element.querySelector('[name="summary"]')?.value.trim() ?? "",
       multiplier: Number(this.element.querySelector('[name="multiplier"]')?.value ?? 1),
       actorUuids: Array.from(this.element.querySelectorAll('[name="actors"]:checked')).map(input => input.value),

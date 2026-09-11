@@ -24,6 +24,7 @@
   {{#if isPrimaryWorld}}
   {{#if awarded}}<p class="notification info">{{localize "DOWNTIME_MANAGER.Session.AlreadyAwarded"}}</p>{{/if}}
   <div class="sc-session-fields"><label><span>{{localize "DOWNTIME_MANAGER.Session.Name"}}</span><input type="text" name="title" value="{{active.title}}" {{#if awarded}}disabled{{/if}}></label><div class="sc-session-package-action">{{#if workflowCanExportSession}}<button type="button" data-action="workflowExportSession"><i class="fa-solid fa-file-export"></i> {{localize "DOWNTIME_MANAGER.Session.Workflow.Prepare"}}</button>{{/if}}</div><label class="wide"><span>{{localize "DOWNTIME_MANAGER.Session.Summary"}}</span><textarea name="summary" {{#if awarded}}disabled{{/if}}>{{active.summary}}</textarea></label></div>
+  {{#if isPrimaryWorld}}<label>Spielleiter für die SL-Belohnung <select name="sessionGm" {{#if awarded}}disabled{{/if}}><option value="">Bitte auswählen</option>{{#each gmUsers}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>{{/if}}
   <details class="sc-session-players" {{#unless awarded}}open{{/unless}}>
     <summary>{{localize "DOWNTIME_MANAGER.Session.PlayerSelection"}}</summary>
     <div class="sc-session-actions">
