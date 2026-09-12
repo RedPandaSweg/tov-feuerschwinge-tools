@@ -9,7 +9,6 @@
 /debug.log
 /development/
 /module.release.tmp.zip
-/tools/
 
 # Abhängigkeiten und Testausgaben
 /node_modules/

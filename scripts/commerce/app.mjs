@@ -3,7 +3,7 @@ import { selectCharacters } from "../character-picker.mjs";
 import { getSystemAdapter } from "../downtime/system-adapter.mjs";
 import { formatCopper, itemQuantity, priceInCopper, purse, quantityForPrice, quantityUpdate } from "./currency.mjs?v=3.5.0-item-quantity-1";
 import { broadcastPeerTrade, commerceRequest } from "./socket.mjs?v=3.5.0-container-stock-1";
-import { AUCTION_HOUSE_FLAG, commerceState, isAuctionHouse, merchantAccess, merchantAllowsActor, merchantAvailableToUser, merchantConfig, merchantItemAvailableToActor, merchantStockQuantity, ownedCharacters } from "./service.mjs?v=3.5.0-container-stock-1";
+import { AUCTION_HOUSE_FLAG, commerceState, isAuctionHouse, merchantAccess, merchantAllowsActor, merchantAvailableToUser, merchantConfig, merchantItemAvailableToActor, merchantStockQuantity, ownedCharacters, rarityMinimumLevel } from "./service.mjs?v=3.5.0-container-stock-1";
 import { addItem, cleanTransferredItem } from "./transactions.mjs?v=3.5.0-item-quantity-1";
 import {
   addMerchantSpellScrollOffer, createSpellScrollData, merchantSpellScrollOffers,
@@ -161,8 +161,8 @@ function inventoryEntries(actor, multiplier, config, { management = false, disco
     const priceQuantity = quantityForPrice(item);
     const detailLabel = [config.displayQuantity ? `${quantity} verfügbar` : "", priceQuantity > 1 ? `Preis für ${priceQuantity}` : ""].filter(Boolean).join(" · ");
     return { id: item.id, actorId: actor.id, name: item.name, img: item.img, quantity, quantityForPrice: priceQuantity, detailLabel, categoryId: category.id,
-      categoryLabel: category.label, hidden, visible: management || (!hidden && (config.showZeroQuantity || quantity > 0)
-        && (!buyer || merchantItemAvailableToActor(item, buyer))),
+      categoryLabel: category.label, hidden, visible: management || (!hidden && (config.showZeroQuantity || quantity > 0)),
+      purchaseBlocked: !merchantItemAvailableToActor(item, buyer), minimumLevel: rarityMinimumLevel(item), levelLocked: !!buyer && !merchantItemAvailableToActor(item, buyer),
       discounted: discountPercent > 0, discountPercent, originalPrice: formatCopper(originalPriceCopper),
       originalPriceCoins: priceCoins(item, multiplier), priceCopper: effectivePriceCopper,
       price: formatCopper(effectivePriceCopper), priceCoins: priceCoins(item, effectiveMultiplier) };
@@ -181,8 +181,9 @@ function spellScrollOfferEntries(actor, multiplier, config, { management = false
     const detailLabel = config.displayQuantity ? `${offer.quantity} verfügbar` : "";
     return { id: offer.id, offerId: offer.id, virtual: true, actorId: actor.id, name: offer.name, img: offer.img,
       quantity: offer.quantity, quantityForPrice: 1, detailLabel, categoryId: category.id, categoryLabel: category.label,
-      hidden, visible: management || (!hidden && (config.showZeroQuantity || offer.quantity > 0)
-        && (!buyer || merchantItemAvailableToActor(itemLike, buyer))), discounted: discountPercent > 0, discountPercent,
+      hidden, visible: management || (!hidden && (config.showZeroQuantity || offer.quantity > 0)),
+      purchaseBlocked: !merchantItemAvailableToActor(itemLike, buyer), minimumLevel: rarityMinimumLevel(itemLike), levelLocked: !!buyer && !merchantItemAvailableToActor(itemLike, buyer),
+      discounted: discountPercent > 0, discountPercent,
       originalPrice: formatCopper(originalPriceCopper), originalPriceCoins: copperPriceCoins(originalPriceCopper),
       priceCopper: effectivePriceCopper, price: formatCopper(effectivePriceCopper), priceCoins: copperPriceCoins(effectivePriceCopper) };
   });
@@ -373,9 +374,9 @@ function merchantAccessProblem(merchant) {
 async function showMerchantAccessDenied(merchant) {
   const configured = merchantConfig(merchant).accessDeniedMessage;
   const problem = merchantAccessProblem(merchant);
-  const source = problem
+  const source = configured || (problem
     ? `<p>${foundry.utils.escapeHTML(problem)}</p>`
-    : configured || `<p><strong>${foundry.utils.escapeHTML(merchant.name)}</strong> steht diesem Charakter nicht zur Verfügung.</p>`;
+    : `<p><strong>${foundry.utils.escapeHTML(merchant.name)}</strong> steht diesem Charakter nicht zur Verfügung.</p>`);
   const content = await foundry.applications.ux.TextEditor.implementation.enrichHTML(source, { async: true, relativeTo: merchant });
   return foundry.applications.api.DialogV2.prompt({ classes: ["tovf-commerce-dialog"], window: { title: "Zugriff verweigert" },
     content: `<div class="tovf-merchant-access-denied">${content}</div>`, ok: { label: "Schließen" }, rejectClose: false });

@@ -8,6 +8,7 @@ import { getSystemAdapter } from "../downtime/system-adapter.mjs";
 import { linkedPerson, charactersForPerson, personAccountIds, detectCampaignLinks } from "./identities.mjs";
 import { reconciliationPlan, reconcileEntries } from "./reconciliation.mjs";
 import { weeklyPreview } from "./weekly.mjs";
+import { rewardNote } from "./reward-label.mjs";
 
 export const CAMPAIGN_SETTING = "campaignLedger";
 const REQUEST = "campaignRequest";
@@ -81,7 +82,7 @@ async function redeem(state, user, payload, requestId) {
     if (reward.milestones) {
       const progress = sessionProgress(actor);
       progress.milestoneEntries = milestoneEntries(actor);
-      for (let i = 0; i < reward.milestones; i++) progress.milestoneEntries.push({ source: claim.kind, note: `${claim.kind === "gm" ? "SL-Belohnung" : "Serverteam-Belohnung"}: ${claim.sourceId}`, week: isoWeekKey(), timestamp: entry.createdAt, rewardId: entry.id });
+      for (let i = 0; i < reward.milestones; i++) progress.milestoneEntries.push({ source: claim.kind, note: rewardNote(state, claim, SessionService.historyEntries()), week: isoWeekKey(), timestamp: entry.createdAt, rewardId: entry.id });
       progress.milestones += reward.milestones;
       await actor.setFlag(MODULE_ID, FLAGS.SESSION_PROGRESS, progress);
       entry.steps.push("milestones"); await save(state);

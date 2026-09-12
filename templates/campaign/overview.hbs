@@ -15,8 +15,8 @@
     {{#if rewardUnlinked}}<p class="hint">Dieser Foundry-Benutzer ist noch keiner Kampagnenperson zugeordnet. Unter „Spielerzuordnung“ den Benutzer auswählen, damit vorhandene Ansprüche und Charaktere angezeigt werden.</p>{{/if}}
     <div class="form-group"><label>Charakter für die Einlösung</label><select name="redeemActor"><option value="">Bitte wählen</option>{{#each ownCharacters}}<option value="{{actorUuid}}">{{name}} · {{foundryMilestones}} Meilensteine · Level {{expectedLevel}}</option>{{/each}}</select></div>
     {{#unless ownCharacters.length}}<p class="hint">Für diese Person ist noch kein Charakter zugeordnet. Spielerbenutzer und Charakterzuordnung unter „Spielerzuordnung“ beziehungsweise „Charaktere“ prüfen.</p>{{/unless}}
-    <table><thead><tr><th>Nutzer</th><th>Herkunft</th><th>Inhalt</th><th>Offen / Gesamt</th><th></th></tr></thead><tbody>
-      {{#each claims}}<tr><td>{{name}}</td><td>{{kindLabel}}<br><small>{{sourceLabel}}</small></td><td>{{rewardLabel}}</td><td>{{remaining}} / {{count}}</td><td>{{#if canRedeem}}<button type="button" data-action="command" data-command="redeem" data-id="{{id}}">Einlösen</button>{{/if}}</td></tr>{{else}}<tr><td colspan="5">Noch keine Belohnungsansprüche gebucht.</td></tr>{{/each}}
+    <table><thead><tr><th style="vertical-align: middle;">Herkunft</th><th style="vertical-align: middle;">Inhalt</th><th style="text-align: center; vertical-align: middle;">Offen / Gesamt</th><th style="vertical-align: middle;"></th></tr></thead><tbody>
+      {{#each openClaims}}<tr><td style="vertical-align: middle;">{{kindLabel}}<br><small>{{sourceLabel}}</small></td><td style="vertical-align: middle;">{{rewardLabel}}</td><td style="text-align: center; vertical-align: middle;">{{remaining}} / {{count}}</td><td style="vertical-align: middle;">{{#if canRedeem}}<button type="button" data-action="command" data-command="redeem" data-id="{{id}}">Einlösen</button>{{/if}}</td></tr>{{else}}<tr><td colspan="4" style="vertical-align: middle;">Keine offenen Belohnungen vorhanden.</td></tr>{{/each}}
     </tbody></table>
     {{#if admin}}
     <details><summary>Guthaben korrigieren</summary>
@@ -33,7 +33,7 @@
     <h3>Einlösungen</h3>
     {{#each redemptions}}
       <details><summary>{{date}} · {{actorName}} · {{kindLabel}} · {{statusLabel}}</summary>
-        <p>Level {{level}} vor Einlösung · {{milestones}} Meilensteine · {{gold}} Gold · Quelle: {{sourceId}}</p>
+        <p>Level {{level}} vor Einlösung · {{milestones}} Meilensteine · {{gold}} Gold · Quelle: {{sourceLabel}}</p>
         {{#if requestedByName}}<p>Ausgeführt von: {{requestedByName}}</p>{{/if}}
         {{#each items}}<p>{{name}} × {{quantity}}</p>{{/each}}
         {{#if needsReview}}<p>Bestätigte Schritte: {{stepsLabel}}. Nach einer Unterbrechung kann auch der unmittelbar nächste Schritt bereits erfolgt sein. Charakterstand prüfen.</p><p>{{error}}</p>
@@ -158,7 +158,7 @@
     <button type="button" data-action="command" data-command="rules">Regelversion speichern</button>
     <details><summary>Offene Guthaben auf neue Inhalte umstellen</summary>
       <p>Die Anzahl bleibt erhalten. Bereits eingelöste oder reservierte Belohnungen bleiben unverändert.</p>
-      <select name="applyKind"><option value="gm">SL-Belohnung</option><option value="community">Serverteam-Belohnung</option></select>
+      <select name="applyKind"><option value="gm">Spielleitung</option><option value="community">Serverteam</option></select>
       <select name="applyRule">{{#each versions}}<option value="{{id}}">{{name}}</option>{{/each}}</select>
       <button type="button" data-action="command" data-command="openRewards">Änderung prüfen</button>
     </details>

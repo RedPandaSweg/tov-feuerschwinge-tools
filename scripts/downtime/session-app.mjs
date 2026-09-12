@@ -87,6 +87,7 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _prepareContext() {
     const active = game.settings.get(MODULE_ID, SETTINGS.ACTIVE_SESSION) ?? {};
+    const selectedGm = active.gmUserId ?? (Object.keys(active).length === 0 ? game.user.id : "");
     const worldRole = game.settings.get(MODULE_ID, "worldRole");
     const workflowStatusKey = ["draft", "exported", "imported", "played", "returned", "awarded"].includes(active.status)
       ? active.status
@@ -145,7 +146,7 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }).filter(player => player.actorUuids);
     return {
       active,
-      gmUsers: game.users.filter(u => u.role >= CONST.USER_ROLES.ASSISTANT).map(u => ({ id: u.id, name: u.name, selected: u.id === active.gmUserId })),
+      gmUsers: game.users.filter(u => u.role >= CONST.USER_ROLES.ASSISTANT).map(u => ({ id: u.id, name: u.name, selected: u.id === selectedGm })),
       isPrimaryWorld: worldRole === WORLD_ROLES.PRIMARY,
       isSessionWorld: worldRole === WORLD_ROLES.SESSION,
       workflowStatus: game.i18n.localize(`DOWNTIME_MANAGER.Session.Workflow.Statuses.${workflowStatusKey}`),
@@ -412,5 +413,5 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
   static async #configureRewards(event) { event.preventDefault(); const { SessionRewardConfigApp } = await import("./session-reward-config-app.mjs"); new SessionRewardConfigApp().render(true); }
-  static async #newSession(event) { event.preventDefault(); await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, {}); await this.render({ force: true }); }
+  static async #newSession(event) { event.preventDefault(); await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, { gmUserId: game.user.id }); await this.render({ force: true }); }
 }

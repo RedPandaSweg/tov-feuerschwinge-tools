@@ -1,6 +1,7 @@
 import { MODULE_ID } from "../downtime/constants.mjs";
 import { milestoneWeek } from "./data.mjs";
 import { SessionService } from "../downtime/session-service.mjs";
+import { rewardNote } from "./reward-label.mjs";
 
 export function evidenceKey(entry) {
   return entry.evidenceKey || (entry.rewardId ? `reward:${entry.rewardId}` : entry.westmarchesSessionId ? `westmarches:${entry.westmarchesSessionId}` : entry.historyId ? `history:${entry.historyId}` : "");
@@ -26,8 +27,9 @@ export function buildMilestoneEvidence(state, history, actorUuid, now = Date.now
   }
   for (const redemption of state.redemptions ?? []) {
     if (redemption.actorUuid !== actorUuid || redemption.status !== "redeemed" || redemption.historical || !(redemption.milestones > 0)) continue;
-    catalog.push({ key: `reward:${redemption.id}`, source: redemption.kind, label: `${redemption.kind === "gm" ? "SL-Belohnung" : "Serverteam-Belohnung"}: ${redemption.sourceId} · ${new Date(redemption.createdAt).toISOString().slice(0, 10)}`, capacity: redemption.milestones,
-      fields: { rewardId: redemption.id, note: `${redemption.kind === "gm" ? "SL-Belohnung" : "Serverteam-Belohnung"}: ${redemption.sourceId}`, timestamp: redemption.createdAt, week: "" } });
+    const note = rewardNote(state, redemption, history);
+    catalog.push({ key: `reward:${redemption.id}`, source: redemption.kind, label: `${note} · ${new Date(redemption.createdAt).toISOString().slice(0, 10)}`, capacity: redemption.milestones,
+      fields: { rewardId: redemption.id, note, timestamp: redemption.createdAt, week: "" } });
   }
   return catalog;
 }

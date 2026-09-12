@@ -10,11 +10,12 @@ import { activeServerteam } from "./serverteam.mjs";
 import { GoldService } from "../downtime/gold-service.mjs";
 import { linkedPerson, personName as nameOfPerson, charactersForPerson, personAccountIds, detectCampaignLinks } from "./identities.mjs";
 import { UserTransferApp } from "../transfer/user-transfer-app.mjs";
+import { rewardSourceLabel } from "./reward-label.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const copy = value => foundry.utils.deepClone(value);
 const escape = value => foundry.utils.escapeHTML(String(value ?? ""));
-const sourceNames = { gm: "SL-Belohnung", community: "Serverteam-Belohnung" };
+const sourceNames = { gm: "Spielleitung", community: "Serverteam" };
 const statusNames = { "needs-review": "Gespielt? Noch nicht bestätigt", cancelled: "Abgesagt", scheduled: "Geplant", unknown: "Unbekannt", played: "Gespielt", excluded: "Ausgeschlossen", redeemed: "Eingelöst", processing: "Reserviert – Prüfung erforderlich", review: "Unterbrochen – Prüfung erforderlich", void: "Freigegeben" };
 
 export class CampaignApp extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -61,7 +62,8 @@ export class CampaignApp extends HandlebarsApplicationMixin(ApplicationV2) {
       return role === CONST.USER_ROLES.GAMEMASTER || role === CONST.USER_ROLES.ASSISTANT;
     })).concat(unlinkedGms);
     const rewardPerson = admin ? [this._rewardPerson, ownPerson, ...eligiblePeople.map(p => p.id)].find(id => eligiblePeople.some(p => p.id === id)) : ownPerson;
-    const characters = (snapshot?.characters ?? []).filter(c => admin || c.userId === ownPerson).map(c => {
+    const characters = (snapshot?.characters ?? []).filter(c => admin || c.userId === ownPerson)
+      .sort((a, b) => String(a.name ?? "").localeCompare(String(b.name ?? ""), game.i18n.lang)).map(c => {
       const actor = game.actors.find(a => a.uuid === state.characterLinks[c.id]);
       const progress = actor ? sessionProgress(actor) : null;
       return { ...c, foundryGold: actor ? GoldService.getGold(actor) : null, personName: personName(c.userId), actorUuid: actor?.uuid, actorName: actor?.name, foundryMilestones: progress?.milestones, expectedLevel: progress ? levelFromMilestones(progress.milestones) : null, mismatch: !!progress && progress.milestones !== c.milestones,
@@ -86,7 +88,7 @@ export class CampaignApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }).map(s => ({ ...s, name: personName(s.gmUserId), displayDate: new Date(s.startTime).toLocaleString(game.i18n.lang), statusLabel: statusNames[effectiveSessionStatus(state, s)],
       played: effectiveSessionStatus(state, s) === "played", excluded: state.sessionReviews[s.id]?.status === "excluded", gmBooked: state.claims.some(c => c.key === `gm:${s.id}`),
       participants: s.participants.map(p => ({ ...p, name: snapshot.characters.find(c => c.id === p.characterId)?.name ?? `Fehlender Charakter: ${p.characterId}` })) }));
-    const history = admin && this._tab === "sessions" ? SessionService.historyEntries() : [];
+    const history = this._tab === "rewards" || (admin && this._tab === "sessions") ? SessionService.historyEntries() : [];
     this._historySignature = JSON.stringify(history);
     const sessionMatches = sessionLinkPreview(state, history).map(row => ({ ...row,
       dateLabel: row.awardedAt ? new Date(row.awardedAt).toLocaleString(game.i18n.lang) : "Unbekannt",
@@ -101,12 +103,12 @@ export class CampaignApp extends HandlebarsApplicationMixin(ApplicationV2) {
       characters, sessionMatches, reconciliation: this._reconciliation, people,
       rewardPeople: people.concat(unlinkedGms.map(p => ({ ...p, rewardSelected: p.id === rewardPerson }))).filter(p => admin ? eligiblePeople.some(e => e.id === p.id) : p.id === ownPerson),
       rewardUnlinked: unlinkedGms.some(p => p.id === rewardPerson),
-      claims, weeks: admin ? weeklyPreview(state, this._month).map(w => ({ ...w, historical: this._month < new Date().toISOString().slice(0, 7), options: people.map(p => ({ id: p.id, name: p.name, selected: w.recipients.includes(p.id) })) })) : [], sessions, preview, previewError, settled: state.settlements[this._month],
+      openClaims: claims.filter(claim => claim.remaining > 0), claims, weeks: admin ? weeklyPreview(state, this._month).map(w => ({ ...w, historical: this._month < new Date().toISOString().slice(0, 7), options: people.map(p => ({ id: p.id, name: p.name, selected: w.recipients.includes(p.id) })) })) : [], sessions, preview, previewError, settled: state.settlements[this._month],
       corrections: admin ? (state.claimCorrections ?? []).filter(c => state.claims.some(claim => claim.id === c.claimId && claim.personId === rewardPerson)).slice().reverse().map(c => ({ ...c, date: new Date(c.at).toLocaleString(game.i18n.lang), userName: game.users.get(c.userId)?.name ?? c.userId })) : [],
       poolMode: ruleForDate(state.rules, `${this._month}-01`)?.community.distribution === "pool",
       localUsers: game.users.filter(u => !snapshot?.people.some(p => personAccountIds(state, p.id).includes(u.id))).map(u => ({ id: u.id, name: u.name })),
       ownCharacters: charactersForPerson(state, rewardPerson).map(actor => ({ actorUuid: actor.uuid, name: actor.name, foundryMilestones: sessionProgress(actor).milestones, expectedLevel: levelFromMilestones(sessionProgress(actor).milestones) })),
-      redemptions: state.redemptions.filter(r => r.personId === rewardPerson).slice().reverse().map(r => ({ ...r, requestedByName: game.users.get(r.requestedBy)?.name, kindLabel: sourceNames[r.kind], statusLabel: statusNames[r.status], needsReview: admin && ["processing", "review"].includes(r.status), date: new Date(r.createdAt).toLocaleString(game.i18n.lang), stepsLabel: r.steps.join(", ") })),
+      redemptions: state.redemptions.filter(r => r.personId === rewardPerson).slice().reverse().map(r => ({ ...r, sourceLabel: rewardSourceLabel(state, r, history), requestedByName: game.users.get(r.requestedBy)?.name, kindLabel: sourceNames[r.kind], statusLabel: statusNames[r.status], needsReview: admin && ["processing", "review"].includes(r.status), date: new Date(r.createdAt).toLocaleString(game.i18n.lang), stepsLabel: r.steps.join(", ") })),
       rules, rewards: ["gm", "community"].map(kind => ({ kind, label: sourceNames[kind], ...rules[kind].reward, sessionLinked: rules[kind].reward.mode === "session", goldModes: [["level", "Nach Leveltabelle"], ["fixed", "Fester Goldbetrag"], ["none", "Kein Gold"]].map(([id, label]) => ({ id, label, selected: rules[kind].reward.goldMode === id })) })),
       modes: [["activeWeeks", "Wochen mit mindestens einer gespielten Gildensession"], ["ratio", "Sessions / aktive Spielleiter"], ["fixed", "Feste Anzahl"], ["sessions", "Anzahl gespielter Sessions"]].map(([id, label]) => ({ id, label, selected: rules.community.mode === id })),
       roundings: [["ceil", "Aufrunden"], ["floor", "Abrunden"], ["round", "Kaufmännisch runden"]].map(([id, label]) => ({ id, label, selected: rules.community.rounding === id })),

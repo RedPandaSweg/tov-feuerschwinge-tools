@@ -4,6 +4,7 @@ import { downtimeItemData } from "./downtime-item-service.mjs";
 import { RewardService } from "./reward-service.mjs";
 import { getSystemAdapter } from "./system-adapter.mjs";
 import { round } from "./utils.mjs";
+import { readableRewardEntry } from "../campaign/reward-label.mjs";
 
 export function isoWeekKey(value = new Date()) {
   const date = new Date(value);
@@ -238,7 +239,8 @@ export function milestoneEntries(actor, entries = structuredHistory().entries) {
   if (Array.isArray(progress.milestoneEntries)) {
     const rows = foundry.utils.deepClone(progress.milestoneEntries).slice(0, total);
     while (rows.length < total) rows.push({ source: "start", note: "", week: "" });
-    return rows;
+    const ledger = game.settings.get(MODULE_ID, "campaignLedger") ?? {};
+    return rows.map(entry => readableRewardEntry(entry, ledger, entries));
   }
   const history = milestoneSources(actor, entries);
   const rows = Array.from({ length: Math.max(0, history.difference) }, () => ({ source: "start", note: "", week: "" }));
