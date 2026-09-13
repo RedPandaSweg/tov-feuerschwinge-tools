@@ -1,3 +1,4 @@
+import { uiText } from "../core/localization.mjs";
 const COIN_CP = Object.freeze({ pp: 1000, gp: 100, sp: 10, cp: 1 });
 const COIN_ORDER = Object.freeze(["pp", "gp", "sp", "cp"]);
 
@@ -70,8 +71,8 @@ function distribute(entries, quantities, copper, order) {
 function resultingQuantities(actor, deltaCopper, { denomination = "" } = {}) {
   const entries = purse(actor);
   const delta = Math.round(Number(deltaCopper) || 0);
-  if (balanceInCopper(actor) + delta < 0) throw new Error(`${actor.name} besitzt nicht genug Geld.`);
-  if (!entries.size && balanceInCopper(actor) + delta) throw new Error(`${actor.name} besitzt keine unterstützten Währungsitems.`);
+  if (balanceInCopper(actor) + delta < 0) throw new Error(uiText("TOVF.Interface.P0DoesNotHaveEnoughMoney_b288d4", "{p0} besitzt nicht genug Geld.", { p0: (actor.name) }));
+  if (!entries.size && balanceInCopper(actor) + delta) throw new Error(uiText("TOVF.Interface.P0HasNoSupportedCurrencyItems_f7b172", "{p0} besitzt keine unterstützten Währungsitems.", { p0: (actor.name) }));
   const quantities = new Map([...entries].map(([id, entry]) => [id, entry.quantity]));
 
   if (delta >= 0) {
@@ -79,7 +80,7 @@ function resultingQuantities(actor, deltaCopper, { denomination = "" } = {}) {
     if (preferred === "pp") preferred = "gp";
     const exact = [preferred, "gp", "sp", "cp", "pp"].find(id => id && entries.has(id) && delta % COIN_CP[id] === 0);
     if (exact) quantities.set(exact, (quantities.get(exact) ?? 0) + delta / COIN_CP[exact]);
-    else if (distribute(entries, quantities, delta, COIN_ORDER)) throw new Error(`${actor.name} kann den Betrag nicht exakt darstellen.`);
+    else if (distribute(entries, quantities, delta, COIN_ORDER)) throw new Error(uiText("TOVF.Interface.P0CannotRepresentTheExactAmount_9f6a9d", "{p0} kann den Betrag nicht exakt darstellen.", { p0: (actor.name) }));
     return { entries, quantities };
   }
 
@@ -92,11 +93,11 @@ function resultingQuantities(actor, deltaCopper, { denomination = "" } = {}) {
   }
   if (remaining) {
     const breakId = ["sp", "gp", "pp"].find(id => entries.has(id) && (quantities.get(id) ?? 0) > 0 && COIN_CP[id] > remaining);
-    if (!breakId) throw new Error(`${actor.name} kann den Betrag nicht exakt bezahlen.`);
+    if (!breakId) throw new Error(uiText("TOVF.Interface.P0CannotPayTheExactAmount_aae4ce", "{p0} kann den Betrag nicht exakt bezahlen.", { p0: (actor.name) }));
     quantities.set(breakId, quantities.get(breakId) - 1);
     const change = COIN_CP[breakId] - remaining;
     const lower = ["gp", "sp", "cp"].filter(id => COIN_CP[id] < COIN_CP[breakId]);
-    if (distribute(entries, quantities, change, lower)) throw new Error(`${actor.name} kann das Wechselgeld nicht darstellen.`);
+    if (distribute(entries, quantities, change, lower)) throw new Error(uiText("TOVF.Interface.P0CannotRepresentTheChange_b70b73", "{p0} kann das Wechselgeld nicht darstellen.", { p0: (actor.name) }));
   }
   return { entries, quantities };
 }

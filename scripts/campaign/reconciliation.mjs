@@ -1,3 +1,4 @@
+import { uiText } from "../core/localization.mjs";
 import { milestoneWeek } from "./data.mjs";
 
 /** Proposals only: registration does not establish attendance or a payout. */
@@ -21,12 +22,12 @@ export function reconciliationPlan(state, character, entries, now = Date.now()) 
 }
 
 export function reconcileEntries(plan, entries, sessionIds, userId, now = Date.now()) {
-  if (plan.signature !== JSON.stringify(entries)) throw new Error("Meilensteine wurden geändert. Vorschau neu öffnen.");
-  if (!Array.isArray(sessionIds) || !sessionIds.length || new Set(sessionIds).size !== sessionIds.length || sessionIds.length > plan.empty) throw new Error("Bitte höchstens so viele Sessions auswählen, wie ungeklärte Meilensteine vorhanden sind.");
+  if (plan.signature !== JSON.stringify(entries)) throw new Error(uiText("TOVF.Interface.MilestonesHaveChangedReopenThePreview_f7d2fb", "Meilensteine wurden geändert. Vorschau neu öffnen."));
+  if (!Array.isArray(sessionIds) || !sessionIds.length || new Set(sessionIds).size !== sessionIds.length || sessionIds.length > plan.empty) throw new Error(uiText("TOVF.Interface.SelectNoMoreSessionsThanThereAre_345952", "Bitte höchstens so viele Sessions auswählen, wie ungeklärte Meilensteine vorhanden sind."));
   const weeks = new Set();
   const selected = sessionIds.map(id => {
     const group = plan.groups.find(g => g.candidates.some(s => s.id === id));
-    if (!group || group.documented || weeks.has(group.week)) throw new Error("Diese Meilensteinwoche ist bereits belegt oder nicht verfügbar.");
+    if (!group || group.documented || weeks.has(group.week)) throw new Error(uiText("TOVF.Interface.ThisMilestoneWeekIsAlreadyAssignedOr_25c978", "Diese Meilensteinwoche ist bereits belegt oder nicht verfügbar."));
     weeks.add(group.week);
     return { group, session: group.candidates.find(s => s.id === id) };
   }).sort((a, b) => a.group.week.localeCompare(b.group.week));

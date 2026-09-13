@@ -42,14 +42,14 @@ import { activateTokenPresetSocket, registerTokenPresets } from "./token-presets
 import { activateTokenLightAuraSocket, toggleTokenLightAura } from "./token-light-aura.mjs";
 import { activateSimpleTileTriggers, registerSimpleTileTriggers } from "./simple-tile-triggers.mjs?v=3.2.2";
 import { activateSummonCompatibility } from "./summon-compat.mjs?v=3.6.2-character-summon-folder-1";
-import { activateCommerce, registerCommerce } from "./commerce/main.mjs?v=3.6.2-actorless-preview-1";
-import "./downtime/main.mjs?v=3.5.0-actor-spell-migration-10";
+import { activateCommerce, registerCommerce } from "./commerce/main.mjs?v=3.7.1-offer-access-1";
+import "./downtime/main.mjs?v=3.7.1-offer-access-1";
 import "./contested-activity.mjs";
 import "./void-taint/main.mjs?v=3.3.0-void-taint-1";
 import { registerTalentBackgrounds } from "./talent-backgrounds.mjs?v=3.3.1-talent-backgrounds-6";
 import { installCustomBackground } from "./integrations/custom-background.mjs?v=3.3.1-custom-background-16";
 import { installActiveEffectChangesUi } from "./active-effect-changes-ui.mjs";
-import { installSpellScrollTools } from "./spell-scrolls.mjs?v=3.5.0-spell-scrolls-3";
+import { installSpellScrollTools } from "./spell-scrolls.mjs?v=3.7.1-offer-access-1";
 import { installSpellNameMarkers } from "./spell-name-markers.mjs?v=3.5.0-spell-markers-1";
 
 // Keep tile triggers independent from the shared initialization chain so an

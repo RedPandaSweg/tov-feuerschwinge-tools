@@ -1,7 +1,7 @@
 import { DEFAULT_MILESTONE_LEVEL_BANDS, MODULE_ID, SETTINGS } from "./constants.mjs";
 import { configuredCategories } from "./utils.mjs";
 import { normalizeMilestoneLevelBands } from "./session-service.mjs";
-import { COMMERCE_RARITY_LEVELS_SETTING } from "../commerce/service.mjs";
+import { COMMERCE_RARITY_LEVELS_SETTING } from "../commerce/service.mjs?v=3.7.1-offer-access-1";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 

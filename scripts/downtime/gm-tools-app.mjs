@@ -1,3 +1,4 @@
+import { uiText } from "../core/localization.mjs";
 import { MODULE_ID } from "./constants.mjs";
 import { DowntimeDashboardApp } from "./dashboard-app.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
@@ -103,9 +104,11 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
         this._milestoneAuditInitialized = true;
       }
     }
-    this.setPosition({ height: this.tab === "characters" ? "auto" : 760 });
+    if (this.element?.isConnected && this.element.parentElement) {
+      this.setPosition({ height: this.tab === "characters" ? "auto" : 760 });
+    }
     this.element.querySelector(".tovf-gm-milestone-audit")?.addEventListener("toggle", () => {
-      if (this.tab === "characters") this.setPosition({ height: "auto" });
+      if (this.tab === "characters" && this.element?.isConnected && this.element.parentElement) this.setPosition({ height: "auto" });
     });
     this.element.querySelectorAll("select[data-character-select]").forEach(select => {
       select.addEventListener("change", event => {
@@ -213,7 +216,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       tabs: ["characters", "projects", "downtime", "session", "voidTaint", "database", "diagnostics"].map(id => ({
         id,
         active: this.tab === id,
-        label: id === "characters" ? "Meilensteine" : id === "projects" ? "Projektübersicht" : id === "downtime" ? "Downtime" : game.i18n.localize(`DOWNTIME_MANAGER.GMTools.Tabs.${id}`)
+        label: id === "characters" ? uiText("TOVF.Interface.Milestones_a38757", "Meilensteine") : id === "projects" ? uiText("TOVF.Interface.ProjectOverview_b340e1", "Projektübersicht") : id === "downtime" ? "Downtime" : game.i18n.localize(`DOWNTIME_MANAGER.GMTools.Tabs.${id}`)
       })),
       actors: actors.map(actor => ({ uuid: actor.uuid, name: actor.name, img: actor.img, selected: actor.uuid === this.actorUuid })),
       selected: selected ? {
@@ -262,7 +265,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       database,
       undo: undo.kind && undoTab === this.tab ? {
         available: true,
-        subject: undo.actorUuid ? `Letzte Korrektur: ${game.actors.find(a => a.uuid === undo.actorUuid)?.name ?? "Charakter"}` : "Letzte Korrektur in diesem Bereich",
+        subject: undo.actorUuid ? `Letzte Korrektur: ${game.actors.find(a => a.uuid === undo.actorUuid)?.name ?? uiText("TOVF.Interface.Character_19365b", "Charakter")}` : uiText("TOVF.Interface.LastCorrectionInThisSection_2d30bd", "Letzte Korrektur in diesem Bereich"),
         date: new Intl.DateTimeFormat(game.i18n.lang, { dateStyle: "medium", timeStyle: "short" }).format(new Date(undo.timestamp))
       } : { available: false }
     };
@@ -290,11 +293,11 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       select.dataset.bound = "true";
       const source = row.querySelector('[name="milestoneSource"]');
       const fill = key => {
-        select.replaceChildren(new Option("Ohne Verknüpfung / bestehende Notiz", ""));
+        select.replaceChildren(new Option(uiText("TOVF.Interface.NoLinkExistingNote_80f15c", "Ohne Verknüpfung / bestehende Notiz"), ""));
         const options = (this._milestoneEvidence ?? []).filter(c => c.source === source.value);
         for (const c of options) select.add(new Option(c.label, c.key));
         const match = options.find(c => c.key === key || c.aliases?.includes(key));
-        if (key && !match) select.add(new Option("Bestehender Nachweis (Quelldaten fehlen)", key));
+        if (key && !match) select.add(new Option(uiText("TOVF.Interface.ExistingEvidenceSourceDataMissing_c62a03", "Bestehender Nachweis (Quelldaten fehlen)"), key));
         select.value = match?.key ?? key ?? "";
       };
       fill(select.dataset.evidenceKey);
@@ -318,7 +321,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       if (!evidence) continue;
       const used = selects.filter(other => other !== select && other.value === option.value).length;
       option.disabled = used >= evidence.capacity && select.value !== option.value;
-      option.textContent = evidence.label + (option.disabled ? " · bereits zugeordnet" : "");
+      option.textContent = evidence.label + (option.disabled ? uiText("TOVF.Interface.AlreadyAssigned_085eed", " · bereits zugeordnet") : "");
     }
   }
 
@@ -335,7 +338,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (total) total.textContent = String(rows.length);
     const level = this.element.querySelector('[data-milestone-level]');
     if (level) level.textContent = String(levelFromMilestones(rows.length));
-    if (this.tab === "characters") this.setPosition({ height: "auto" });
+    if (this.tab === "characters" && this.element?.isConnected && this.element.parentElement) this.setPosition({ height: "auto" });
   }
 
   static #removeMilestoneRow(event, target) {
@@ -357,7 +360,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const root = this.element.querySelector('[data-downtime-editor]');
     if (!root || !this.actorUuid) return;
     const values = { downtime: root.querySelector('[name="downtime"]').value, passiveDowntime: root.querySelector('[name="passiveDowntime"]').value, signature: this._downtimeSignature };
-    if (!await foundry.applications.api.DialogV2.confirm({ window: { title: "Downtime korrigieren" }, content: `<p>Downtime auf ${foundry.utils.escapeHTML(values.downtime)} setzen und die passive Downtime übernehmen?</p>`, rejectClose: false })) return;
+    if (!await foundry.applications.api.DialogV2.confirm({ window: { title: uiText("TOVF.Interface.CorrectDowntime_4d226f", "Downtime korrigieren") }, content: `<p>${uiText("TOVF.Interface.SetDowntimeToP0AndApplyPassive_91fd9d", "Downtime auf {p0} setzen und die passive Downtime übernehmen?", { p0: (foundry.utils.escapeHTML(values.downtime)) })}</p>`, rejectClose: false })) return;
     await this.#execute(() => GMToolsService.updateDowntime(this.actorUuid, values), "DOWNTIME_MANAGER.GMTools.Notifications.CharacterSaved");
   }
 

@@ -1,10 +1,11 @@
+import { uiText } from "./core/localization.mjs";
 function escapeHtml(value) {
   const element = document.createElement("div");
   element.textContent = String(value ?? "");
   return element.innerHTML;
 }
 
-export async function selectCharacters({ selectedIds = [], title = "Charaktere auswählen", hint = "" } = {}) {
+export async function selectCharacters({ selectedIds = [], title = uiText("TOVF.Interface.SelectCharacters_c946ae", "Charaktere auswählen"), hint = "" } = {}) {
   const selected = new Set(selectedIds);
   const actors = game.actors.filter(actor => actor.type === "pc")
     .sort((left, right) => left.name.localeCompare(right.name, game.i18n.lang));
@@ -18,7 +19,7 @@ export async function selectCharacters({ selectedIds = [], title = "Charaktere a
     const ownerIds = players.filter(user => actor.testUserPermission(user, "OWNER")).map(user => user.id);
     return `<label data-character-picker-entry data-search="${escapeHtml(actor.name.toLocaleLowerCase())}" data-folder="${actor.folder?.id ?? ""}" data-owners="${ownerIds.join(",")}" data-connected="${connectedIds.has(actor.id)}"><input type="checkbox" name="actors" value="${actor.id}" ${selected.has(actor.id) ? "checked" : ""}><img src="${escapeHtml(actor.img)}" alt=""><span><strong>${escapeHtml(actor.name)}</strong><small>${escapeHtml(actor.folder?.name ?? "Ohne Ordner")}</small></span></label>`;
   }).join("");
-  const content = `<div class="tovf-trigger-character-picker"><div class="tovf-trigger-character-filters"><label><i class="fa-solid fa-magnifying-glass"></i><input type="search" data-character-picker-search placeholder="Charaktere durchsuchen …" autocomplete="off"></label><select data-character-picker-player><option value="">Alle Spieler</option>${players.map(user => `<option value="${user.id}">${escapeHtml(user.name)}</option>`).join("")}</select><select data-character-picker-folder><option value="*">Alle Ordner</option>${folders.map(([id, name]) => `<option value="${id}">${escapeHtml(name)}</option>`).join("")}</select></div><div class="tovf-actor-selection-actions"><button type="button" data-picker-mode="all"><i class="fa-solid fa-check-double"></i> Alle</button><button type="button" data-picker-mode="none"><i class="fa-solid fa-xmark"></i> Keine</button><button type="button" data-picker-mode="connected"><i class="fa-solid fa-users"></i> Verbundene Spieler</button><button type="button" data-picker-mode="tokens"><i class="fa-solid fa-location-dot"></i> Ausgewählte Token</button></div>${hint ? `<p class="hint">${escapeHtml(hint)}</p>` : ""}<div class="tovf-actor-list">${rows || "<p>Keine Spielercharaktere vorhanden.</p>"}</div></div>`;
+  const content = `<div class="tovf-trigger-character-picker"><div class="tovf-trigger-character-filters"><label><i class="fa-solid fa-magnifying-glass"></i><input type="search" data-character-picker-search placeholder="Charaktere durchsuchen …" autocomplete="off"></label><select data-character-picker-player><option value="">Alle Spieler</option>${players.map(user => `<option value="${user.id}">${escapeHtml(user.name)}</option>`).join("")}</select><select data-character-picker-folder><option value="*">Alle Ordner</option>${folders.map(([id, name]) => `<option value="${id}">${escapeHtml(name)}</option>`).join("")}</select></div><div class="tovf-actor-selection-actions"><button type="button" data-picker-mode="all"><i class="fa-solid fa-check-double"></i> Alle</button><button type="button" data-picker-mode="none"><i class="fa-solid fa-xmark"></i> Keine</button><button type="button" data-picker-mode="connected"><i class="fa-solid fa-users"></i> Verbundene Spieler</button><button type="button" data-picker-mode="tokens"><i class="fa-solid fa-location-dot"></i> Ausgewählte Token</button></div>${hint ? `<p class="hint">${escapeHtml(hint)}</p>` : ""}<div class="tovf-actor-list">${rows || `<p>${uiText("TOVF.Interface.NoPlayerCharactersAvailable_9add4f", "Keine Spielercharaktere vorhanden.")}</p>`}</div></div>`;
   return foundry.applications.api.DialogV2.prompt({ classes: ["tovf-commerce-dialog", "tovf-trigger-character-dialog"], window: { title }, position: { width: 700, height: 650 }, content,
     render: (_event, dialog) => {
       const root = dialog.element.querySelector(".tovf-trigger-character-picker");
@@ -45,6 +46,6 @@ export async function selectCharacters({ selectedIds = [], title = "Charaktere a
         for (const row of targets) row.querySelector('[name="actors"]').checked = mode !== "none";
       });
     },
-    ok: { label: "Auswahl übernehmen", icon: "fa-solid fa-check", callback: (_event, button) => [...button.form.querySelectorAll('[name="actors"]:checked')].map(input => input.value) },
+    ok: { label: uiText("TOVF.Interface.ApplySelection_285fa7", "Auswahl übernehmen"), icon: "fa-solid fa-check", callback: (_event, button) => [...button.form.querySelectorAll('[name="actors"]:checked')].map(input => input.value) },
     rejectClose: false });
 }

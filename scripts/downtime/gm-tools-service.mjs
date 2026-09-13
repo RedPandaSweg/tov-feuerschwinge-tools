@@ -1,3 +1,4 @@
+import { uiText } from "../core/localization.mjs";
 import {
   DEFAULT_SESSION_PROGRESS,
   FLAGS,
@@ -282,7 +283,7 @@ export class GMToolsService {
     const downtime = values.downtime === undefined ? DowntimeService.get(actor) : finiteNumber(values.downtime, game.i18n.localize("DOWNTIME_MANAGER.GMTools.Downtime"));
     const milestoneLabel = game.i18n.localize('DOWNTIME_MANAGER.GMTools.Milestones');
     const existingEntries = milestoneEntries(actor);
-    if (values.milestoneSignature && values.milestoneSignature !== JSON.stringify(existingEntries)) throw new Error("Meilensteine wurden inzwischen geändert. Editor neu öffnen.");
+    if (values.milestoneSignature && values.milestoneSignature !== JSON.stringify(existingEntries)) throw new Error(uiText("TOVF.Interface.MilestonesHaveChangedReopenTheEditor_05bca3", "Meilensteine wurden inzwischen geändert. Editor neu öffnen."));
     const rows = Array.isArray(values.milestoneEntries) ? values.milestoneEntries : existingEntries.map((entry, originalIndex) => ({ ...entry, originalIndex }));
     const used = new Set();
     let entries = rows.map(entry => {
@@ -330,11 +331,11 @@ export class GMToolsService {
     const actor = await actorFromUuid(actorUuid);
     const progress = sessionProgress(actor);
     const current = { downtime: DowntimeService.get(actor), passiveDowntime: progress.passiveDowntime ?? {} };
-    if (values.signature !== JSON.stringify(current)) throw new Error("Downtime wurde inzwischen geändert. Ansicht aktualisieren.");
+    if (values.signature !== JSON.stringify(current)) throw new Error(uiText("TOVF.Interface.DowntimeHasChangedRefreshTheView_f84973", "Downtime wurde inzwischen geändert. Ansicht aktualisieren."));
     const downtime = finiteNumber(values.downtime, "Downtime");
     let passive;
-    try { passive = JSON.parse(values.passiveDowntime); } catch { throw new Error("Ungültige passive Downtime."); }
-    if (!passive || typeof passive !== "object" || Array.isArray(passive)) throw new Error("Ungültige passive Downtime.");
+    try { passive = JSON.parse(values.passiveDowntime); } catch { throw new Error(uiText("TOVF.Interface.InvalidPassiveDowntime_1978c5", "Ungültige passive Downtime.")); }
+    if (!passive || typeof passive !== "object" || Array.isArray(passive)) throw new Error(uiText("TOVF.Interface.InvalidPassiveDowntime_1978c5", "Ungültige passive Downtime."));
     for (const value of Object.values(passive)) finiteNumber(value, "Passive Downtime");
     await storeUndo({ kind: "actor", tab: "downtime", actorUuid: actor.uuid, before: { downtime: actor.getFlag(MODULE_ID, FLAGS.DOWNTIME) ?? null, sessionProgress: actor.getFlag(MODULE_ID, FLAGS.SESSION_PROGRESS) ?? null } });
     await actor.setFlag(MODULE_ID, FLAGS.DOWNTIME, downtime);

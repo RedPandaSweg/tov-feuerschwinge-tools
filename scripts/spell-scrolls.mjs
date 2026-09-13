@@ -1,3 +1,4 @@
+import { uiText } from "./core/localization.mjs";
 import { MODULE_ID } from "./core/constants.mjs";
 import { markedSpellName } from "./spell-name-markers.mjs?v=3.5.0-spell-markers-1";
 
@@ -76,7 +77,7 @@ function spellScrollDescription(spell, level) {
 }
 
 export async function createSpellScrollData(spell, { quantity = 1 } = {}) {
-  if (spell?.documentName !== "Item" || spell.type !== "spell") throw new Error("Es wurde kein Spell ausgewählt.");
+  if (spell?.documentName !== "Item" || spell.type !== "spell") throw new Error(uiText("TOVF.Interface.NoSpellWasSelected_dd9482", "Es wurde kein Spell ausgewählt."));
   const level = spellScrollLevel(spell);
   if (!level) throw new Error(`Der Spell-Circle von ${spell.name} konnte nicht bestimmt werden.`);
   const spellUuid = canonicalSpellUuid(spell);
@@ -142,6 +143,8 @@ export async function saveMerchantSpellScrollOffers(actor, offers) {
     circle: Math.clamp(Math.floor(Number(offer.circle) || 0), 0, 9), rarity: String(offer.rarity ?? ""),
     price: Math.max(0, Number(offer.price) || 0), quantity: Math.max(0, Math.floor(Number(offer.quantity) || 0)),
     hidden: offer.hidden === true, discountPercent: Math.clamp(Math.round(Number(offer.discountPercent) || 0), 0, 100),
+    minimumLevel: offer.minimumLevel == null || offer.minimumLevel === "" ? null : Math.max(1, Math.min(20, Math.floor(Number(offer.minimumLevel) || 1))),
+    purchaseLocked: offer.purchaseLocked === true, purchaseNote: String(offer.purchaseNote ?? "").trim(),
     createdAt: Number(offer.createdAt) || Date.now()
   }));
   await actor.setFlag(MODULE_ID, OFFER_FLAG, clean);

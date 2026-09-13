@@ -9,7 +9,7 @@
       <button type="button" data-action="refresh" title="{{localize 'DOWNTIME_MANAGER.GMTools.Refresh'}}"><i class="fa-solid fa-rotate"></i></button>
     </div>
   </header>
-  {{#if undo.available}}<div class="tovf-gm-undo-row"><span>{{undo.subject}} · {{undo.date}}</span><button type="button" data-action="undo" title="Letzte gespeicherte Korrektur rückgängig machen"><i class="fa-solid fa-rotate-left"></i> Rückgängig</button></div>{{/if}}
+  {{#if undo.available}}<div class="tovf-gm-undo-row"><span>{{undo.subject}} · {{undo.date}}</span><button type="button" data-action="undo" title="{{localize 'TOVF.Interface.UndoTheLastSavedCorrection_351eff'}}"><i class="fa-solid fa-rotate-left"></i> {{localize 'TOVF.Interface.Undo_b626f2'}}</button></div>{{/if}}
 
   {{#if (eq tab "characters")}}
   <section class="tovf-gm-tools-section">
@@ -32,13 +32,13 @@
           <div class="tovf-gm-milestone-scroll">
             <table class="tovf-gm-milestone-table">
               <colgroup><col class="milestone-number"><col class="milestone-source"><col class="milestone-evidence"><col class="milestone-note"><col class="milestone-week"><col class="milestone-actions"></colgroup>
-              <thead><tr><th scope="col">#</th><th scope="col">{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Source"}}</th><th scope="col">Nachweis</th><th scope="col">{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Reason"}}</th><th scope="col">{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Week"}}</th><th scope="col"><span class="tovf-gm-sr-only">{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Actions"}}</span></th></tr></thead>
+              <thead><tr><th scope="col">#</th><th scope="col">{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Source"}}</th><th scope="col">{{localize 'TOVF.Interface.Evidence_c5d55b'}}</th><th scope="col">{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Reason"}}</th><th scope="col">{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Week"}}</th><th scope="col"><span class="tovf-gm-sr-only">{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Actions"}}</span></th></tr></thead>
               <tbody data-milestone-changes>
                 {{#each selected.milestoneEntries}}
                   <tr data-milestone-row data-original-index="{{originalIndex}}">
                     <td class="tovf-gm-milestone-number" data-milestone-number>{{number}}</td>
                     <td><select name="milestoneSource" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Source"}}"><option value="start" {{#if (eq source "start")}}selected{{/if}}>{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.start"}}</option><option value="session" {{#if (eq source "session")}}selected{{/if}}>{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.session"}}</option><option value="community" {{#if (eq source "community")}}selected{{/if}}>{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.community"}}</option><option value="gm" {{#if (eq source "gm")}}selected{{/if}}>{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.gm"}}</option><option value="correction" {{#if (eq source "correction")}}selected{{/if}}>{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.correction"}}</option></select></td>
-                    <td><select name="milestoneEvidence" data-evidence-key="{{evidenceKey}}" aria-label="Nachweis auswählen"></select></td><td><input type="text" name="milestoneNote" value="{{note}}" placeholder="Ergänzende Notiz / manuelle Begründung" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Reason"}}"></td>
+                    <td><select name="milestoneEvidence" data-evidence-key="{{evidenceKey}}" aria-label="{{localize 'TOVF.Interface.SelectEvidence_ab2eb6'}}"></select></td><td><input type="text" name="milestoneNote" value="{{note}}" placeholder="{{localize 'TOVF.Interface.AdditionalNoteManualReason_f08a2e'}}" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Reason"}}"></td>
                     <td><input type="text" name="milestoneWeek" value="{{week}}" placeholder="2026-W32" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Week"}}"></td>
                     <td><div class="tovf-gm-milestone-actions"><button type="button" data-action="moveMilestoneRow" data-direction="up" title="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.MoveUp"}}" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.MoveUp"}}"><i class="fa-solid fa-arrow-up"></i></button><button type="button" data-action="moveMilestoneRow" data-direction="down" title="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.MoveDown"}}" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.MoveDown"}}"><i class="fa-solid fa-arrow-down"></i></button><button type="button" data-action="removeMilestoneRow" title="{{localize 'DOWNTIME_MANAGER.GMTools.Remove'}}" aria-label="{{localize 'DOWNTIME_MANAGER.GMTools.Remove'}}"><i class="fa-solid fa-trash"></i></button></div></td>
                   </tr>
@@ -49,7 +49,7 @@
           <template data-milestone-template>                <tr data-milestone-row data-original-index="">
                     <td class="tovf-gm-milestone-number" data-milestone-number></td>
                     <td><select name="milestoneSource" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Source"}}"><option value="start" >{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.start"}}</option><option value="session" >{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.session"}}</option><option value="community" >{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.community"}}</option><option value="gm" >{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.gm"}}</option><option value="correction" >{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Types.correction"}}</option></select></td>
-                    <td><select name="milestoneEvidence" data-evidence-key="" aria-label="Nachweis auswählen"></select></td><td><input type="text" name="milestoneNote" value="" placeholder="Ergänzende Notiz / manuelle Begründung" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Reason"}}"></td>
+                    <td><select name="milestoneEvidence" data-evidence-key="" aria-label="{{localize 'TOVF.Interface.SelectEvidence_ab2eb6'}}"></select></td><td><input type="text" name="milestoneNote" value="" placeholder="{{localize 'TOVF.Interface.AdditionalNoteManualReason_f08a2e'}}" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Reason"}}"></td>
                     <td><input type="text" name="milestoneWeek" value="" placeholder="2026-W32" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.Week"}}"></td>
                     <td><div class="tovf-gm-milestone-actions"><button type="button" data-action="moveMilestoneRow" data-direction="up" title="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.MoveUp"}}" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.MoveUp"}}"><i class="fa-solid fa-arrow-up"></i></button><button type="button" data-action="moveMilestoneRow" data-direction="down" title="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.MoveDown"}}" aria-label="{{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.MoveDown"}}"><i class="fa-solid fa-arrow-down"></i></button><button type="button" data-action="removeMilestoneRow" title="{{localize 'DOWNTIME_MANAGER.GMTools.Remove'}}" aria-label="{{localize 'DOWNTIME_MANAGER.GMTools.Remove'}}"><i class="fa-solid fa-trash"></i></button></div></td>
                   </tr></template>
@@ -66,7 +66,7 @@
   <section class="tovf-gm-tools-section">
 
   {{#if selected}}<div data-downtime-editor>
-    <label>Charakter <select data-character-select>{{#each actors}}<option value="{{uuid}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
+    <label>{{localize 'TOVF.Interface.Character_19365b'}} <select data-character-select>{{#each actors}}<option value="{{uuid}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
             <div class="tovf-gm-character-sidebar">
         <fieldset class="tovf-gm-downtime-card">
           <legend>{{localize "DOWNTIME_MANAGER.GMTools.Downtime"}}</legend>
@@ -75,7 +75,7 @@
         </fieldset>
   
     </div>
-    <button type="button" data-action="saveDowntime">Downtime-Korrektur speichern</button>
+    <button type="button" data-action="saveDowntime">{{localize 'TOVF.Interface.SaveDowntimeCorrection_c096b6'}}</button>
   </div>{{/if}}
   {{#with dashboard}}  <details class="sc-dashboard-downtime" open><summary>{{localize "DOWNTIME_MANAGER.Dashboard.DirectDowntime"}}</summary><div class="sc-dashboard-downtime-body"><div class="sc-dashboard-character-grid">{{#each characters}}<label class="checkbox"><input type="checkbox" name="directDowntimeActors" value="{{uuid}}"><img src="{{img}}" alt=""><span><strong>{{name}}</strong><small>{{localize "DOWNTIME_MANAGER.Dashboard.CurrentDowntime"}}: {{downtime}}</small></span></label>{{else}}<p class="notes">{{localize "DOWNTIME_MANAGER.Dashboard.Errors.NoCharacters"}}</p>{{/each}}</div><div class="sc-dashboard-grant-actions"><label><span>{{localize "DOWNTIME_MANAGER.Dashboard.Amount"}}</span><input type="number" name="directDowntimeAmount" value="1" min="0.000001" step="any"></label><button type="button" data-action="grantSelectedDowntime"><i class="fa-solid fa-user-check"></i> {{localize "DOWNTIME_MANAGER.Dashboard.GrantSelected"}}</button><button type="button" data-action="grantAllDowntime"><i class="fa-solid fa-users"></i> {{localize "DOWNTIME_MANAGER.Dashboard.GrantAll"}}</button></div>{{#with lastDirectAll}}<p class="sc-dashboard-last-grant"><i class="fa-solid fa-clock-rotate-left"></i> {{localize "DOWNTIME_MANAGER.Dashboard.LastGrantAll"}}: <strong>{{date}}</strong> · {{amount}} {{localize "DOWNTIME_MANAGER.Station.Downtime"}} · {{count}} {{localize "DOWNTIME_MANAGER.Dashboard.Characters"}}{{#if userName}} · {{userName}}{{/if}}</p>{{/with}}</div></details>
 {{/with}}

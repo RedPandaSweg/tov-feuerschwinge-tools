@@ -1,3 +1,4 @@
+import { uiText } from "../core/localization.mjs";
 import {
   createDefaultSessionRewards,
   createDefaultStationCategories,
@@ -35,7 +36,7 @@ import {
 import { MIGRATION_SETTING, migrateIntegratedDowntime } from "./migration.mjs";
 import { openChallengeManager } from "../challenge-manager.mjs";
 import { openFeuerschwingeSettings } from "../settings-categories.mjs";
-import { createWorldSpellScroll } from "../spell-scrolls.mjs?v=3.5.0-spell-scrolls-3";
+import { createWorldSpellScroll } from "../spell-scrolls.mjs?v=3.7.1-offer-access-1";
 import { GMToolsApp } from "./gm-tools-app.mjs?v=3.5.0-actor-spell-migration-10";
 import { isCompendiumItem, synchronizeCompendiumItem } from "../item-compendium-sync.mjs?v=3.5.0-cross-source-spell-sync-8";
 
@@ -145,7 +146,7 @@ function registerTokenDoubleClick() {
     const auctionHouse = this.actor?.getFlag?.(MODULE_ID, "auctionHouse")?.enabled === true;
     if (merchant || auctionHouse) {
       event?.stopPropagation?.();
-      void import("../commerce/app.mjs").then(({ openCommerce }) => openCommerce({
+      void import("../commerce/app.mjs?v=3.7.1-offer-access-1").then(({ openCommerce }) => openCommerce({
         mode: merchant ? "merchant" : "auction",
         merchantId: merchant ? this.actor.id : null,
         auctionHouseId: auctionHouse ? this.actor.id : null
@@ -168,8 +169,8 @@ Hooks.once("init", async () => {
   registerTokenDoubleClick();
   registerCampaignService();
   game.settings.registerMenu(MODULE_ID, "userTransfer", {
-    name: "Benutzer importieren / exportieren", label: "Benutzertransfer öffnen",
-    hint: "Benutzerprofile und Charakterzuordnungen zwischen Live-, Test- und Sessionwelt übertragen.",
+    name: uiText("TOVF.Interface.ImportExportUsers_006bc8", "Benutzer importieren / exportieren"), label: uiText("TOVF.Interface.OpenUserTransfer_f4d32a", "Benutzertransfer öffnen"),
+    hint: uiText("TOVF.Interface.TransferUserProfilesAndCharacterAssignmentsBetween_3265a3", "Benutzerprofile und Charakterzuordnungen zwischen Live-, Test- und Sessionwelt übertragen."),
     icon: "fa-solid fa-users", type: UserTransferApp, restricted: true
   });
 
@@ -365,8 +366,8 @@ function actorHeaderControls(app, controls) {
       const action = await foundry.applications.api.DialogV2.wait({
         window: { title: game.i18n.localize("DOWNTIME_MANAGER.Headers.Feuerschwinge") },
         buttons: [
-          { action: "merchant", icon: "fa-solid fa-shop", label: merchant ? "Händler öffnen und verwalten" : "Als Händler einrichten", callback: () => "merchant" },
-          { action: "auction", icon: "fa-solid fa-gavel", label: auctionHouse ? "Auktionshaus öffnen" : "Als Auktionshaus einrichten", callback: () => "auction" },
+          { action: "merchant", icon: "fa-solid fa-shop", label: merchant ? uiText("TOVF.Interface.OpenAndManageMerchant_3334c1", "Händler öffnen und verwalten") : uiText("TOVF.Interface.ConfigureAsMerchant_7e184b", "Als Händler einrichten"), callback: () => "merchant" },
+          { action: "auction", icon: "fa-solid fa-gavel", label: auctionHouse ? uiText("TOVF.Interface.OpenAuctionHouse_9a5133", "Auktionshaus öffnen") : "Als Auktionshaus einrichten", callback: () => "auction" },
           { action: "station", icon: "fa-solid fa-hammer", label: isStation(actor)
             ? game.i18n.localize("DOWNTIME_MANAGER.Headers.ConfigureStation")
             : game.i18n.localize("DOWNTIME_MANAGER.Headers.MakeStation"), callback: () => "station" },
@@ -376,7 +377,7 @@ function actorHeaderControls(app, controls) {
       });
       if (action === "station") return configureStation(actor, app);
       if (action === "openStation") return openStation(actor);
-      const commerce = await import("../commerce/app.mjs");
+      const commerce = await import("../commerce/app.mjs?v=3.7.1-offer-access-1");
       if (action === "merchant") return merchant ? commerce.openCommerce({ mode: "merchant", merchantId: actor.id, shopPage: "management" }) : commerce.configureMerchantActor(actor, app);
       if (action === "auction") return auctionHouse ? commerce.openCommerce({ mode: "auction", auctionHouseId: actor.id }) : commerce.configureAuctionHouseActor(actor, app);
     }

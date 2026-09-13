@@ -1,3 +1,4 @@
+import { uiText } from "../core/localization.mjs";
 import { MODULE_ID } from "../core/constants.mjs";
 import { MERCHANT_FLAG } from "./service.mjs";
 
@@ -50,7 +51,7 @@ export function findItemPilesMerchants() {
 }
 
 export async function migrateItemPilesMerchants() {
-  if (!game.user.isGM) throw new Error("Nur die Spielleitung kann Händler importieren.");
+  if (!game.user.isGM) throw new Error(uiText("TOVF.Interface.OnlyAGMCanImportMerchants_2a2f3a", "Nur die Spielleitung kann Händler importieren."));
   const entries = findItemPilesMerchants();
   const report = { found: entries.length, created: 0, updated: 0 };
   for (const entry of entries) {
@@ -61,7 +62,7 @@ export async function migrateItemPilesMerchants() {
       if (!game.actors.has(target?.id)) {
         const source = actor.toObject();
         delete source._id;
-        source.name = `${actor.name} (Händler)`;
+        source.name = uiText("TOVF.Interface.P0Merchant_572db4", "{p0} (Händler)", { p0: (actor.name) });
         target = await Actor.create(source);
         report.created += 1;
       } else report.updated += 1;

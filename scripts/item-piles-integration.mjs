@@ -1,3 +1,4 @@
+import { uiText } from "./core/localization.mjs";
 import { MODULE_ID } from "./core/constants.mjs";
 
 function getModuleVersion() {
@@ -23,7 +24,7 @@ const EARLY_CURRENCIES = [
   },
   {
     type: "item",
-    name: "Gold",
+    name: uiText("TOVF.Interface.Gold_c57604", "Gold"),
     img: null,
     abbreviation: "{#}gp",
     data: { uuid: BLACK_FLAG_GP_UUID },
@@ -58,7 +59,7 @@ let chatCompatibilityInstalled = false;
 function baseGoldCurrency() {
   return {
     type: "item",
-    name: "Gold",
+    name: uiText("TOVF.Interface.Gold_c57604", "Gold"),
     img: null,
     abbreviation: "{#}gp",
     data: { uuid: BLACK_FLAG_GP_UUID },
@@ -197,7 +198,7 @@ function installChatCompatibility() {
     const recipients = recipientIds.reduce((names, id) => {
       const user = game.users.get(id);
       if (!user) return names;
-      const name = user.isGM ? "Spielleitung" : user.name;
+      const name = user.isGM ? uiText("TOVF.Interface.GM_fa2c48", "Spielleitung") : user.name;
       if (!names.includes(name)) names.push(name);
       return names;
     }, []);

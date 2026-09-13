@@ -1,3 +1,4 @@
+import { uiText } from "./core/localization.mjs";
 import { CONTENT_MODULE_ID, MODULE_ID, modulePath } from "./core/constants.mjs";
 
 const LEGACY_MODULE = "forge-vtt-shared-compendiums-tcv-gesammt";
@@ -330,7 +331,7 @@ async function updateActor(actor, replacements) {
     ].filter(Boolean).join("; ");
     throw new Error(
       `Character enthält bereits ungültige eingebettete Dokumente (${details}). `
-      + "Er wurde übersprungen, damit Foundry ihn nicht durch eine Teilaktualisierung beschädigt."
+      + uiText("TOVF.Interface.ItWasSkippedToPreventFoundryFrom_6e5722", "Er wurde übersprungen, damit Foundry ihn nicht durch eine Teilaktualisierung beschädigt.")
     );
   }
 
@@ -359,13 +360,13 @@ async function updateActor(actor, replacements) {
 
 export async function repairLegacyCharacterLinks() {
   if (!game.user.isGM) return;
-  ui.notifications.info("Character-Verweise werden geprüft …");
+  ui.notifications.info(uiText("TOVF.Interface.CheckingCharacterReferences_c36b02", "Character-Verweise werden geprüft …"));
   const catalog = await loadLegacyCatalog({ reportMissing: true });
   const { replacements, current } = await buildReplacements(catalog);
   await addWorldReplacements(replacements, current);
   const analysis = analyzeActors(replacements);
   if (!analysis.actors.length) {
-    ui.notifications.info("Keine automatisch reparierbaren Verweise in bestehenden Characters gefunden.");
+    ui.notifications.info(uiText("TOVF.Interface.NoAutomaticallyRepairableReferencesFoundInExisting_9926cc", "Keine automatisch reparierbaren Verweise in bestehenden Characters gefunden."));
     return;
   }
 
@@ -437,7 +438,7 @@ function collectReferences(value, path = "", references = []) {
 
 export async function auditCharacterLinks() {
   if (!game.user.isGM) return;
-  ui.notifications.info("Character-Verknüpfungen werden geprüft …");
+  ui.notifications.info(uiText("TOVF.Interface.CheckingCharacterLinks_e9d4c7", "Character-Verknüpfungen werden geprüft …"));
   const issues = [];
   let checkedReferences = 0;
   const resolutionCache = new Map();

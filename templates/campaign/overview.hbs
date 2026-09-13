@@ -1,182 +1,192 @@
 <div class="tovf-campaign-body">
   <nav class="tovf-campaign-tabs">
     {{#each tabs}}<button type="button" data-action="command" data-command="tab" data-tab="{{id}}" class="{{#if active}}active{{/if}}">{{label}}</button>{{/each}}
-    <button type="button" data-action="command" data-command="refresh" title="Aktualisieren"><i class="fa-solid fa-rotate"></i></button>
+    <button type="button" data-action="command" data-command="refresh" title="{{localize 'TOVF.Interface.Refresh_87c65f'}}"><i class="fa-solid fa-rotate"></i></button>
   </nav>
-  <p class="hint">{{summary}}{{#if exportedAt}} · Datenstand: {{exportedAt}}{{/if}}</p>
+  <p class="hint">{{summary}}{{#if exportedAt}} {{localize 'TOVF.Interface.DataAsOf_ffa317'}} {{exportedAt}}{{/if}}</p>
 
   {{#if rewardsTab}}
-    {{#if admin}}<p>Wähle die Person, deren Guthaben du verwalten möchtest. Als Spielleiter kannst du für sie eine Belohnung auf einen ihrer Charaktere einlösen.</p>
-      <div class="form-group"><label>Guthaben von</label><select name="rewardPerson">{{#each rewardPeople}}<option value="{{id}}" {{#if rewardSelected}}selected{{/if}}>{{name}}</option>{{else}}<option value="">Keine zugeordneten Spielleiter oder Serverteam-Mitglieder</option>{{/each}}</select></div>
-    {{else}}<p>Hier kannst du dein Guthaben auf deine Charaktere verteilen.</p>
-      <div class="form-group"><label>Guthaben von</label><select disabled>{{#each rewardPeople}}<option selected>{{name}}</option>{{else}}<option selected>Dein Benutzer ist noch keiner Person zugeordnet</option>{{/each}}</select></div>
+    {{#if admin}}<p>{{localize 'TOVF.Interface.SelectThePersonWhoseBalanceYouWant_6fe82d'}}</p>
+      <div class="form-group"><label>{{localize 'TOVF.Interface.BalanceOf_bb96ac'}}</label><select name="rewardPerson">{{#each rewardPeople}}<option value="{{id}}" {{#if rewardSelected}}selected{{/if}}>{{name}}</option>{{else}}<option value="">{{localize 'TOVF.Interface.NoAssignedGMsOrServerTeamMembers_8f8368'}}</option>{{/each}}</select></div>
+    {{else}}<p>{{localize 'TOVF.Interface.YouCanDistributeYourBalanceAmongYour_9c12b0'}}</p>
+      <div class="form-group"><label>{{localize 'TOVF.Interface.BalanceOf_bb96ac'}}</label><select disabled>{{#each rewardPeople}}<option selected>{{name}}</option>{{else}}<option selected>{{localize 'TOVF.Interface.YourUserIsNotAssignedToA_f611f0'}}</option>{{/each}}</select></div>
     {{/if}}
-    <p class="hint">Gold richtet sich nach dem Charakterlevel vor der Einlösung.</p>
-    {{#if rewardUnlinked}}<p class="hint">Dieser Foundry-Benutzer ist noch keiner Kampagnenperson zugeordnet. Unter „Spielerzuordnung“ den Benutzer auswählen, damit vorhandene Ansprüche und Charaktere angezeigt werden.</p>{{/if}}
-    <div class="form-group"><label>Charakter für die Einlösung</label><select name="redeemActor"><option value="">Bitte wählen</option>{{#each ownCharacters}}<option value="{{actorUuid}}">{{name}} · {{foundryMilestones}} Meilensteine · Level {{expectedLevel}}</option>{{/each}}</select></div>
-    {{#unless ownCharacters.length}}<p class="hint">Für diese Person ist noch kein Charakter zugeordnet. Spielerbenutzer und Charakterzuordnung unter „Spielerzuordnung“ beziehungsweise „Charaktere“ prüfen.</p>{{/unless}}
-    <table><thead><tr><th style="vertical-align: middle;">Herkunft</th><th style="vertical-align: middle;">Inhalt</th><th style="text-align: center; vertical-align: middle;">Offen / Gesamt</th><th style="vertical-align: middle;"></th></tr></thead><tbody>
-      {{#each openClaims}}<tr><td style="vertical-align: middle;">{{kindLabel}}<br><small>{{sourceLabel}}</small></td><td style="vertical-align: middle;">{{rewardLabel}}</td><td style="text-align: center; vertical-align: middle;">{{remaining}} / {{count}}</td><td style="vertical-align: middle;">{{#if canRedeem}}<button type="button" data-action="command" data-command="redeem" data-id="{{id}}">Einlösen</button>{{/if}}</td></tr>{{else}}<tr><td colspan="4" style="vertical-align: middle;">Keine offenen Belohnungen vorhanden.</td></tr>{{/each}}
+    <p class="hint">{{localize 'TOVF.Interface.GoldIsBasedOnTheCharacterS_0ab34c'}}</p>
+    {{#if rewardUnlinked}}<p class="hint">{{localize 'TOVF.Interface.ThisFoundryUserIsNotAssignedTo_c5ec74'}}</p>{{/if}}
+    <div class="form-group"><label>{{localize 'TOVF.Interface.CharacterForRedemption_bfd8c4'}}</label><select name="redeemActor"><option value="">{{localize 'TOVF.Interface.PleaseSelect_888fc4'}}</option>{{#each ownCharacters}}<option value="{{actorUuid}}">{{name}} · {{foundryMilestones}} {{localize 'TOVF.Interface.MilestonesLevel_dc2202'}} {{expectedLevel}}</option>{{/each}}</select></div>
+    {{#unless ownCharacters.length}}<p class="hint">{{localize 'TOVF.Interface.NoCharacterIsAssignedToThisPerson_483b4c'}}</p>{{/unless}}
+    <table><thead><tr><th style="vertical-align: middle;">{{localize 'TOVF.Interface.Source_336448'}}</th><th style="vertical-align: middle;">{{localize 'TOVF.Interface.Contents_85840d'}}</th><th style="text-align: center; vertical-align: middle;">{{localize 'TOVF.Interface.RemainingTotal_7647d2'}}</th><th style="vertical-align: middle;"></th></tr></thead><tbody>
+      {{#each openClaims}}<tr><td style="vertical-align: middle;">{{kindLabel}}<br><small>{{sourceLabel}}</small></td><td style="vertical-align: middle;">{{rewardLabel}}</td><td style="text-align: center; vertical-align: middle;">{{remaining}} / {{count}}</td><td style="vertical-align: middle;">{{#if canRedeem}}<button type="button" data-action="command" data-command="redeem" data-id="{{id}}">{{localize 'TOVF.Interface.Redeem_829bcf'}}</button>{{/if}}</td></tr>{{else}}<tr><td colspan="4" style="vertical-align: middle;">{{localize 'TOVF.Interface.NoOpenRewardsAvailable_ca6566'}}</td></tr>{{/each}}
     </tbody></table>
     {{#if admin}}
-    <details><summary>Guthaben korrigieren</summary>
-      <p>Gesamtanspruch und bereits außerhalb des Moduls verwendete Belohnungen berichtigen. Tatsächliche Einlösungen bleiben erhalten. Es werden keine Charakterwerte geändert.</p>
+    <details><summary>{{localize 'TOVF.Interface.CorrectBalance_266c6c'}}</summary>
+      <p>{{localize 'TOVF.Interface.CorrectTheTotalClaimAndRewardsAlready_c85a46'}}</p>
       {{#each claims}}<fieldset><legend>{{kindLabel}} · {{sourceLabel}}</legend>
-        <label>Gesamtanspruch <input type="number" name="claimTotal.{{id}}" value="{{count}}" min="0" step="1"></label>
-        <label>Bereits außerhalb des Moduls verwendet <input type="number" name="claimUsed.{{id}}" value="{{historicalUsed}}" min="0" step="1"></label>
-        <label>Begründung <input type="text" name="claimReason.{{id}}"></label>
-        <button type="button" data-action="command" data-command="correctClaim" data-id="{{id}}">Korrektur speichern</button>
+        <label>{{localize 'TOVF.Interface.TotalClaim_fea820'}} <input type="number" name="claimTotal.{{id}}" value="{{count}}" min="0" step="1"></label>
+        <label>{{localize 'TOVF.Interface.AlreadyUsedOutsideTheModule_998782'}} <input type="number" name="claimUsed.{{id}}" value="{{historicalUsed}}" min="0" step="1"></label>
+        <label>{{localize 'TOVF.Interface.Reason_e1ce09'}} <input type="text" name="claimReason.{{id}}"></label>
+        <button type="button" data-action="command" data-command="correctClaim" data-id="{{id}}">{{localize 'TOVF.Interface.SaveCorrection_7cfcdf'}}</button>
       </fieldset>{{/each}}
-      {{#each corrections}}<p>{{date}} · {{userName}}: Gesamt {{before.total}} → {{after.total}}, extern verwendet {{before.historicalUsed}} → {{after.historicalUsed}}. {{reason}}</p>{{/each}}
+      {{#each corrections}}<p>{{date}} · {{userName}}{{localize 'TOVF.Interface.Total_fd2c11'}} {{before.total}} → {{after.total}}{{localize 'TOVF.Interface.UsedExternally_8dbd55'}} {{before.historicalUsed}} → {{after.historicalUsed}}. {{reason}}</p>{{/each}}
     </details>
     {{/if}}
-    <h3>Einlösungen</h3>
+    <h3>{{localize 'TOVF.Interface.Redemptions_529da1'}}</h3>
     {{#each redemptions}}
       <details><summary>{{date}} · {{actorName}} · {{kindLabel}} · {{statusLabel}}</summary>
-        <p>Level {{level}} vor Einlösung · {{milestones}} Meilensteine · {{gold}} Gold · Quelle: {{sourceLabel}}</p>
-        {{#if requestedByName}}<p>Ausgeführt von: {{requestedByName}}</p>{{/if}}
+        <p>Level {{level}} {{localize 'TOVF.Interface.BeforeRedemption_199c67'}} {{milestones}} {{localize 'TOVF.Interface.Milestones_89b2d6'}} {{gold}} {{localize 'TOVF.Interface.GoldSource_46c373'}} {{sourceLabel}}</p>
+        {{#if requestedByName}}<p>{{localize 'TOVF.Interface.RequestedBy_b0acf5'}} {{requestedByName}}</p>{{/if}}
         {{#each items}}<p>{{name}} × {{quantity}}</p>{{/each}}
-        {{#if needsReview}}<p>Bestätigte Schritte: {{stepsLabel}}. Nach einer Unterbrechung kann auch der unmittelbar nächste Schritt bereits erfolgt sein. Charakterstand prüfen.</p><p>{{error}}</p>
-          <select name="resolveStatus.{{id}}"><option value="redeemed">Vergabe vollständig abgeschlossen</option><option value="void">Vergabe vollständig zurückgenommen, Guthaben freigeben</option></select>
-          <input name="resolveReason.{{id}}" type="text" placeholder="Prüfung und manuelle Korrekturen dokumentieren">
-          <button type="button" data-action="command" data-command="resolve" data-id="{{id}}">Prüfung abschließen</button>
+        {{#if canAssignHistorical}}
+          <p class="hint">{{localize 'TOVF.HistoricalAssignment.Hint'}}</p>
+          <label>{{localize 'TOVF.HistoricalAssignment.Character'}}
+            <select name="historicalActor.{{id}}"><option value="">{{localize 'TOVF.Interface.PleaseSelect_888fc4'}}</option>{{#each historicalActors}}<option value="{{uuid}}">{{name}}</option>{{/each}}</select>
+          </label>
+          <label>{{localize 'TOVF.HistoricalAssignment.Milestones'}} <input type="number" name="historicalMilestones.{{id}}" value="1" min="1" max="100" step="1"></label>
+          <button type="button" data-action="command" data-command="assignHistorical" data-id="{{id}}">{{localize 'TOVF.HistoricalAssignment.Assign'}}</button>
+        {{/if}}
+        {{#if needsReview}}<p>{{localize 'TOVF.Interface.ConfirmedSteps_ff2445'}} {{stepsLabel}}{{localize 'TOVF.Interface.AfterAnInterruptionTheNextStepMay_9e5d18'}}</p><p>{{error}}</p>
+          <select name="resolveStatus.{{id}}"><option value="redeemed">{{localize 'TOVF.Interface.RewardFullyGranted_913a11'}}</option><option value="void">{{localize 'TOVF.Interface.RewardFullyRevertedReleaseBalance_694d88'}}</option></select>
+          <input name="resolveReason.{{id}}" type="text" placeholder="{{localize 'TOVF.Interface.DocumentReviewAndManualCorrections_0f600e'}}">
+          <button type="button" data-action="command" data-command="resolve" data-id="{{id}}">{{localize 'TOVF.Interface.CompleteReview_8d6ffb'}}</button>
         {{/if}}
       </details>
-    {{else}}<p class="hint">Noch keine Einlösungen.</p>{{/each}}
+    {{else}}<p class="hint">{{localize 'TOVF.Interface.NoRedemptionsYet_ad07fe'}}</p>{{/each}}
   {{/if}}
 
   {{#if charactersTab}}
     <details open>
-    <summary>Charakterübersicht & Zuordnungen</summary>
-    <input type="search" name="search" placeholder="Charakter oder Nutzer suchen">
-    <p class="hint">Westmarches-Werte sind ein Ausgangsstand. Der Import überschreibt keine Meilensteine, kein Gold und keine Gegenstände in Foundry.</p>
-    <div class="tovf-character-table-scroll"><table class="tovf-character-table"><colgroup><col style="width:17%"><col style="width:19%"><col style="width:47%"><col style="width:17%"></colgroup><thead><tr><th>Charakter / Nutzer</th><th>Westmarches</th><th>Foundry</th><th>Zuordnung</th></tr></thead><tbody>
-      {{#each characters}}<tr data-search="{{name}} {{personName}}"><td>{{name}}<br><small>{{personName}}</small></td><td>{{milestones}} Meilensteine · Level {{level}}</td><td>{{#if actorUuid}}<div class="tovf-character-foundry"><span>{{foundryMilestones}} Meilensteine · Level {{expectedLevel}}</span><button type="button" data-action="command" data-command="history" data-uuid="{{actorUuid}}" title="Herkunft der Meilensteine anzeigen">Herkunft</button>{{#if ../admin}}<button type="button" data-action="command" data-command="milestoneEditor" data-uuid="{{actorUuid}}" title="Meilensteine zuordnen">Zuordnen</button>{{/if}}</div>{{#if mismatch}}<strong>Abweichung prüfen</strong>{{/if}}{{else}}Nicht zugeordnet{{/if}}</td><td>{{#if ../admin}}<select name="character.{{id}}"><option value="">Nicht zugeordnet</option>{{#each actorOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select>{{else}}{{actorName}}{{/if}}</td></tr>{{/each}}
+    <summary>{{localize 'TOVF.Interface.CharacterOverviewAssignments_e0e39b'}}</summary>
+    <input type="search" name="search" placeholder="{{localize 'TOVF.Interface.SearchCharactersOrUsers_9cb518'}}">
+    <p class="hint">{{localize 'TOVF.Interface.WestmarchesValuesAreABaselineImportingDoes_540bfb'}}</p>
+    <div class="tovf-character-table-scroll"><table class="tovf-character-table"><colgroup><col style="width:17%"><col style="width:19%"><col style="width:47%"><col style="width:17%"></colgroup><thead><tr><th>{{localize 'TOVF.Interface.CharacterUser_bac1fd'}}</th><th>Westmarches</th><th>Foundry</th><th>{{localize 'TOVF.Interface.Assignment_f11eeb'}}</th></tr></thead><tbody>
+      {{#each characters}}<tr data-search="{{name}} {{personName}}"><td>{{name}}<br><small>{{personName}}</small></td><td>{{milestones}} {{localize 'TOVF.Interface.MilestonesLevel_dc2202'}} {{level}}</td><td>{{#if actorUuid}}<div class="tovf-character-foundry"><span>{{foundryMilestones}} {{localize 'TOVF.Interface.MilestonesLevel_dc2202'}} {{expectedLevel}}</span><button type="button" data-action="command" data-command="history" data-uuid="{{actorUuid}}" title="{{localize 'TOVF.Interface.ShowMilestoneSources_4f7d62'}}">{{localize 'TOVF.Interface.Source_336448'}}</button>{{#if ../admin}}<button type="button" data-action="command" data-command="milestoneEditor" data-uuid="{{actorUuid}}" title="{{localize 'TOVF.Interface.AssignMilestones_f836d9'}}">{{localize 'TOVF.Interface.Assign_f88d19'}}</button>{{/if}}</div>{{#if mismatch}}<strong>{{localize 'TOVF.Interface.ReviewDiscrepancy_927b37'}}</strong>{{/if}}{{else}}{{localize 'TOVF.Interface.Unassigned_d52900'}}{{/if}}</td><td>{{#if ../admin}}<select name="character.{{id}}"><option value="">{{localize 'TOVF.Interface.Unassigned_d52900'}}</option>{{#each actorOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select>{{else}}{{actorName}}{{/if}}</td></tr>{{/each}}
     </tbody></table>
     </div>
-    {{#if admin}}<button type="button" data-action="command" data-command="links" title="Charakterzuordnungen speichern">Speichern</button>{{/if}}
+    {{#if admin}}<button type="button" data-action="command" data-command="links" title="{{localize 'TOVF.Interface.SaveCharacterAssignments_162e40'}}">{{localize 'TOVF.Interface.Save_70b73b'}}</button>{{/if}}
     </details>
     {{#if admin}}
-    <h3>Meilensteinnachweise abgleichen</h3>
-    <p class="hint">Für zugeordnete Charaktere: vorhandene ungeklärte Meilensteine mit Westmarches-Sessions belegen. Anmeldungen sind Vorschläge, keine bestätigte Teilnahme. Pro Woche ist höchstens ein Sessionmeilenstein möglich. Leere Starteinträge werden erst nach deiner Bestätigung ersetzt; bewusst vergebene Startmeilensteine bitte frei lassen.</p>
+    <h3>{{localize 'TOVF.Interface.ReconcileMilestoneEvidence_964120'}}</h3>
+    <p class="hint">{{localize 'TOVF.Interface.ForLinkedCharactersDocumentExistingUnresolvedMilestones_3bd4df'}}</p>
     {{#each reconciliation}}
-      <details><summary>{{name}} · {{empty}} ungeklärte Einträge · Foundry {{total}} / Westmarches {{remoteTotal}}</summary>
+      <details><summary>{{name}} · {{empty}} {{localize 'TOVF.Interface.UnresolvedEntriesFoundry_ea6301'}} {{total}} / Westmarches {{remoteTotal}}</summary>
         {{#each groups}}
-          <div class="form-group"><label>{{week}}{{#if documented}} · bereits dokumentiert{{/if}}</label>
+          <div class="form-group"><label>{{week}}{{#if documented}} {{localize 'TOVF.Interface.AlreadyDocumented_4ff996'}}{{/if}}</label>
           <select name="evidence.{{../characterId}}" {{#if documented}}disabled{{/if}}>
-            <option value="">Nicht übernehmen</option>
-            {{#each candidates}}<option value="{{id}}">{{date}} · {{title}} · Anmeldung: {{registration}}{{#if played}} · Session als gespielt bestätigt{{/if}}</option>{{/each}}
+            <option value="">{{localize 'TOVF.Interface.DoNotApply_875df7'}}</option>
+            {{#each candidates}}<option value="{{id}}">{{date}} · {{title}} {{localize 'TOVF.Interface.Registration_141030'}} {{registration}}{{#if played}} {{localize 'TOVF.Interface.SessionConfirmedAsPlayed_29ef18'}}{{/if}}</option>{{/each}}
           </select></div>
-        {{else}}<p>Keine vergangenen Sessionanmeldungen gefunden. Herkunft manuell prüfen.</p>{{/each}}
-        {{#if empty}}<button type="button" data-action="command" data-command="reconcile" data-id="{{characterId}}">Ausgewählte Nachweise übernehmen</button>{{else}}<p>Keine leeren Herkunftseinträge verfügbar. Bestehende Einträge werden nicht überschrieben.</p>{{/if}}
+        {{else}}<p>{{localize 'TOVF.Interface.NoPastSessionRegistrationsFoundReviewSources_9a3404'}}</p>{{/each}}
+        {{#if empty}}<button type="button" data-action="command" data-command="reconcile" data-id="{{characterId}}">{{localize 'TOVF.Interface.ApplySelectedEvidence_b3d938'}}</button>{{else}}<p>{{localize 'TOVF.Interface.NoEmptySourceEntriesAvailableExistingEntries_c46d47'}}</p>{{/if}}
       </details>
     {{/each}}
     {{/if}}
   {{/if}}
 
   {{#if sessionsTab}}
-    <details><summary>Foundry-Sessions mit Westmarches verknüpfen</summary>
-      <p>Gesamte Foundry-Historie, unabhängig vom Abrechnungsmonat. Zuerst fehlende Spielleiter zuordnen und „Spielleiter speichern & Vorschläge berechnen“ wählen. Danach Sessionpaare prüfen und speichern. Foundry-Zeiten sind Eintragszeiten und dürfen vom Termin abweichen.</p>
+    <p>{{localize 'TOVF.AutoSessions.Hint'}}</p>
+    <button type="button" data-action="command" data-command="autoSessionLinks">{{localize 'TOVF.AutoSessions.Action'}}</button>
+    <details><summary>{{localize 'TOVF.Interface.LinkFoundrySessionsToWestmarches_d5b712'}}</summary>
+      <p>{{localize 'TOVF.Interface.CompleteFoundryHistoryRegardlessOfTheSettlement_692e74'}}</p>
       {{#each sessionMatches}}
         <fieldset><legend>{{title}}</legend>
-          <p>Foundry-Eintrag: {{dateLabel}} · {{reason}}{{#if missingRemote}} · Verknüpfte Westmarches-Session fehlt im Export{{/if}}</p>
-          <label>Spielleiter <select name="historyGm.{{id}}"><option value="">Bitte zuordnen</option>{{#each gmOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
-          <label>Westmarches-Session <select name="historyLink.{{id}}"><option value="">Nicht verknüpft</option>{{#if missingRemote}}<option value="{{link.westmarchesId}}" selected>Gespeicherte Verbindung beibehalten</option>{{/if}}{{#each options}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{date}} · {{title}}</option>{{/each}}</select></label>
+          <p>{{localize 'TOVF.Interface.FoundryEntry_4943c0'}} {{dateLabel}} · {{reason}}{{#if missingRemote}} {{localize 'TOVF.Interface.LinkedWestmarchesSessionIsMissingFromThe_305204'}}{{/if}}</p>
+          <label>{{localize 'TOVF.Interface.GM_016a67'}} <select name="historyGm.{{id}}"><option value="">{{localize 'TOVF.Interface.PleaseAssign_e9ab3d'}}</option>{{#each gmOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
+          <label>{{localize 'TOVF.Interface.WestmarchesSession_bb7922'}} <select name="historyLink.{{id}}"><option value="">{{localize 'TOVF.Interface.NotLinked_ffd6fd'}}</option>{{#if missingRemote}}<option value="{{link.westmarchesId}}" selected>{{localize 'TOVF.Interface.KeepSavedLink_ec1014'}}</option>{{/if}}{{#each options}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{date}} · {{title}}</option>{{/each}}</select></label>
         </fieldset>
-      {{else}}<p>In dieser Welt ist noch keine strukturierte Sessionhistorie vorhanden.</p>{{/each}}
-      <button type="button" data-action="command" data-command="sessionGms">Spielleiter speichern & Vorschläge berechnen</button>
-      <button type="button" data-action="command" data-command="sessionLinks">Ausgewählte Sessionverbindungen speichern</button>
+      {{else}}<p>{{localize 'TOVF.Interface.ThisWorldHasNoStructuredSessionHistory_12f150'}}</p>{{/each}}
+      <button type="button" data-action="command" data-command="sessionGms">{{localize 'TOVF.Interface.SaveGMsCalculateSuggestions_b7c24a'}}</button>
+      <button type="button" data-action="command" data-command="sessionLinks">{{localize 'TOVF.Interface.SaveSelectedSessionLinks_d5d049'}}</button>
     </details>
-    <div class="form-group"><label>Abrechnungsmonat</label><input type="month" name="month" value="{{month}}"></div>
-    <p>Zum Exportzeitpunkt beendete Westmarches-Sessions gelten automatisch als gespielt. Abgesagte oder ausdrücklich ausgeschlossene Termine zählen nicht. Für neue, verschobene oder entfernte Termine bitte einen aktuellen Export importieren.</p>
+    <div class="form-group"><label>{{localize 'TOVF.Interface.SettlementMonth_7eec61'}}</label><input type="month" name="month" value="{{month}}"></div>
+    <p>{{localize 'TOVF.Interface.WestmarchesSessionsThatHadEndedAtExport_783d0e'}}</p>
     {{#each sessions}}
       <details><summary>{{displayDate}} · {{title}}</summary>
-        <p><strong>Spielleiter:</strong> {{name}} · <strong>Durchführung:</strong> {{statusLabel}}</p>
-        <div class="form-group"><label>Session berücksichtigen</label><select name="session.{{id}}"><option value="">Automatisch nach Export</option><option value="excluded" {{#if excluded}}selected{{/if}}>Ausgeschlossen</option></select></div>
-        <ul>{{#each participants}}<li>{{name}} · Anmeldung: {{registrationStatus}}</li>{{/each}}</ul>
-        {{#if gmBooked}}<p>SL-Belohnung bereits gebucht.</p>{{else}}{{#if played}}<label>Bereits außerhalb des Moduls verwendet <input type="number" name="gmUsed.{{id}}" value="0" min="0" step="1"></label><button type="button" data-action="command" data-command="grantGM" data-id="{{id}}">SL-Belohnung prüfen und buchen</button>{{/if}}{{/if}}
+        <p><strong>{{localize 'TOVF.Interface.GM_c514c9'}}</strong> {{name}} · <strong>{{localize 'TOVF.Interface.SessionStatus_955c01'}}</strong> {{statusLabel}}</p>
+        <div class="form-group"><label>{{localize 'TOVF.Interface.IncludeSession_267be1'}}</label><select name="session.{{id}}"><option value="">{{localize 'TOVF.Interface.AutomaticFromExport_c2cbe9'}}</option><option value="excluded" {{#if excluded}}selected{{/if}}>{{localize 'TOVF.Interface.Excluded_139af0'}}</option></select></div>
+        <ul>{{#each participants}}<li>{{name}} {{localize 'TOVF.Interface.Registration_141030'}} {{registrationStatus}}</li>{{/each}}</ul>
+        {{#if gmBooked}}<p>{{localize 'TOVF.Interface.GMRewardAlreadyBooked_98380d'}}</p>{{else}}{{#if played}}<label>{{localize 'TOVF.Interface.AlreadyUsedOutsideTheModule_998782'}} <input type="number" name="gmUsed.{{id}}" value="0" min="0" step="1"></label><button type="button" data-action="command" data-command="grantGM" data-id="{{id}}">{{localize 'TOVF.Interface.ReviewAndBookGMReward_3e0232'}}</button>{{/if}}{{/if}}
       </details>
-    {{else}}<p>Keine Sessions in diesem Monat.</p>{{/each}}
-    <button type="button" data-action="command" data-command="review">Sessionausnahmen speichern</button>
-    <h3>Serverteam wochenweise buchen</h3>
-    <p>Das dauerhaft aktive Serverteam ist vorausgewählt. Die Auswahl kann für jede Wochenbuchung angepasst werden.</p>
-    {{#each weeks}}<details><summary>{{week}} · {{count}} Belohnungen je Mitglied{{#if booked}} · Bereits abgerechnet{{/if}}</summary>
-      {{#if historical}}<p>Nachtrag: Bitte die damaligen Serverteam-Mitglieder prüfen.</p>{{/if}}
+    {{else}}<p>{{localize 'TOVF.Interface.NoSessionsInThisMonth_590eaf'}}</p>{{/each}}
+    <button type="button" data-action="command" data-command="review">{{localize 'TOVF.Interface.SaveSessionExceptions_439dc8'}}</button>
+    <h3>{{localize 'TOVF.Interface.BookServerTeamRewardsByWeek_2558f9'}}</h3>
+    <p>{{localize 'TOVF.Interface.ThePermanentActiveServerTeamIsPreselected_3b8c99'}}</p>
+    {{#each weeks}}<details><summary>{{week}} · {{count}} {{localize 'TOVF.Interface.RewardsPerMember_fec9bb'}}{{#if booked}} {{localize 'TOVF.Interface.AlreadySettled_8cd033'}}{{/if}}</summary>
+      {{#if historical}}<p>{{localize 'TOVF.Interface.HistoricalBookingPleaseCheckTheMembersActive_f414ba'}}</p>{{/if}}
       {{#each options}}<label><input type="checkbox" name="weekRecipients.{{../week}}" value="{{id}}" {{#if selected}}checked{{/if}} {{#if ../booked}}disabled{{/if}}> {{name}}</label>{{/each}}
-      {{#unless booked}}{{#if closed}}<button type="button" data-action="command" data-command="settleWeek" data-week="{{week}}">Woche buchen</button>{{else}}<p>Woche läuft noch.</p>{{/if}}{{/unless}}
-    </details>{{else}}<p>Keine passenden Wochen; Datenstand und Regelkonfiguration prüfen.</p>{{/each}}
-    <h3>Serverteam-Monatsvorschau</h3>
+      {{#unless booked}}{{#if closed}}<button type="button" data-action="command" data-command="settleWeek" data-week="{{week}}">{{localize 'TOVF.Interface.BookWeek_8e2c37'}}</button>{{else}}<p>{{localize 'TOVF.Interface.WeekIsStillInProgress_6fac1c'}}</p>{{/if}}{{/unless}}
+    </details>{{else}}<p>{{localize 'TOVF.Interface.NoMatchingWeeksCheckSourceDataAnd_372b84'}}</p>{{/each}}
+    <h3>{{localize 'TOVF.Interface.MonthlyServerTeamPreview_13f219'}}</h3>
     {{#if previewError}}<p>{{previewError}}</p>{{/if}}
-    {{#if preview}}<p>{{preview.sessions}} gespielte Sessions / {{preview.gms}} unterschiedliche aktive Spielleiter.</p>
-      {{#if preview.weekly}}<p><strong>{{preview.activeWeeks}} aktive Meilensteinwochen:</strong> {{#each preview.weeks}}{{this}} {{/each}}</p><p class="hint">Montag bis Sonntag. Eine Woche zählt im Monat ihres Sonntags, auch wenn eine zugehörige Session im Vormonat stattfand.</p>{{/if}}
-      <p>Serverteam-Belohnungen: {{preview.community.base}} vor Faktor und Rundung → <strong>{{preview.community.amount}}</strong>. Aktive Serverteam-Mitglieder: {{preview.recipients.length}}.</p>
-      <p>Sessions mit unklaren Datumsangaben: {{preview.unresolved.length}}.{{#if poolMode}} Nicht zugewiesener Pool: {{preview.community.unassigned}}.{{/if}}</p>
-      <table><thead><tr><th>Herkunft</th><th>Empfänger</th><th>Anzahl</th><th>Status</th></tr></thead><tbody>{{#each preview.claims}}<tr><td>{{kindLabel}} · {{sourceLabel}}</td><td>{{personName}}</td><td>{{count}}</td><td>{{#if booked}}Bereits gebucht{{else}}Neu{{/if}}</td></tr>{{/each}}</tbody></table>
-      {{#if settled}}<p><strong>Dieser Monat wurde bereits gebucht.</strong> Die Vorschau zeigt den aktuellen Prüfstand; die gespeicherte Abrechnung bleibt unverändert.</p>{{else}}<button type="button" data-action="command" data-command="settle">Monatsabrechnung prüfen und buchen</button>{{/if}}
+    {{#if preview}}<p>{{preview.sessions}} {{localize 'TOVF.Interface.PlayedSessions_cdc25e'}} {{preview.gms}} {{localize 'TOVF.Interface.DistinctActiveGMs_82565c'}}</p>
+      {{#if preview.weekly}}<p><strong>{{preview.activeWeeks}} {{localize 'TOVF.Interface.ActiveMilestoneWeeks_9f316a'}}</strong> {{#each preview.weeks}}{{this}} {{/each}}</p><p class="hint">{{localize 'TOVF.Interface.MondayThroughSundayAWeekCountsIn_def791'}}</p>{{/if}}
+      <p>{{localize 'TOVF.Interface.ServerTeamRewards_30d74b'}} {{preview.community.base}} {{localize 'TOVF.Interface.BeforeFactorAndRounding_054513'}} <strong>{{preview.community.amount}}</strong>{{localize 'TOVF.Interface.ActiveServerTeamMembers_da813c'}} {{preview.recipients.length}}.</p>
+      <p>{{localize 'TOVF.Interface.SessionsWithUnclearDates_2260f1'}} {{preview.unresolved.length}}.{{#if poolMode}} {{localize 'TOVF.Interface.UnallocatedPool_eb4b7f'}} {{preview.community.unassigned}}.{{/if}}</p>
+      <table><thead><tr><th>{{localize 'TOVF.Interface.Source_336448'}}</th><th>{{localize 'TOVF.Interface.Recipient_dd8278'}}</th><th>{{localize 'TOVF.Interface.Count_a00154'}}</th><th>Status</th></tr></thead><tbody>{{#each preview.claims}}<tr><td>{{kindLabel}} · {{sourceLabel}}</td><td>{{personName}}</td><td>{{count}}</td><td>{{#if booked}}{{localize 'TOVF.Interface.AlreadyBooked_1f96f4'}}{{else}}{{localize 'TOVF.Interface.New_e56832'}}{{/if}}</td></tr>{{/each}}</tbody></table>
+      {{#if settled}}<p><strong>{{localize 'TOVF.Interface.ThisMonthHasAlreadyBeenBooked_93c276'}}</strong> {{localize 'TOVF.Interface.ThePreviewShowsTheCurrentReviewState_19dbb8'}}</p>{{else}}<button type="button" data-action="command" data-command="settle">{{localize 'TOVF.Interface.ReviewAndBookMonthlySettlement_642baa'}}</button>{{/if}}
     {{/if}}
   {{/if}}
 
   {{#if peopleTab}}
-    <button type="button" data-action="command" data-command="userTransfer">Benutzer importieren / exportieren</button>
-    {{#if poolMode}}<div class="form-group"><label>Monat der Poolverteilung</label><input type="month" name="month" value="{{month}}"></div>{{/if}}
-    <button type="button" data-action="command" data-command="autoLinks">Zuordnungen erneut erkennen</button>
-    <table><thead><tr><th>Spieler</th><th>Foundry-Benutzer</th><th>Serverteam</th>{{#if poolMode}}<th>Anzahl aus Pool</th>{{/if}}</tr></thead><tbody>
-      {{#each people}}<tr><td><input type="text" name="personName.{{id}}" value="{{displayName}}" placeholder="{{name}}" aria-label="Anzeigename"><small>Charaktere: {{characterNames}}</small></td><td><select name="person.{{id}}"><option value="">Nicht zugeordnet</option>{{#each users}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></td><td class="tovf-serverteam-cell"><input type="checkbox" name="recipients" value="{{id}}" {{#if recipient}}checked{{/if}}></td>{{#if ../poolMode}}<td><input type="number" name="allocation.{{id}}" value="{{allocation}}" min="0" step="1"></td>{{/if}}</tr>{{/each}}
+    <button type="button" data-action="command" data-command="userTransfer">{{localize 'TOVF.Interface.ImportExportUsers_006bc8'}}</button>
+    {{#if poolMode}}<div class="form-group"><label>{{localize 'TOVF.Interface.PoolDistributionMonth_108dea'}}</label><input type="month" name="month" value="{{month}}"></div>{{/if}}
+    <button type="button" data-action="command" data-command="autoLinks">{{localize 'TOVF.Interface.DetectAssignmentsAgain_1c879c'}}</button>
+    <table><thead><tr><th>{{localize 'TOVF.Interface.Player_1f52fa'}}</th><th>{{localize 'TOVF.Interface.FoundryUser_fcc26c'}}</th><th>{{localize 'TOVF.Interface.ServerTeam_d71b1b'}}</th>{{#if poolMode}}<th>{{localize 'TOVF.Interface.CountFromPool_1e4b49'}}</th>{{/if}}</tr></thead><tbody>
+      {{#each people}}<tr><td><input type="text" name="personName.{{id}}" value="{{displayName}}" placeholder="{{name}}" aria-label="{{localize 'TOVF.Interface.DisplayName_164d81'}}"><small>{{localize 'TOVF.Interface.Characters_d52e35'}} {{characterNames}}</small></td><td><select name="person.{{id}}"><option value="">{{localize 'TOVF.Interface.Unassigned_d52900'}}</option>{{#each users}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></td><td class="tovf-serverteam-cell"><input type="checkbox" name="recipients" value="{{id}}" {{#if recipient}}checked{{/if}}></td>{{#if ../poolMode}}<td><input type="number" name="allocation.{{id}}" value="{{allocation}}" min="0" step="1"></td>{{/if}}</tr>{{/each}}
     </tbody></table>
-    {{#if poolMode}}<p class="hint">Der gemeinsame Pool wird auf die aktiven Serverteam-Mitglieder verteilt. „Anzahl aus Pool“ legt fest, wie viele Belohnungen das jeweilige Mitglied daraus erhält.</p>{{/if}}
-    {{#if localUsers.length}}<details><summary>Weitere Foundry-Nutzer als Empfänger eintragen</summary>{{#each localUsers}}<label><input type="checkbox" name="localUsers" value="{{id}}"> {{name}}</label>{{/each}}</details>{{/if}}
-    <button type="button" data-action="command" data-command="links">Spielerzuordnung & Serverteam speichern</button>
+    {{#if poolMode}}<p class="hint">{{localize 'TOVF.Interface.TheSharedPoolIsDistributedAmongActive_e1e57a'}}</p>{{/if}}
+    {{#if localUsers.length}}<details><summary>{{localize 'TOVF.Interface.AddOtherFoundryUsersAsRecipients_aad35f'}}</summary>{{#each localUsers}}<label><input type="checkbox" name="localUsers" value="{{id}}"> {{name}}</label>{{/each}}</details>{{/if}}
+    <button type="button" data-action="command" data-command="links">{{localize 'TOVF.Interface.SavePlayerAssignmentsServerTeam_a5e95f'}}</button>
   {{/if}}
 
   {{#if rulesTab}}
-    <p>Regelversionen gelten ab dem gewählten Datum. Serverteamberechnungen verwenden die am Monatsersten gültige Version. Ansprüche speichern ihre Inhaltsquelle. Bei Sessionkopplung wird die aktuelle Sessiontabelle beim Einlösen verwendet; eigene Inhalte werden im Anspruch gespeichert.</p>
-    <div class="form-group"><label>Gültig ab</label><input type="date" name="effectiveFrom" value="{{rules.effectiveFrom}}"></div>
-    <fieldset><legend>SL-Belohnungen für geleitete Sessions</legend><label><input type="checkbox" name="gm.enabled" {{#if rules.gm.enabled}}checked{{/if}}> Aktiviert</label><div class="form-group"><label>Belohnungen pro geleiteter Session</label><input type="number" name="gm.count" value="{{rules.gm.count}}" min="0" step="1"></div></fieldset>
-    <fieldset><legend>Serverteam-Belohnungen für aktive Mitarbeit</legend>
-      <label><input type="checkbox" name="community.enabled" {{#if rules.community.enabled}}checked{{/if}}> Aktiviert</label>
-      <div class="form-group"><label>Berechnung</label><select name="community.mode">{{#each modes}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
-      <p class="hint">Standard: eine Belohnung pro Woche mit mindestens einer gespielten Gildensession. Ohne aktive Woche gibt es keine Belohnung. Wochen laufen von Montag bis Sonntag und zählen im Monat ihres Sonntags.</p>
-      <div class="form-group"><label>Feste Anzahl</label><input type="number" name="community.fixed" value="{{rules.community.fixed}}" min="0" step="1"></div>
-      <div class="form-group"><label>Faktor</label><input type="number" name="community.factor" value="{{rules.community.factor}}" min="0" step="any"></div>
-      <div class="form-group"><label>Rundung</label><select name="community.rounding">{{#each roundings}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
-      <div class="form-group"><label>Mindestanzahl</label><input type="number" name="community.minimum" value="{{rules.community.minimum}}" min="0" step="1"></div>
-      <div class="form-group"><label>Höchstanzahl (leer = unbegrenzt)</label><input type="number" name="community.maximum" value="{{rules.community.maximum}}" min="0" step="1"></div>
-      <div class="form-group"><label>Verteilung</label><select name="community.distribution">{{#each distributions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+    <p>{{localize 'TOVF.Interface.RuleVersionsApplyFromTheSelectedDate_1fa35e'}}</p>
+    <div class="form-group"><label>{{localize 'TOVF.Interface.EffectiveFrom_6a8b3c'}}</label><input type="date" name="effectiveFrom" value="{{rules.effectiveFrom}}"></div>
+    <fieldset><legend>{{localize 'TOVF.Interface.GMRewardsForRunningSessions_d63fca'}}</legend><label><input type="checkbox" name="gm.enabled" {{#if rules.gm.enabled}}checked{{/if}}> {{localize 'TOVF.Interface.Enabled_060155'}}</label><div class="form-group"><label>{{localize 'TOVF.Interface.RewardsPerSessionRun_77cb7f'}}</label><input type="number" name="gm.count" value="{{rules.gm.count}}" min="0" step="1"></div></fieldset>
+    <fieldset><legend>{{localize 'TOVF.Interface.ServerTeamRewardsForActiveParticipation_b8a545'}}</legend>
+      <label><input type="checkbox" name="community.enabled" {{#if rules.community.enabled}}checked{{/if}}> {{localize 'TOVF.Interface.Enabled_060155'}}</label>
+      <div class="form-group"><label>{{localize 'TOVF.Interface.Calculation_844d47'}}</label><select name="community.mode">{{#each modes}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+      <p class="hint">{{localize 'TOVF.Interface.DefaultOneRewardPerWeekWithAt_b5f517'}}</p>
+      <div class="form-group"><label>{{localize 'TOVF.Interface.FixedCount_49ac63'}}</label><input type="number" name="community.fixed" value="{{rules.community.fixed}}" min="0" step="1"></div>
+      <div class="form-group"><label>{{localize 'TOVF.Interface.Factor_548815'}}</label><input type="number" name="community.factor" value="{{rules.community.factor}}" min="0" step="any"></div>
+      <div class="form-group"><label>{{localize 'TOVF.Interface.Rounding_e43f1c'}}</label><select name="community.rounding">{{#each roundings}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+      <div class="form-group"><label>{{localize 'TOVF.Interface.MinimumCount_f2962c'}}</label><input type="number" name="community.minimum" value="{{rules.community.minimum}}" min="0" step="1"></div>
+      <div class="form-group"><label>{{localize 'TOVF.Interface.MaximumCountEmptyUnlimited_60e647'}}</label><input type="number" name="community.maximum" value="{{rules.community.maximum}}" min="0" step="1"></div>
+      <div class="form-group"><label>{{localize 'TOVF.Interface.Distribution_84c54d'}}</label><select name="community.distribution">{{#each distributions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
     </fieldset>
-    {{#each rewards}}<fieldset data-reward-drop="{{kind}}"><legend>Inhalt: {{label}}</legend>
-      <div class="form-group"><label>Belohnungsinhalt</label><select name="{{kind}}.rewardMode" data-reward-mode><option value="session" {{#if sessionLinked}}selected{{/if}}>Wie normale Sessionbelohnung</option><option value="custom" {{#unless sessionLinked}}selected{{/unless}}>Eigener Inhalt</option></select></div>
-      <p class="hint">Die Sessionkopplung vergibt einen Meilenstein und alle für das Charakterlevel konfigurierten Sessiongegenstände einschließlich Gold und Downtime. Maßgeblich ist das Level vor der Einlösung.</p>
+    {{#each rewards}}<fieldset data-reward-drop="{{kind}}"><legend>{{localize 'TOVF.Interface.Contents_2bcc91'}} {{label}}</legend>
+      <div class="form-group"><label>{{localize 'TOVF.Interface.RewardContents_a0bec0'}}</label><select name="{{kind}}.rewardMode" data-reward-mode><option value="session" {{#if sessionLinked}}selected{{/if}}>{{localize 'TOVF.Interface.SameAsANormalSessionReward_5953ab'}}</option><option value="custom" {{#unless sessionLinked}}selected{{/unless}}>{{localize 'TOVF.Interface.CustomContents_46481c'}}</option></select></div>
+      <p class="hint">{{localize 'TOVF.Interface.SessionLinkedRewardsGrantOneMilestoneAnd_87c46c'}}</p>
       <div data-custom-reward {{#if sessionLinked}}hidden{{/if}}>
-      <div class="form-group"><label>Meilensteine</label><input type="number" name="{{kind}}.milestones" value="{{milestones}}" min="0" max="1000" step="1"></div>
-      <div class="form-group"><label>Goldberechnung</label><select name="{{kind}}.goldMode">{{#each goldModes}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
-      <div class="form-group"><label>Fester Goldbetrag</label><input type="number" name="{{kind}}.gold" value="{{gold}}" min="0" step="any"></div>
-      <div class="form-group"><label>Goldfaktor</label><input type="number" name="{{kind}}.goldFactor" value="{{goldFactor}}" min="0" step="any"></div>
-      <p class="hint">Zusätzliche Gegenstände hier hineinziehen. Die Levelberechnung verwendet ausschließlich den Goldanteil der bestehenden Session-Belohnungstabelle.</p>
-      {{#each items}}<div class="form-group"><label>{{name}}</label><input type="number" name="{{../kind}}.item.{{@index}}" value="{{quantity}}" min="0" step="any"><button type="button" data-action="command" data-command="removeItem" data-kind="{{../kind}}" data-index="{{@index}}">Entfernen</button></div>{{/each}}
+      <div class="form-group"><label>{{localize 'TOVF.Interface.Milestones_a38757'}}</label><input type="number" name="{{kind}}.milestones" value="{{milestones}}" min="0" max="1000" step="1"></div>
+      <div class="form-group"><label>{{localize 'TOVF.Interface.GoldCalculation_05be55'}}</label><select name="{{kind}}.goldMode">{{#each goldModes}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}</select></div>
+      <div class="form-group"><label>{{localize 'TOVF.Interface.FixedGoldAmount_acfaa5'}}</label><input type="number" name="{{kind}}.gold" value="{{gold}}" min="0" step="any"></div>
+      <div class="form-group"><label>{{localize 'TOVF.Interface.GoldFactor_b491a7'}}</label><input type="number" name="{{kind}}.goldFactor" value="{{goldFactor}}" min="0" step="any"></div>
+      <p class="hint">{{localize 'TOVF.Interface.DropAdditionalItemsHereTheLevelCalculation_3290ca'}}</p>
+      {{#each items}}<div class="form-group"><label>{{name}}</label><input type="number" name="{{../kind}}.item.{{@index}}" value="{{quantity}}" min="0" step="any"><button type="button" data-action="command" data-command="removeItem" data-kind="{{../kind}}" data-index="{{@index}}">{{localize 'TOVF.Interface.Remove_f78b63'}}</button></div>{{/each}}
       </div>
     </fieldset>{{/each}}
-    <button type="button" data-action="command" data-command="rules">Regelversion speichern</button>
-    <details><summary>Offene Guthaben auf neue Inhalte umstellen</summary>
-      <p>Die Anzahl bleibt erhalten. Bereits eingelöste oder reservierte Belohnungen bleiben unverändert.</p>
-      <select name="applyKind"><option value="gm">Spielleitung</option><option value="community">Serverteam</option></select>
+    <button type="button" data-action="command" data-command="rules">{{localize 'TOVF.Interface.SaveRuleVersion_bcc84d'}}</button>
+    <details><summary>{{localize 'TOVF.Interface.UpdateOpenBalancesToNewContents_0f728c'}}</summary>
+      <p>{{localize 'TOVF.Interface.TheCountIsRetainedAlreadyRedeemedOr_82919f'}}</p>
+      <select name="applyKind"><option value="gm">{{localize 'TOVF.Interface.GM_fa2c48'}}</option><option value="community">{{localize 'TOVF.Interface.ServerTeam_d71b1b'}}</option></select>
       <select name="applyRule">{{#each versions}}<option value="{{id}}">{{name}}</option>{{/each}}</select>
-      <button type="button" data-action="command" data-command="openRewards">Änderung prüfen</button>
+      <button type="button" data-action="command" data-command="openRewards">{{localize 'TOVF.Interface.ReviewChange_1470ab'}}</button>
     </details>
   {{/if}}
 
   {{#if importTab}}
-    <p>Wähle die Datei campaign.json aus dem Exporter. Zuerst werden die Änderungen angezeigt. Die Übernahme speichert die Quelldaten in dieser Welt und vergibt keine Belohnungen.</p>
+    <p>{{localize 'TOVF.Interface.SelectCampaignJsonFromTheExporterChanges_fd3d39'}}</p>
     <input name="snapshot" type="file" accept=".json,application/json">
-    <button type="button" data-action="command" data-command="loadImport">Export prüfen</button>
-    {{#if importPreview}}<h3>Änderungsvorschau</h3><p>Export: {{importPreview.exportedAt}}</p>
-      <table><thead><tr><th>Daten</th><th>Neu</th><th>Geändert</th><th>Im neuen Export nicht enthalten</th></tr></thead><tbody>
-        <tr><td>Charaktere</td><td>{{importPreview.characters.added.length}}</td><td>{{importPreview.characters.changed.length}}</td><td>{{importPreview.characters.absent.length}}</td></tr>
-        <tr><td>Personen</td><td>{{importPreview.people.added.length}}</td><td>{{importPreview.people.changed.length}}</td><td>{{importPreview.people.absent.length}}</td></tr>
+    <button type="button" data-action="command" data-command="loadImport">{{localize 'TOVF.Interface.ReviewExport_6fd5fe'}}</button>
+    {{#if importPreview}}<h3>{{localize 'TOVF.Interface.ChangePreview_eec493'}}</h3><p>Export: {{importPreview.exportedAt}}</p>
+      <table><thead><tr><th>{{localize 'TOVF.Interface.Data_dd86b1'}}</th><th>{{localize 'TOVF.Interface.New_e56832'}}</th><th>{{localize 'TOVF.Interface.Changed_01de83'}}</th><th>{{localize 'TOVF.Interface.NotIncludedInTheNewExport_2b43c7'}}</th></tr></thead><tbody>
+        <tr><td>{{localize 'TOVF.Interface.Characters_346a51'}}</td><td>{{importPreview.characters.added.length}}</td><td>{{importPreview.characters.changed.length}}</td><td>{{importPreview.characters.absent.length}}</td></tr>
+        <tr><td>{{localize 'TOVF.Interface.People_78f8fa'}}</td><td>{{importPreview.people.added.length}}</td><td>{{importPreview.people.changed.length}}</td><td>{{importPreview.people.absent.length}}</td></tr>
         <tr><td>Sessions</td><td>{{importPreview.sessions.added.length}}</td><td>{{importPreview.sessions.changed.length}}</td><td>{{importPreview.sessions.absent.length}}</td></tr>
-      </tbody></table><p>Geänderte Sessions müssen erneut geprüft werden. Bereits gebuchte Belohnungen bleiben bestehen. Der bisherige Quellbestand wird durch diesen Export ersetzt.</p>
-      <button type="button" data-action="command" data-command="import">Geprüften Datenbestand übernehmen</button>
+      </tbody></table><p>{{localize 'TOVF.Interface.ChangedSessionsNeedToBeReviewedAgain_28341d'}}</p>
+      <button type="button" data-action="command" data-command="import">{{localize 'TOVF.Interface.ImportReviewedData_40e1d9'}}</button>
     {{/if}}
-    <h3>Prüfhinweise</h3><ul>{{#each issues}}<li>{{code}} · Session {{sessionId}} · Charakter {{characterId}}</li>{{else}}<li>Keine strukturellen Zuordnungsfehler im Export.</li>{{/each}}</ul>
-    <p class="hint">Der API-Client liefert keinen vollständigen Mitgliederbestand, kein ausdrückliches „gespielt“-Kennzeichen und kein vollständiges Belohnungsjournal. Historische Bestände sind deshalb kein Nachweis offener Ansprüche.</p>
+    <h3>{{localize 'TOVF.Interface.ValidationNotes_7d4d41'}}</h3><ul>{{#each issues}}<li>{{code}} · Session {{sessionId}} {{localize 'TOVF.Interface.Character_fd1b44'}} {{characterId}}</li>{{else}}<li>{{localize 'TOVF.Interface.NoStructuralAssignmentErrorsInTheExport_554245'}}</li>{{/each}}</ul>
+    <p class="hint">{{localize 'TOVF.Interface.TheAPIClientDoesNotProvideA_59dcb6'}}</p>
   {{/if}}
 </div>

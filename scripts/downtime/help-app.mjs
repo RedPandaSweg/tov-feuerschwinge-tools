@@ -11,6 +11,7 @@ const GROUPS = [
     ["TOVF.Help.Weapons", "weapons", "fa-solid fa-swords", 4],
     ["TOVF.Help.Compendiums", "compendiums", "fa-solid fa-books", 4],
     ["TOVF.Help.Challenge", "challenge", "fa-solid fa-skull-crossbones", 6],
+    ["TOVF.Help.Concentration", "concentration", "fa-solid fa-brain", 4],
     ["TOVF.Help.Links", "links", "fa-solid fa-link", 4]
   ]],
   ["TOVF.Help.Groups.DowntimeProjects", "fa-solid fa-hourglass-half", [
@@ -25,6 +26,13 @@ const GROUPS = [
     ["DOWNTIME_MANAGER.Help.DowntimeItems", "downtime-items", "fa-solid fa-ticket", 6]
   ]],
   ["TOVF.Help.Groups.DowntimeManagement", "fa-solid fa-people-group", [
+    ["TOVF.Help.Campaign", "campaign", "fa-solid fa-gift", 7],
+    ["TOVF.Help.Settlements", "settlements", "fa-solid fa-calendar-check", 7],
+    ["TOVF.Help.Milestones", "milestones", "fa-solid fa-flag", 6],
+    ["TOVF.Help.Commerce", "commerce", "fa-solid fa-store", 7],
+    ["TOVF.Help.Trade", "trade", "fa-solid fa-handshake", 5],
+    ["TOVF.Help.Animals", "animals", "fa-solid fa-paw", 6],
+    ["TOVF.Help.UserTransfer", "user-transfer", "fa-solid fa-users", 6],
     ["DOWNTIME_MANAGER.Help.Dashboard", "dashboard", "fa-solid fa-table-columns", 6],
     ["DOWNTIME_MANAGER.Help.Sessions", "sessions", "fa-solid fa-scroll", 11],
     ["DOWNTIME_MANAGER.GMTools.Help", "gm-tools", "fa-solid fa-screwdriver-wrench", 7],

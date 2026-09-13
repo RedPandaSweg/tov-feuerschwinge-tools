@@ -1,5 +1,6 @@
+import { uiText } from "../core/localization.mjs";
 import { MODULE_ID } from "../core/constants.mjs";
-import { executeCommerceAction } from "./service.mjs?v=3.5.0-container-stock-1";
+import { executeCommerceAction } from "./service.mjs?v=3.7.1-offer-access-1";
 
 const SCOPE = "commerce";
 const pending = new Map();
@@ -30,12 +31,12 @@ export async function commerceRequest(action, payload = {}) {
     const result = await executeCommerceAction(action, payload, game.user.id); broadcastSync(result); return result;
   }
   const gm = activeGM();
-  if (!gm) throw new Error("Für diese Handelsaktion muss Seraphius oder eine Spielleitung verbunden sein.");
+  if (!gm) throw new Error(uiText("TOVF.Interface.SeraphiusOrAGMMustBeConnected_73e665", "Für diese Handelsaktion muss Seraphius oder eine Spielleitung verbunden sein."));
   const requestId = foundry.utils.randomID();
   const promise = new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       pending.delete(requestId);
-      reject(new Error(`${gm.name} hat die Handelsanfrage nicht beantwortet.`));
+      reject(new Error(uiText("TOVF.Interface.P0DidNotRespondToTheTrade_585cba", "{p0} hat die Handelsanfrage nicht beantwortet.", { p0: (gm.name) })));
     }, 12000);
     pending.set(requestId, {
       resolve: value => { clearTimeout(timeout); resolve(value); },

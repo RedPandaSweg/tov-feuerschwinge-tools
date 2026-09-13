@@ -1,3 +1,4 @@
+import { uiText } from "../core/localization.mjs";
 const DEFAULT_IMAGE = "icons/sundries/books/book-red-exclamation.webp";
 const GOLD_UUID = "Compendium.black-flag.currencies.Item.eWMYzM5UVZUDIqtg";
 let currentTalents = [];
@@ -63,7 +64,7 @@ async function browseTalents(talents, selectedUuid, actor) {
   }));
   return foundry.applications.api.DialogV2.wait({
     classes: ["tovf-talent-browser-dialog"],
-    window: { title: "Talent auswählen" },
+    window: { title: uiText("TOVF.Interface.SelectTalent_fd8192", "Talent auswählen") },
     position: { width: 760, height: 720 },
     content: `<div class="tovf-talent-browser standard-form">
       <input type="search" data-tovf-talent-search placeholder="Talente durchsuchen …">
@@ -79,10 +80,10 @@ async function browseTalents(talents, selectedUuid, actor) {
     </div>`,
     buttons: [
       {
-        action: "select", label: "Talent übernehmen", icon: "fa-solid fa-check", default: true,
+        action: "select", label: uiText("TOVF.Interface.ApplyTalent_44c56b", "Talent übernehmen"), icon: "fa-solid fa-check", default: true,
         callback: (_event, button) => new FormData(button.form).get("talentUuid")
       },
-      { action: "cancel", label: "Abbrechen" }
+      { action: "cancel", label: uiText("TOVF.Interface.Cancel_07af7c", "Abbrechen") }
     ],
     close: () => null
   });
@@ -150,7 +151,7 @@ async function promptForBackground(actor) {
   currentTalents = talents;
   currentActor = actor;
   if (!talents.length) {
-    ui.notifications.error("Die Auswahloptionen für den Custom Background konnten nicht geladen werden.");
+    ui.notifications.error(uiText("TOVF.Interface.OptionsForTheCustomBackgroundCouldNot_650aa9", "Die Auswahloptionen für den Custom Background konnten nicht geladen werden."));
     return null;
   }
 
@@ -167,7 +168,7 @@ async function promptForBackground(actor) {
       position: { width: 760 },
       content: `<div class="standard-form tovf-custom-background-form">
         <div class="tovf-background-name-row">
-          <label><span>Name</span><input type="text" name="name" required value="${escape(draft.name)}"></label>
+          <label><span>${uiText("TOVF.Interface.Name_709a23", "Name")}</span><input type="text" name="name" required value="${escape(draft.name)}"></label>
           <div class="tovf-background-starting-gold"><span>Startausrüstung</span><strong><i class="fa-solid fa-coins"></i> 50 gp</strong></div>
         </div>
         <div class="tovf-background-overview">
@@ -213,7 +214,7 @@ async function promptForBackground(actor) {
     if (!result) return null;
     draft = result;
     if (!String(result.name ?? "").trim()) {
-      ui.notifications.warn("Bitte einen Namen für den Background eingeben.");
+      ui.notifications.warn(uiText("TOVF.Interface.PleaseEnterANameForTheBackground_2c5012", "Bitte einen Namen für den Background eingeben."));
       continue;
     }
     return result;

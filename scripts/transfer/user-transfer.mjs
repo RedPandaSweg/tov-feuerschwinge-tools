@@ -1,12 +1,13 @@
+import { uiText } from "../core/localization.mjs";
 import { MODULE_ID } from "../core/constants.mjs";
 
 const FORMAT = "tov-feuerschwinge-users";
 const IDENTITIES = "userTransferIds";
 const copy = value => foundry.utils.deepClone(value);
-const assertGM = () => { if (game.user.role !== CONST.USER_ROLES.GAMEMASTER) throw new Error("Benutzerimporte und -exporte erfordern die Rolle Spielleiter."); };
+const assertGM = () => { if (game.user.role !== CONST.USER_ROLES.GAMEMASTER) throw new Error(uiText("TOVF.Interface.UserImportsAndExportsRequireTheFull_1770f8", "Benutzerimporte und -exporte erfordern die Rolle Spielleiter.")); };
 const actorId = actor => actor.getFlag(MODULE_ID, "transfer")?.id ?? `world:${game.world.id}:Actor:${actor.id}`;
 export const userIdentity = user => user.getFlag(MODULE_ID, IDENTITIES)?.[0] ?? `world:${game.world.id}:User:${user.id}`;
-export const roleLabel = role => ({ 0: "Deaktiviert", 1: "Spieler", 2: "Vertrauenswürdiger Spieler", 3: "Spielleiterassistent", 4: "Spielleiter" }[role] ?? "Unbekannt");
+export const roleLabel = role => ({ 0: "Deaktiviert", 1: uiText("TOVF.Interface.Player_1f52fa", "Spieler"), 2: uiText("TOVF.Interface.TrustedPlayer_5b60ca", "Vertrauenswürdiger Spieler"), 3: "Spielleiterassistent", 4: uiText("TOVF.Interface.GM_016a67", "Spielleiter") }[role] ?? uiText("TOVF.Interface.Unknown_d0b00a", "Unbekannt"));
 
 export function createUserBundle({ actors = game.actors.contents, userIds = null } = {}) {
   const state = game.settings.get(MODULE_ID, "campaignLedger") ?? {};
@@ -51,27 +52,27 @@ export function createSessionUserBundle(actors, participants = actors) {
 }
 
 export function validateUserBundle(bundle) {
-  if (bundle?.format !== FORMAT || bundle.version !== 1 || !Array.isArray(bundle.users) || !Array.isArray(bundle.actors) || typeof bundle.sourceWorld !== "string") throw new Error("Ungültiges Benutzerpaket.");
+  if (bundle?.format !== FORMAT || bundle.version !== 1 || !Array.isArray(bundle.users) || !Array.isArray(bundle.actors) || typeof bundle.sourceWorld !== "string") throw new Error(uiText("TOVF.Interface.InvalidUserPackage_ddef48", "Ungültiges Benutzerpaket."));
   for (const [kind, rows] of [["users", bundle.users], ["actors", bundle.actors]]) {
     const ids = new Set(); const sourceIds = new Set();
     for (const row of rows) {
-      if (typeof row.id !== "string" || !row.id || ids.has(row.id) || typeof row.sourceId !== "string" || !row.sourceId || sourceIds.has(row.sourceId) || ["__proto__", "constructor", "prototype", "default"].includes(row.sourceId)) throw new Error("Fehlende oder doppelte Transferkennung.");
+      if (typeof row.id !== "string" || !row.id || ids.has(row.id) || typeof row.sourceId !== "string" || !row.sourceId || sourceIds.has(row.sourceId) || ["__proto__", "constructor", "prototype", "default"].includes(row.sourceId)) throw new Error(uiText("TOVF.Interface.MissingOrDuplicateTransferID_031a7f", "Fehlende oder doppelte Transferkennung."));
       ids.add(row.id); sourceIds.add(row.sourceId);
-      if (typeof row.name !== "string" || !row.name.trim()) throw new Error("Name fehlt.");
-      if (kind === "users" && (!Number.isInteger(row.role) || row.role < 0 || row.role > 4 || !Array.isArray(row.people))) throw new Error("Ungültige Benutzerrolle oder Personenzuordnung.");
-      if (kind === "users" && (![row.color, row.avatar, row.pronouns].every(v => typeof v === "string") || (row.identities !== undefined && (!Array.isArray(row.identities) || row.identities.some(id => typeof id !== "string" || !id))))) throw new Error("Ungültiges Benutzerprofil.");
+      if (typeof row.name !== "string" || !row.name.trim()) throw new Error(uiText("TOVF.Interface.NameIsMissing_b4d6b5", "Name fehlt."));
+      if (kind === "users" && (!Number.isInteger(row.role) || row.role < 0 || row.role > 4 || !Array.isArray(row.people))) throw new Error(uiText("TOVF.Interface.InvalidUserRoleOrPersonAssignment_89f28b", "Ungültige Benutzerrolle oder Personenzuordnung."));
+      if (kind === "users" && (![row.color, row.avatar, row.pronouns].every(v => typeof v === "string") || (row.identities !== undefined && (!Array.isArray(row.identities) || row.identities.some(id => typeof id !== "string" || !id))))) throw new Error(uiText("TOVF.Interface.InvalidUserProfile_e22027", "Ungültiges Benutzerprofil."));
       if (kind === "users") for (const p of row.people) {
-        if (typeof p.id !== "string" || !p.id || ["__proto__", "constructor", "prototype"].includes(p.id) || typeof p.name !== "string" || typeof p.primary !== "boolean") throw new Error("Ungültige Personenzuordnung.");
+        if (typeof p.id !== "string" || !p.id || ["__proto__", "constructor", "prototype"].includes(p.id) || typeof p.name !== "string" || typeof p.primary !== "boolean") throw new Error(uiText("TOVF.Interface.InvalidPersonAssignment_1290e4", "Ungültige Personenzuordnung."));
       }
-      if (kind === "actors" && (!Array.isArray(row.ownership) || !Array.isArray(row.campaignCharacterIds))) throw new Error("Ungültige Charakterrechte.");
-      if (kind === "actors" && (typeof row.type !== "string" || row.campaignCharacterIds.some(id => typeof id !== "string" || !id || ["__proto__", "constructor", "prototype"].includes(id)))) throw new Error("Ungültige Charakterkennung.");
+      if (kind === "actors" && (!Array.isArray(row.ownership) || !Array.isArray(row.campaignCharacterIds))) throw new Error(uiText("TOVF.Interface.InvalidCharacterPermissions_9b56e1", "Ungültige Charakterrechte."));
+      if (kind === "actors" && (typeof row.type !== "string" || row.campaignCharacterIds.some(id => typeof id !== "string" || !id || ["__proto__", "constructor", "prototype"].includes(id)))) throw new Error(uiText("TOVF.Interface.InvalidCharacterIdentifier_d3b2f6", "Ungültige Charakterkennung."));
     }
   }
   const userIds = new Set(bundle.users.map(u => u.id));
   const actorIds = new Set(bundle.actors.map(a => a.id));
-  for (const u of bundle.users) if (u.character && !actorIds.has(u.character.id)) throw new Error("Gewählter Charakter fehlt im Benutzerpaket.");
+  for (const u of bundle.users) if (u.character && !actorIds.has(u.character.id)) throw new Error(uiText("TOVF.Interface.TheSelectedCharacterIsMissingFromThe_d6a22f", "Gewählter Charakter fehlt im Benutzerpaket."));
   for (const actor of bundle.actors) for (const owner of actor.ownership) {
-    if (!userIds.has(owner.userId) || !Number.isInteger(owner.level) || owner.level < 0 || owner.level > 3) throw new Error("Ungültiger Charakterbesitzer.");
+    if (!userIds.has(owner.userId) || !Number.isInteger(owner.level) || owner.level < 0 || owner.level > 3) throw new Error(uiText("TOVF.Interface.InvalidCharacterOwner_b9dfb0", "Ungültiger Charakterbesitzer."));
   }
   return bundle;
 }
@@ -99,7 +100,7 @@ function mergePersonAssignments(state, bundle, identityMap) {
     for (const p of source.people) {
       const existingOwner = Object.entries(state.personLinks).find(([id, linked]) => id !== p.id && linked === userId);
       if (!p.primary) continue;
-      if (existingOwner || (state.personLinks[p.id] && state.personLinks[p.id] !== userId)) throw new Error("Personenzuordnung widerspricht der Zielwelt. Bitte vorhandene Zuordnung zuerst prüfen.");
+      if (existingOwner || (state.personLinks[p.id] && state.personLinks[p.id] !== userId)) throw new Error(uiText("TOVF.Interface.ThePersonAssignmentConflictsWithTheTarget_d6e0ee", "Personenzuordnung widerspricht der Zielwelt. Bitte vorhandene Zuordnung zuerst prüfen."));
       if (p.primary) state.personLinks[p.id] = userId;
       else state.personAccounts[p.id] = [...new Set([...(state.personAccounts[p.id] ?? []), userId])];
       if (p.name && !state.personNames[p.id]) state.personNames[p.id] = p.name;
@@ -118,22 +119,22 @@ export function planUserImport(bundle, choices = {}, actorChoices = {}) {
     const suggested = identity.length === 1 ? identity[0] : identity.length === 0 && byName.length === 1 ? byName[0] : null;
     const targetId = choices[source.id] ?? (suggested?.id ?? "new");
     const target = game.users.get(targetId);
-    if (!["new", "skip"].includes(targetId) && !target) throw new Error("Gewählter Zielbenutzer fehlt.");
-    return { source, targetId, target, reason: identity.length === 1 ? "Transferkennung" : suggested ? "Name und Rolle – Zuordnung prüfen" : "Neu anlegen", role: roleLabel(source.role) };
+    if (!["new", "skip"].includes(targetId) && !target) throw new Error(uiText("TOVF.Interface.TheSelectedTargetUserIsMissing_b09af0", "Gewählter Zielbenutzer fehlt."));
+    return { source, targetId, target, reason: identity.length === 1 ? "Transferkennung" : suggested ? uiText("TOVF.Interface.NameAndRoleReviewAssignment_280d25", "Name und Rolle – Zuordnung prüfen") : uiText("TOVF.Interface.CreateNew_d095db", "Neu anlegen"), role: roleLabel(source.role) };
   });
   const targets = rows.filter(r => !["new", "skip"].includes(r.targetId)).map(r => r.targetId);
-  if (new Set(targets).size !== targets.length) throw new Error("Mehrere Quellbenutzer sind demselben Zielbenutzer zugeordnet.");
+  if (new Set(targets).size !== targets.length) throw new Error(uiText("TOVF.Interface.MultipleSourceUsersAreAssignedToThe_e5adec", "Mehrere Quellbenutzer sind demselben Zielbenutzer zugeordnet."));
   const actors = bundle.actors.map(source => {
     const matches = game.actors.filter(a => actorId(a) === source.id);
     const byName = game.actors.filter(a => a.name === source.name && a.type === source.type);
     const suggested = matches.length === 1 ? matches[0] : matches.length === 0 && byName.length === 1 ? byName[0] : null;
     const targetId = actorChoices[source.id] ?? suggested?.id ?? "skip";
     const target = game.actors.get(targetId);
-    if (targetId !== "skip" && !target) throw new Error("Gewählter Zielcharakter fehlt.");
-    return { source, targetId, target, reason: matches.length === 1 ? "Transferkennung" : suggested ? "Name und Typ – Zuordnung prüfen" : "Charakter fehlt" };
+    if (targetId !== "skip" && !target) throw new Error(uiText("TOVF.Interface.TheSelectedTargetCharacterIsMissing_caa0bb", "Gewählter Zielcharakter fehlt."));
+    return { source, targetId, target, reason: matches.length === 1 ? "Transferkennung" : suggested ? uiText("TOVF.Interface.NameAndTypeReviewAssignment_a05af2", "Name und Typ – Zuordnung prüfen") : uiText("TOVF.Interface.CharacterIsMissing_99d80e", "Charakter fehlt") };
   });
   const targetActors = actors.filter(a => a.target).map(a => a.targetId);
-  if (new Set(targetActors).size !== targetActors.length) throw new Error("Mehrere Quellcharaktere sind demselben Zielcharakter zugeordnet.");
+  if (new Set(targetActors).size !== targetActors.length) throw new Error(uiText("TOVF.Interface.MultipleSourceCharactersAreAssignedToThe_306b1d", "Mehrere Quellcharaktere sind demselben Zielcharakter zugeordnet."));
   return { rows, actors };
 }
 
@@ -149,9 +150,9 @@ export function remapUserOwnership(ownership, mapping) {
 let busy = false;
 export async function importUserBundle(bundle, { choices = {}, actorChoices = {}, applyActors = true, sessionPlayers = false } = {}) {
   assertGM();
-  if (busy) throw new Error("Ein Benutzerimport läuft bereits.");
+  if (busy) throw new Error(uiText("TOVF.Interface.AUserImportIsAlreadyRunning_fda359", "Ein Benutzerimport läuft bereits."));
   const plan = planUserImport(bundle, choices, actorChoices);
-  if (sessionPlayers && plan.rows.some(r => r.target && r.target.role !== 1)) throw new Error("Für Sessionbenutzer bitte einen neuen Zugang oder einen bestehenden Player auswählen. Spielleiterzugänge der Sessionwelt bleiben erhalten.");
+  if (sessionPlayers && plan.rows.some(r => r.target && r.target.role !== 1)) throw new Error(uiText("TOVF.Interface.ForSessionUsersSelectANewAccount_f22f95", "Für Sessionbenutzer bitte einen neuen Zugang oder einen bestehenden Player auswählen. Spielleiterzugänge der Sessionwelt bleiben erhalten."));
   // Detect conflicts before creating a user or changing any Actor.
   mergePersonAssignments(copy(game.settings.get(MODULE_ID, "campaignLedger") ?? {}), bundle,
     new Map(plan.rows.filter(r => r.targetId !== "skip").map(r => [r.source.id, r.target?.id ?? `new:${r.source.id}`])));

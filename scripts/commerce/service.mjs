@@ -1,10 +1,13 @@
+import { uiText } from "../core/localization.mjs";
 import { MODULE_ID } from "../core/constants.mjs";
+import { purchaseAnimals } from "./animals.mjs";
+import { offerPurchaseAccess } from "./offer-access.mjs";
 import { levelFromMilestones, sessionProgress } from "../downtime/session-service.mjs";
 import { balanceInCopper, changeCurrency, formatCopper, itemQuantity, priceInCopper, quantityForPrice, validateCurrencyChange } from "./currency.mjs?v=3.5.0-item-quantity-1";
 import { addItem, cleanTransferredItem, exchange, removeItem, transferItem } from "./transactions.mjs?v=3.5.0-item-quantity-1";
 import {
   createSpellScrollData, merchantSpellScrollOffers, resolveSpellScrollOffer, saveMerchantSpellScrollOffers
-} from "../spell-scrolls.mjs?v=3.5.0-spell-scrolls-3";
+} from "../spell-scrolls.mjs?v=3.7.1-offer-access-1";
 
 export const COMMERCE_SETTING = "commerceState";
 export const COMMERCE_RARITY_LEVELS_SETTING = "commerceRarityLevels";
@@ -49,7 +52,7 @@ function itemPriceDenomination(item) {
 function purchaseCardContent(data) {
   const esc = foundry.utils.escapeHTML;
   const rows = data.entries.map(entry => `<li><img src="${esc(entry.img)}" alt=""><span><strong>${entry.quantity}× ${esc(entry.name)}</strong><small>${formatCopper(entry.totalCopper)}</small></span></li>`).join("");
-  return `<div class="tovf-merchant-chat-card"><header><img src="${esc(data.merchantImg)}" alt=""><span><strong>${esc(data.merchantName)}</strong><small>Einkauf von ${esc(data.buyerName)}</small></span></header><ul>${rows}</ul><footer><span>Gesamt</span><strong>${formatCopper(data.totalCopper)}</strong></footer></div>`;
+  return `<div class="tovf-merchant-chat-card"><header><img src="${esc(data.merchantImg)}" alt=""><span><strong>${esc(data.merchantName)}</strong><small>${uiText("TOVF.Interface.PurchaseByP2_dd9402", "Einkauf von {p2}", { p2: (esc(data.buyerName)) })}</small></span></header><ul>${rows}</ul><footer><span>Gesamt</span><strong>${formatCopper(data.totalCopper)}</strong></footer></div>`;
 }
 
 function saleCardContent(data) {
@@ -201,7 +204,12 @@ export function rarityMinimumLevel(item) {
 }
 
 export function merchantItemAvailableToActor(item, actor) {
-  return !!actor && milestoneLevel(actor) >= rarityMinimumLevel(item);
+  return !merchantItemPurchaseAccess(item, actor).purchaseBlocked;
+}
+
+export function merchantItemPurchaseAccess(item, actor) {
+  const config = item?.getFlag?.(MODULE_ID, "merchantItem") ?? item?.merchantItem ?? {};
+  return offerPurchaseAccess(config, rarityMinimumLevel(item), actor ? milestoneLevel(actor) : null);
 }
 
 function hasProficiency(actor, encoded) {
@@ -288,39 +296,49 @@ function actorOwnedBy(actor, userId) {
   return !!actor?.testUserPermission(user, "OWNER") || user?.character?.id === actor?.id;
 }
 
-function actor(id, label = "Charakter") {
+function actor(id, label = uiText("TOVF.Interface.Character_19365b", "Charakter")) {
   const document = game.actors.get(id);
-  if (!document) throw new Error(`${label} wurde nicht gefunden.`);
+  if (!document) throw new Error(uiText("TOVF.Interface.P0WasNotFound_a7c346", "{p0} wurde nicht gefunden.", { p0: (label) }));
   return document;
 }
 
 function merchant(id) {
-  const document = actor(id, "Händler");
-  if (!merchantConfig(document).enabled) throw new Error("Dieser Actor ist nicht als Händler eingerichtet.");
+  const document = actor(id, uiText("TOVF.Interface.Merchant_90863d", "Händler"));
+  if (!merchantConfig(document).enabled) throw new Error(uiText("TOVF.Interface.ThisActorIsNotConfiguredAsA_66f51f", "Dieser Actor ist nicht als Händler eingerichtet."));
   return document;
 }
 
 async function merchantBuy(payload, userId) {
   const shop = merchant(payload.merchantId);
   const buyer = actor(payload.actorId);
-  if (!actorOwnedBy(buyer, userId)) throw new Error("Du besitzt diesen Charakter nicht.");
-  if (!merchantAllowsActor(shop, buyer, game.users.get(userId), { sceneId: payload.sceneId })) throw new Error("Dieser Charakter darf bei diesem Händler nicht handeln.");
+  if (!actorOwnedBy(buyer, userId)) throw new Error(uiText("TOVF.Interface.YouDoNotOwnThisCharacter_f356e9", "Du besitzt diesen Charakter nicht."));
+  if (!merchantAllowsActor(shop, buyer, game.users.get(userId), { sceneId: payload.sceneId })) throw new Error(uiText("TOVF.Interface.ThisCharacterCannotTradeWithThisMerchant_db8fc1", "Dieser Charakter darf bei diesem Händler nicht handeln."));
   if (payload.offerId) return merchantBuySpellScroll({ payload, userId, shop, buyer });
   const item = shop.items.get(payload.itemId);
-  if (!isTradeableItem(item)) throw new Error("Dieser Gegenstand kann nicht gehandelt werden.");
-  if (!merchantItemAvailableToActor(item, buyer)) {
-    throw new Error(`Dieser Gegenstand kann erst ab Level ${rarityMinimumLevel(item)} gekauft werden.`);
-  }
+  if (!isTradeableItem(item)) throw new Error(uiText("TOVF.Interface.ThisItemCannotBeTraded_1e2809", "Dieser Gegenstand kann nicht gehandelt werden."));
+  if (item.getFlag(MODULE_ID, "merchantItem")?.hidden) throw new Error(uiText("TOVF.Interface.ThisOfferIsUnavailable_430f66", "Dieses Angebot ist nicht verfügbar."));
+  const access = merchantItemPurchaseAccess(item, buyer);
+  if (access.purchaseBlocked) throw new Error(access.purchaseMessage);
   const priceUnits = Math.max(1, Math.floor(Number(payload.quantity) || 1));
   const quantity = priceUnits * quantityForPrice(item);
   const config = merchantConfig(shop);
   const stock = merchantStockQuantity(item);
-  if (!config.infiniteStock && stock < quantity) throw new Error("Der Händler hat nicht genug davon auf Lager.");
+  if (!config.infiniteStock && stock < quantity) throw new Error(uiText("TOVF.Interface.TheMerchantDoesNotHaveEnoughStock_91a24c", "Der Händler hat nicht genug davon auf Lager."));
   const unitCopper = Math.round(priceInCopper(item, config.buyModifier) * (1 - itemDiscount(item) / 100));
   const copper = unitCopper * priceUnits;
   const denomination = itemPriceDenomination(item);
   validateCurrencyChange(buyer, -copper);
   if (!config.infiniteCurrency) validateCurrencyChange(shop, copper, { denomination });
+  const animalOffer = item.getFlag(MODULE_ID, "animalOffer");
+  if (animalOffer) {
+    const template = await fromUuid(animalOffer.actorUuid);
+    if (template?.documentName !== "Actor" || template.type !== "npc") throw new Error(uiText("TOVF.Interface.TheAnimalTemplateIsNoLongerAvailable_92bdd0", "Die Tier-Vorlage ist nicht mehr verfügbar."));
+    await purchaseAnimals({ shop, buyer, item, template: template.toObject(), users: game.users.contents,
+      quantity, copper, stock, config, denomination });
+    await recordMerchantPurchase({ sessionId: payload.sessionId, shop, buyer, item, quantity, copper, userId })
+      .catch(error => console.error(`${MODULE_ID} | Merchant chat card failed`, error));
+    return { message: uiText("TOVF.Interface.P0BuysP1P2ForP3The_9a4927", "{p0} kauft {p1}× {p2} für {p3}. Die Tiere liegen im Ordner des Charakters.", { p0: (buyer.name), p1: (quantity), p2: (item.name), p3: (formatCopper(copper)) }) };
+  }
   const containerConfig = item.type === "container" ? (item.getFlag(MODULE_ID, "merchantItem") ?? {}) : null;
   await changeCurrency(buyer, -copper);
   try {
@@ -340,22 +358,21 @@ async function merchantBuy(payload, userId) {
   }
   await recordMerchantPurchase({ sessionId: payload.sessionId, shop, buyer, item, quantity, copper, userId })
     .catch(error => console.error(`${MODULE_ID} | Merchant chat card failed`, error));
-  return { message: `${buyer.name} kauft ${quantity}× ${item.name} für ${formatCopper(copper)}.` };
+  return { message: uiText("TOVF.Interface.P0BuysP1P2ForP3_1d1ddd", "{p0} kauft {p1}× {p2} für {p3}.", { p0: (buyer.name), p1: (quantity), p2: (item.name), p3: (formatCopper(copper)) }) };
 }
 
 async function merchantBuySpellScroll({ payload, userId, shop, buyer }) {
   const offers = merchantSpellScrollOffers(shop);
   const offer = offers.find(entry => entry.id === payload.offerId);
-  if (!offer || offer.hidden) throw new Error("Dieses Spellscroll-Angebot wurde nicht gefunden.");
-  const itemLike = { system: { rarity: offer.rarity } };
-  if (!merchantItemAvailableToActor(itemLike, buyer)) {
-    throw new Error(`Dieser Gegenstand kann erst ab Level ${rarityMinimumLevel(itemLike)} gekauft werden.`);
-  }
+  if (!offer || offer.hidden) throw new Error(uiText("TOVF.Interface.ThisSpellScrollOfferWasNotFound_ba3817", "Dieses Spellscroll-Angebot wurde nicht gefunden."));
+  const itemLike = { system: { rarity: offer.rarity }, merchantItem: offer };
+  const access = merchantItemPurchaseAccess(itemLike, buyer);
+  if (access.purchaseBlocked) throw new Error(access.purchaseMessage);
   const quantity = Math.max(1, Math.floor(Number(payload.quantity) || 1));
   const config = merchantConfig(shop);
-  if (!config.infiniteStock && offer.quantity < quantity) throw new Error("Der Händler hat nicht genug davon auf Lager.");
+  if (!config.infiniteStock && offer.quantity < quantity) throw new Error(uiText("TOVF.Interface.TheMerchantDoesNotHaveEnoughStock_91a24c", "Der Händler hat nicht genug davon auf Lager."));
   const spell = await resolveSpellScrollOffer(offer);
-  if (!spell) throw new Error("Der verknüpfte Spell ist nicht mehr verfügbar.");
+  if (!spell) throw new Error(uiText("TOVF.Interface.TheLinkedSpellIsNoLongerAvailable_1fd889", "Der verknüpfte Spell ist nicht mehr verfügbar."));
   const itemData = await createSpellScrollData(spell, { quantity });
   const unitCopper = Math.round(offer.price * 100 * config.buyModifier * (1 - offer.discountPercent / 100));
   const copper = unitCopper * quantity;
@@ -379,21 +396,21 @@ async function merchantBuySpellScroll({ payload, userId, shop, buyer }) {
   const item = { id: offer.id, name: offer.name, img: offer.img };
   await recordMerchantPurchase({ sessionId: payload.sessionId, shop, buyer, item, quantity, copper, userId })
     .catch(error => console.error(`${MODULE_ID} | Merchant chat card failed`, error));
-  return { message: `${buyer.name} kauft ${quantity}× ${offer.name} für ${formatCopper(copper)}.` };
+  return { message: uiText("TOVF.Interface.P0BuysP1P2ForP3_1d1ddd", "{p0} kauft {p1}× {p2} für {p3}.", { p0: (buyer.name), p1: (quantity), p2: (offer.name), p3: (formatCopper(copper)) }) };
 }
 
 async function merchantSell(payload, userId) {
   const shop = merchant(payload.merchantId);
   const seller = actor(payload.actorId);
-  if (!actorOwnedBy(seller, userId)) throw new Error("Du besitzt diesen Charakter nicht.");
-  if (!merchantAllowsActor(shop, seller, game.users.get(userId), { sceneId: payload.sceneId })) throw new Error("Dieser Charakter darf bei diesem Händler nicht handeln.");
+  if (!actorOwnedBy(seller, userId)) throw new Error(uiText("TOVF.Interface.YouDoNotOwnThisCharacter_f356e9", "Du besitzt diesen Charakter nicht."));
+  if (!merchantAllowsActor(shop, seller, game.users.get(userId), { sceneId: payload.sceneId })) throw new Error(uiText("TOVF.Interface.ThisCharacterCannotTradeWithThisMerchant_db8fc1", "Dieser Charakter darf bei diesem Händler nicht handeln."));
   const item = seller.items.get(payload.itemId);
-  if (!isTradeableItem(item)) throw new Error("Dieser Gegenstand kann nicht gehandelt werden.");
+  if (!isTradeableItem(item)) throw new Error(uiText("TOVF.Interface.ThisItemCannotBeTraded_1e2809", "Dieser Gegenstand kann nicht gehandelt werden."));
   const priceUnits = Math.max(1, Math.floor(Number(payload.quantity) || 1));
   const quantity = priceUnits * quantityForPrice(item);
-  if (itemQuantity(item) < quantity) throw new Error("Du besitzt nicht genug davon.");
+  if (itemQuantity(item) < quantity) throw new Error(uiText("TOVF.Interface.YouDoNotOwnEnoughOfThis_27deac", "Du besitzt nicht genug davon."));
   const config = merchantConfig(shop);
-  if (config.purchaseOnly) throw new Error("Dieser Händler kauft keine Gegenstände an.");
+  if (config.purchaseOnly) throw new Error(uiText("TOVF.Interface.ThisMerchantDoesNotBuyItems_455704", "Dieser Händler kauft keine Gegenstände an."));
   const copper = priceInCopper(item, config.sellModifier) * priceUnits;
   validateCurrencyChange(seller, copper);
   if (!config.infiniteCurrency) validateCurrencyChange(shop, -copper);
@@ -411,18 +428,18 @@ async function merchantSell(payload, userId) {
   }
   await recordMerchantSale({ shop, seller, item, quantity, copper, userId })
     .catch(error => console.error(`${MODULE_ID} | Merchant sale chat card failed`, error));
-  return { message: `${seller.name} verkauft ${quantity}× ${item.name} für ${formatCopper(copper)}.` };
+  return { message: uiText("TOVF.Interface.P0SellsP1P2ForP3_8e9223", "{p0} verkauft {p1}× {p2} für {p3}.", { p0: (seller.name), p1: (quantity), p2: (item.name), p3: (formatCopper(copper)) }) };
 }
 
 async function createAuction(payload, userId) {
   const seller = actor(payload.actorId);
-  if (!actorOwnedBy(seller, userId)) throw new Error("Du besitzt diesen Charakter nicht.");
+  if (!actorOwnedBy(seller, userId)) throw new Error(uiText("TOVF.Interface.YouDoNotOwnThisCharacter_f356e9", "Du besitzt diesen Charakter nicht."));
   const item = seller.items.get(payload.itemId);
   const quantity = Math.max(1, Math.floor(Number(payload.quantity) || 1));
-  if (!isTradeableItem(item) || itemQuantity(item) < quantity) throw new Error("Der Gegenstand ist nicht verfügbar oder nicht handelbar.");
+  if (!isTradeableItem(item) || itemQuantity(item) < quantity) throw new Error(uiText("TOVF.Interface.TheItemIsUnavailableOrCannotBe_c2b139", "Der Gegenstand ist nicht verfügbar oder nicht handelbar."));
   const startCopper = Math.max(1, Math.round(Number(payload.startCopper) || 0));
   const buyoutCopper = Math.max(0, Math.round(Number(payload.buyoutCopper) || 0));
-  if (buyoutCopper && buyoutCopper < startCopper) throw new Error("Der Sofortkaufpreis darf nicht unter dem Startpreis liegen.");
+  if (buyoutCopper && buyoutCopper < startCopper) throw new Error(uiText("TOVF.Interface.TheBuyoutPriceCannotBeLowerThan_f5a765", "Der Sofortkaufpreis darf nicht unter dem Startpreis liegen."));
   const durationMs = Math.clamp(Number(payload.durationMs) || 86400000, 60000, 2592000000);
   const data = cleanTransferredItem(item, quantity);
   await removeItem(seller, item, quantity);
@@ -435,21 +452,21 @@ async function createAuction(payload, userId) {
   state.auctions.push(auction);
   try { await saveState(state); }
   catch (error) { await addItem(seller, data, quantity).catch(() => {}); throw error; }
-  return { auction, message: `${item.name} wurde zur Auktion eingestellt.` };
+  return { auction, message: uiText("TOVF.Interface.P0WasListedForAuction_bff844", "{p0} wurde zur Auktion eingestellt.", { p0: (item.name) }) };
 }
 
 async function bidAuction(payload, userId) {
   const bidder = actor(payload.actorId);
-  if (!actorOwnedBy(bidder, userId)) throw new Error("Du besitzt diesen Charakter nicht.");
+  if (!actorOwnedBy(bidder, userId)) throw new Error(uiText("TOVF.Interface.YouDoNotOwnThisCharacter_f356e9", "Du besitzt diesen Charakter nicht."));
   const state = commerceState();
   const auction = state.auctions.find(entry => entry.id === payload.auctionId && entry.status === "active");
-  if (!auction || auction.endsAt <= Date.now()) throw new Error("Diese Auktion ist beendet.");
-  if (auction.sellerActorId === bidder.id) throw new Error("Du kannst nicht auf deine eigene Auktion bieten.");
+  if (!auction || auction.endsAt <= Date.now()) throw new Error(uiText("TOVF.Interface.ThisAuctionHasEnded_8f5dbc", "Diese Auktion ist beendet."));
+  if (auction.sellerActorId === bidder.id) throw new Error(uiText("TOVF.Interface.YouCannotBidOnYourOwnAuction_7379ad", "Du kannst nicht auf deine eigene Auktion bieten."));
   const minimum = Math.max(auction.startCopper, auction.highestBid + 1);
   const copper = Math.round(Number(payload.copper) || 0);
-  if (copper < minimum) throw new Error(`Das Mindestgebot beträgt ${formatCopper(minimum)}.`);
+  if (copper < minimum) throw new Error(uiText("TOVF.Interface.TheMinimumBidIsP0_eb8b0d", "Das Mindestgebot beträgt {p0}.", { p0: (formatCopper(minimum)) }));
   if (auction.buyoutCopper && copper >= auction.buyoutCopper) {
-    throw new Error(`Für ${formatCopper(auction.buyoutCopper)} kann die Auktion sofort gekauft werden.`);
+    throw new Error(uiText("TOVF.Interface.ThisAuctionCanBeBoughtOutFor_09ae50", "Für {p0} kann die Auktion sofort gekauft werden.", { p0: (formatCopper(auction.buyoutCopper)) }));
   }
   validateCurrencyChange(bidder, -copper);
   const previous = auction.highestBidderActorId ? game.actors.get(auction.highestBidderActorId) : null;
@@ -474,7 +491,7 @@ async function settleAuctionEntry(state, auction) {
   if (auction.status !== "active") return;
   const seller = game.actors.get(auction.sellerActorId);
   const winner = game.actors.get(auction.highestBidderActorId);
-  if (!seller) throw new Error("Der Verkäufer der Auktion wurde nicht gefunden.");
+  if (!seller) throw new Error(uiText("TOVF.Interface.TheAuctionSellerWasNotFound_18e1f6", "Der Verkäufer der Auktion wurde nicht gefunden."));
   if (winner && auction.highestBid > 0) {
     validateCurrencyChange(seller, auction.highestBid);
     await addItem(winner, auction.itemData, auction.quantity);
@@ -491,10 +508,10 @@ async function settleAuctionEntry(state, auction) {
 async function buyoutAuction(payload, userId) {
   const state = commerceState();
   const auction = state.auctions.find(entry => entry.id === payload.auctionId && entry.status === "active");
-  if (!auction?.buyoutCopper) throw new Error("Diese Auktion hat keinen Sofortkaufpreis.");
+  if (!auction?.buyoutCopper) throw new Error(uiText("TOVF.Interface.ThisAuctionHasNoBuyoutPrice_961f15", "Diese Auktion hat keinen Sofortkaufpreis."));
   const buyer = actor(payload.actorId);
-  if (!actorOwnedBy(buyer, userId)) throw new Error("Du besitzt diesen Charakter nicht.");
-  if (auction.sellerActorId === buyer.id) throw new Error("Du kannst deine eigene Auktion nicht kaufen.");
+  if (!actorOwnedBy(buyer, userId)) throw new Error(uiText("TOVF.Interface.YouDoNotOwnThisCharacter_f356e9", "Du besitzt diesen Charakter nicht."));
+  if (auction.sellerActorId === buyer.id) throw new Error(uiText("TOVF.Interface.YouCannotBuyYourOwnAuction_d43a44", "Du kannst deine eigene Auktion nicht kaufen."));
   validateCurrencyChange(buyer, -auction.buyoutCopper);
   const previous = auction.highestBidderActorId ? game.actors.get(auction.highestBidderActorId) : null;
   if (previous) validateCurrencyChange(previous, auction.highestBid);
@@ -506,30 +523,30 @@ async function buyoutAuction(payload, userId) {
   const updated = auction;
   updated.endsAt = Date.now();
   await settleAuctionEntry(state, updated);
-  return { message: `${updated.itemName} wurde sofort gekauft.` };
+  return { message: uiText("TOVF.Interface.P0WasBoughtOut_8fd361", "{p0} wurde sofort gekauft.", { p0: (updated.itemName) }) };
 }
 
 async function cancelAuction(payload, userId) {
   const state = commerceState();
   const auction = state.auctions.find(entry => entry.id === payload.auctionId && entry.status === "active");
-  if (!auction) throw new Error("Diese Auktion ist nicht mehr verfügbar.");
+  if (!auction) throw new Error(uiText("TOVF.Interface.ThisAuctionIsNoLongerAvailable_feff7a", "Diese Auktion ist nicht mehr verfügbar."));
   const seller = actor(auction.sellerActorId);
-  if (!game.users.get(userId)?.isGM && !actorOwnedBy(seller, userId)) throw new Error("Du darfst diese Auktion nicht zurückziehen.");
+  if (!game.users.get(userId)?.isGM && !actorOwnedBy(seller, userId)) throw new Error(uiText("TOVF.Interface.YouCannotWithdrawThisAuction_50a607", "Du darfst diese Auktion nicht zurückziehen."));
   const bidder = auction.highestBidderActorId ? actor(auction.highestBidderActorId) : null;
   if (bidder && auction.highestBid > 0) validateCurrencyChange(bidder, auction.highestBid);
   await addItem(seller, auction.itemData, auction.quantity);
   if (bidder && auction.highestBid > 0) await changeCurrency(bidder, auction.highestBid);
   auction.status = "cancelled"; auction.cancelledAt = Date.now(); auction.cancelledByUserId = userId;
   await saveState(state);
-  return { message: `${auction.itemName} wurde aus dem Auktionshaus genommen.` };
+  return { message: uiText("TOVF.Interface.P0WasRemovedFromTheAuctionHouse_60e666", "{p0} wurde aus dem Auktionshaus genommen.", { p0: (auction.itemName) }) };
 }
 
 async function createRequest(payload, userId) {
   const requester = actor(payload.actorId);
-  if (!actorOwnedBy(requester, userId)) throw new Error("Du besitzt diesen Charakter nicht.");
+  if (!actorOwnedBy(requester, userId)) throw new Error(uiText("TOVF.Interface.YouDoNotOwnThisCharacter_f356e9", "Du besitzt diesen Charakter nicht."));
   const wanted = payload.wantedItem;
   if (!wanted || !TRADEABLE_TYPES.has(wanted.type) || !String(wanted.name ?? "").trim()) {
-    throw new Error("Der gesuchte Gegenstand ist ungültig oder nicht handelbar.");
+    throw new Error(uiText("TOVF.Interface.TheRequestedItemIsInvalidOrCannot_0ea5a3", "Der gesuchte Gegenstand ist ungültig oder nicht handelbar."));
   }
   const wantedQuantity = Math.max(1, Math.floor(Number(payload.wantedQuantity) || 1));
   const offeredCopper = Math.max(0, Math.round(Number(payload.offeredCopper) || 0));
@@ -537,15 +554,15 @@ async function createRequest(payload, userId) {
   for (const entry of (Array.isArray(payload.offeredItems) ? payload.offeredItems : [])) {
     const item = requester.items.get(entry.itemId);
     const quantity = Math.max(1, Math.floor(Number(entry.quantity) || 1));
-    if (!isTradeableItem(item) || itemQuantity(item) < quantity) throw new Error("Ein angebotener Gegenstand ist nicht mehr verfügbar.");
+    if (!isTradeableItem(item) || itemQuantity(item) < quantity) throw new Error(uiText("TOVF.Interface.AnOfferedItemIsNoLongerAvailable_96b146", "Ein angebotener Gegenstand ist nicht mehr verfügbar."));
     offeredItems.push({ itemId: item.id, name: item.name, img: item.img, quantity, itemData: cleanTransferredItem(item, quantity) });
   }
-  if (!offeredCopper && !offeredItems.length) throw new Error("Das Handelsgesuch benötigt eine Gegenleistung.");
+  if (!offeredCopper && !offeredItems.length) throw new Error(uiText("TOVF.Interface.TheTradeRequestNeedsAnOfferIn_af0544", "Das Handelsgesuch benötigt eine Gegenleistung."));
   validateCurrencyChange(requester, -offeredCopper);
   const totals = new Map();
   for (const entry of offeredItems) totals.set(entry.itemId, (totals.get(entry.itemId) ?? 0) + entry.quantity);
   for (const [itemId, quantity] of totals) {
-    if (itemQuantity(requester.items.get(itemId)) < quantity) throw new Error("Ein angebotener Gegenstand ist nicht in ausreichender Menge vorhanden.");
+    if (itemQuantity(requester.items.get(itemId)) < quantity) throw new Error(uiText("TOVF.Interface.AnOfferedItemIsNotAvailableIn_89b9af", "Ein angebotener Gegenstand ist nicht in ausreichender Menge vorhanden."));
   }
   await changeCurrency(requester, -offeredCopper);
   const removed = [];
@@ -562,7 +579,7 @@ async function createRequest(payload, userId) {
     };
     state.requests.push(request);
     await saveState(state);
-    return { request, message: `Handelsgesuch für ${wantedQuantity}× ${wanted.name} erstellt.` };
+    return { request, message: uiText("TOVF.Interface.CreatedTradeRequestForP0P1_a6338b", "Handelsgesuch für {p0}× {p1} erstellt.", { p0: (wantedQuantity), p1: (wanted.name) }) };
   } catch (error) {
     await changeCurrency(requester, offeredCopper).catch(() => {});
     for (const entry of removed) await addItem(requester, entry.itemData, entry.quantity).catch(() => {});
@@ -573,16 +590,16 @@ async function createRequest(payload, userId) {
 async function fulfillRequest(payload, userId) {
   const state = commerceState();
   const request = state.requests.find(entry => entry.id === payload.requestId && entry.status === "active");
-  if (!request) throw new Error("Dieses Handelsgesuch ist nicht mehr verfügbar.");
+  if (!request) throw new Error(uiText("TOVF.Interface.ThisTradeRequestIsNoLongerAvailable_83d6a8", "Dieses Handelsgesuch ist nicht mehr verfügbar."));
   const seller = actor(payload.actorId);
   const requester = actor(request.requesterActorId);
-  if (!actorOwnedBy(seller, userId)) throw new Error("Du besitzt diesen Charakter nicht.");
-  if (seller.id === requester.id) throw new Error("Du kannst dein eigenes Handelsgesuch nicht erfüllen.");
+  if (!actorOwnedBy(seller, userId)) throw new Error(uiText("TOVF.Interface.YouDoNotOwnThisCharacter_f356e9", "Du besitzt diesen Charakter nicht."));
+  if (seller.id === requester.id) throw new Error(uiText("TOVF.Interface.YouCannotFulfillYourOwnTradeRequest_c42caf", "Du kannst dein eigenes Handelsgesuch nicht erfüllen."));
   const soldItem = seller.items.get(payload.itemId);
   const sameItem = isTradeableItem(soldItem)
     && soldItem.type === request.wantedItem.type
     && soldItem.name.trim().toLocaleLowerCase() === request.wantedItem.name.trim().toLocaleLowerCase();
-  if (!sameItem || itemQuantity(soldItem) < request.wantedQuantity) throw new Error("Der ausgewählte Gegenstand entspricht nicht dem Handelsgesuch.");
+  if (!sameItem || itemQuantity(soldItem) < request.wantedQuantity) throw new Error(uiText("TOVF.Interface.TheSelectedItemDoesNotMatchThe_d3b498", "Der ausgewählte Gegenstand entspricht nicht dem Handelsgesuch."));
   validateCurrencyChange(seller, request.offeredCopper);
   const soldData = cleanTransferredItem(soldItem, request.wantedQuantity);
   await removeItem(seller, soldItem, request.wantedQuantity);
@@ -598,22 +615,22 @@ async function fulfillRequest(payload, userId) {
     await addItem(seller, soldData, request.wantedQuantity).catch(() => {});
     throw error;
   }
-  return { message: `${seller.name} erfüllt das Handelsgesuch für ${request.wantedQuantity}× ${request.wantedItem.name}.` };
+  return { message: uiText("TOVF.Interface.P0FulfillsTheTradeRequestForP1_ce5398", "{p0} erfüllt das Handelsgesuch für {p1}× {p2}.", { p0: (seller.name), p1: (request.wantedQuantity), p2: (request.wantedItem.name) }) };
 }
 
 async function cancelRequest(payload, userId) {
   const state = commerceState();
   const request = state.requests.find(entry => entry.id === payload.requestId && entry.status === "active");
-  if (!request) throw new Error("Dieses Handelsgesuch ist nicht mehr verfügbar.");
+  if (!request) throw new Error(uiText("TOVF.Interface.ThisTradeRequestIsNoLongerAvailable_83d6a8", "Dieses Handelsgesuch ist nicht mehr verfügbar."));
   const requester = actor(request.requesterActorId);
-  if (!game.users.get(userId)?.isGM && !actorOwnedBy(requester, userId)) throw new Error("Du darfst dieses Handelsgesuch nicht zurückziehen.");
+  if (!game.users.get(userId)?.isGM && !actorOwnedBy(requester, userId)) throw new Error(uiText("TOVF.Interface.YouCannotWithdrawThisTradeRequest_dd7d0c", "Du darfst dieses Handelsgesuch nicht zurückziehen."));
   validateCurrencyChange(requester, request.offeredCopper);
   for (const entry of request.offeredItems) await addItem(requester, entry.itemData, entry.quantity);
   await changeCurrency(requester, request.offeredCopper);
   request.status = "cancelled";
   request.cancelledAt = Date.now();
   await saveState(state);
-  return { message: "Das Handelsgesuch wurde zurückgezogen." };
+  return { message: uiText("TOVF.Interface.TheTradeRequestWasWithdrawn_35974b", "Das Handelsgesuch wurde zurückgezogen.") };
 }
 
 function tradeSync(trade) {
@@ -628,7 +645,7 @@ function cleanTradeItems(entries, owner) {
   }
   return [...totals].map(([itemId, quantity]) => {
     const item = owner.items.get(itemId);
-    if (!isTradeableItem(item) || itemQuantity(item) < quantity) throw new Error("Ein Handelsgegenstand ist nicht verfügbar oder nicht handelbar.");
+    if (!isTradeableItem(item) || itemQuantity(item) < quantity) throw new Error(uiText("TOVF.Interface.ATradeItemIsUnavailableOrCannot_46c59d", "Ein Handelsgegenstand ist nicht verfügbar oder nicht handelbar."));
     return { itemId, name: item.name, img: item.img, quantity };
   });
 }
@@ -636,14 +653,14 @@ function cleanTradeItems(entries, owner) {
 async function finalizeTrade(payload, userId) {
   const submitted = payload?.trade;
   if (!submitted?.id || submitted.status !== "finalizing" || submitted.confirmations?.from !== true || submitted.confirmations?.to !== true) {
-    throw new Error("Der Handel wurde nicht von beiden Seiten bestätigt.");
+    throw new Error(uiText("TOVF.Interface.BothPartiesHaveNotConfirmedTheTrade_39a43d", "Der Handel wurde nicht von beiden Seiten bestätigt."));
   }
   const state = commerceState();
   const existing = state.trades.find(entry => entry.id === submitted.id && entry.status === "accepted");
-  if (existing) return { trade: existing, sync: tradeSync(existing), message: "Der Handel wurde bereits abgeschlossen." };
+  if (existing) return { trade: existing, sync: tradeSync(existing), message: uiText("TOVF.Interface.TheTradeHasAlreadyCompleted_1e3df8", "Der Handel wurde bereits abgeschlossen.") };
   const fromActor = actor(submitted.fromActorId), toActor = actor(submitted.toActorId);
-  if (!actorOwnedBy(fromActor, userId) && !actorOwnedBy(toActor, userId)) throw new Error("Du bist nicht an diesem Handel beteiligt.");
-  if (fromActor.id === toActor.id) throw new Error("Ein Charakter kann nicht mit sich selbst handeln.");
+  if (!actorOwnedBy(fromActor, userId) && !actorOwnedBy(toActor, userId)) throw new Error(uiText("TOVF.Interface.YouAreNotInvolvedInThisTrade_c5a8d5", "Du bist nicht an diesem Handel beteiligt."));
+  if (fromActor.id === toActor.id) throw new Error(uiText("TOVF.Interface.ACharacterCannotTradeWithItself_a3d921", "Ein Charakter kann nicht mit sich selbst handeln."));
   const trade = { id: submitted.id, status: "accepted", fromActorId: fromActor.id, toActorId: toActor.id,
     fromItems: cleanTradeItems(submitted.fromItems, fromActor), toItems: cleanTradeItems(submitted.toItems, toActor),
     fromCopper: Math.max(0, Math.round(Number(submitted.fromCopper) || 0)), toCopper: Math.max(0, Math.round(Number(submitted.toCopper) || 0)),
@@ -655,23 +672,23 @@ async function finalizeTrade(payload, userId) {
   state.trades.push(trade);
   state.trades = state.trades.slice(-500);
   await saveState(state);
-  return { trade, sync: tradeSync(trade), message: "Der Handel wurde abgeschlossen." };
+  return { trade, sync: tradeSync(trade), message: uiText("TOVF.Interface.TheTradeIsComplete_24087e", "Der Handel wurde abgeschlossen.") };
 }
 
 async function ownerDeleteActor(payload, userId) {
   const document = actor(payload.actorId);
-  if (!actorOwnedBy(document, userId)) throw new Error("Du besitzt diesen Actor nicht.");
-  if (merchantConfig(document).enabled || isAuctionHouse(document)) throw new Error("Händler und Auktionshäuser können nur durch eine Spielleitung gelöscht werden.");
+  if (!actorOwnedBy(document, userId)) throw new Error(uiText("TOVF.Interface.YouDoNotOwnThisActor_fc7457", "Du besitzt diesen Actor nicht."));
+  if (merchantConfig(document).enabled || isAuctionHouse(document)) throw new Error(uiText("TOVF.Interface.OnlyAGMCanDeleteMerchantsAnd_746c4e", "Händler und Auktionshäuser können nur durch eine Spielleitung gelöscht werden."));
   const state = commerceState();
   const inAuction = state.auctions.some(entry => entry.status === "active"
     && [entry.sellerActorId, entry.highestBidderActorId].includes(document.id));
   const inRequest = state.requests.some(entry => entry.status === "active" && entry.requesterActorId === document.id);
   const inTrade = state.trades.some(entry => ["pending", "active"].includes(entry.status)
     && [entry.fromActorId, entry.toActorId].includes(document.id));
-  if (inAuction || inRequest || inTrade) throw new Error("Dieser Actor ist noch an einem offenen Handel beteiligt. Beende ihn zuerst.");
+  if (inAuction || inRequest || inTrade) throw new Error(uiText("TOVF.Interface.ThisActorIsStillInvolvedInAn_ce951c", "Dieser Actor ist noch an einem offenen Handel beteiligt. Beende ihn zuerst."));
   const name = document.name;
   await document.delete();
-  return { message: `${name} wurde gelöscht.` };
+  return { message: uiText("TOVF.Interface.P0WasDeleted_f459e1", "{p0} wurde gelöscht.", { p0: (name) }) };
 }
 
 export async function settleExpiredAuctions() {
@@ -685,7 +702,7 @@ export async function settleExpiredAuctions() {
 }
 
 export async function executeCommerceAction(action, payload, userId = game.user.id) {
-  if (!game.user.isGM) throw new Error("Diese Handelsaktion muss durch eine Spielleitung ausgeführt werden.");
+  if (!game.user.isGM) throw new Error(uiText("TOVF.Interface.AGMMustExecuteThisTradeAction_453449", "Diese Handelsaktion muss durch eine Spielleitung ausgeführt werden."));
   return serialize(async () => {
     if (action === "merchantBuy") return merchantBuy(payload, userId);
     if (action === "merchantSell") return merchantSell(payload, userId);

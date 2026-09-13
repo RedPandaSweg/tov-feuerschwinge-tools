@@ -1,3 +1,4 @@
+import { uiText } from "../core/localization.mjs";
 import {
   MODULE_ID,
   TRANSFER_FORMAT_VERSION,
@@ -757,7 +758,7 @@ export async function cleanupSessionImport() {
   const deleteUsers = importedUsers.length && await foundry.applications.api.DialogV2.confirm({
     window: { title: "Sessionbenutzer entfernen" },
     content: `<p>Auch die ${importedUsers.length} durch den Sessiontransfer angelegten Player-Benutzer löschen?</p><ul>${importedUsers.map(u => `<li>${foundry.utils.escapeHTML(u.name)}</li>`).join("")}</ul><p>Bestehende Benutzer und Spielleiterzugänge bleiben erhalten.</p>`,
-    yes: { label: "Benutzer löschen" }, no: { label: "Benutzer behalten" }
+    yes: { label: uiText("TOVF.Interface.DeleteUsers_181024", "Benutzer löschen") }, no: { label: "Benutzer behalten" }
   });
 
   for (const uuid of actorUuids) await (await fromUuid(uuid).catch(() => null))?.delete();

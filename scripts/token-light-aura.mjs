@@ -1,3 +1,4 @@
+import { uiText } from "./core/localization.mjs";
 import { MODULE_ID } from "./core/constants.mjs";
 
 const SOCKET_SCOPE = "token-light-aura";
@@ -55,11 +56,11 @@ async function toggleForUser(tokenUuid, userId) {
 }
 
 export async function toggleTokenLightAura({ tokenUuid } = {}) {
-  if (!tokenUuid) throw new Error("Es wurde kein Token übergeben.");
+  if (!tokenUuid) throw new Error(uiText("TOVF.Interface.NoTokenWasSupplied_f882a1", "Es wurde kein Token übergeben."));
   if (game.user.isGM) return toggleForUser(tokenUuid, game.user.id);
 
   const gm = activeGM();
-  if (!gm) throw new Error("Zum Ändern der Lichtaura muss eine Spielleitung verbunden sein.");
+  if (!gm) throw new Error(uiText("TOVF.Interface.AGMMustBeConnectedToChange_08d7fb", "Zum Ändern der Lichtaura muss eine Spielleitung verbunden sein."));
   const requestId = foundry.utils.randomID();
   const response = new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {

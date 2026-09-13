@@ -1,3 +1,4 @@
+import { uiText } from "../core/localization.mjs";
 import { changeCurrency, itemQuantity, quantityUpdate, setItemQuantity, validateCurrencyChange } from "./currency.mjs?v=3.5.0-item-quantity-1";
 
 const locks = new Map();
@@ -57,7 +58,7 @@ export async function addItem(actor, itemData, quantity, { stackWeapons = false 
 
 export async function removeItem(actor, item, quantity) {
   const current = itemQuantity(item);
-  if (!(quantity > 0) || current < quantity) throw new Error(`${item.name} ist nicht in ausreichender Menge vorhanden.`);
+  if (!(quantity > 0) || current < quantity) throw new Error(uiText("TOVF.Interface.P0IsNotAvailableInSufficientQuantity_91720d", "{p0} ist nicht in ausreichender Menge vorhanden.", { p0: (item.name) }));
   if (current === quantity) await actor.deleteEmbeddedDocuments("Item", [item.id]);
   else await actor.updateEmbeddedDocuments("Item", [quantityUpdate(item, current - quantity)]);
 }
@@ -65,8 +66,8 @@ export async function removeItem(actor, item, quantity) {
 async function transferItemUnlocked({ source, target, itemId, quantity = 1, keepSource = false }) {
   quantity = Math.max(1, Math.floor(Number(quantity) || 1));
   const item = source.items.get(itemId);
-  if (!item) throw new Error("Der Gegenstand wurde nicht gefunden.");
-  if (item.type === "currency") throw new Error("Währung wird über den Geldbetrag übertragen.");
+  if (!item) throw new Error(uiText("TOVF.Interface.TheItemWasNotFound_56f5aa", "Der Gegenstand wurde nicht gefunden."));
+  if (item.type === "currency") throw new Error(uiText("TOVF.Interface.CurrencyIsTransferredUsingTheMoneyAmount_5b306f", "Währung wird über den Geldbetrag übertragen."));
   if (itemQuantity(item) < quantity && !keepSource) throw new Error("Der Bestand reicht nicht aus.");
   const data = cleanTransferredItem(item, quantity);
   if (!keepSource) await removeItem(source, item, quantity);
@@ -87,11 +88,11 @@ export async function exchange({ fromActor, toActor, fromCopper = 0, toCopper = 
     validateCurrencyChange(toActor, -toCopper + fromCopper);
     for (const entry of fromItems) {
       const item = fromActor.items.get(entry.itemId);
-      if (!item || itemQuantity(item) < entry.quantity) throw new Error("Ein angebotener Gegenstand ist nicht mehr verfügbar.");
+      if (!item || itemQuantity(item) < entry.quantity) throw new Error(uiText("TOVF.Interface.AnOfferedItemIsNoLongerAvailable_96b146", "Ein angebotener Gegenstand ist nicht mehr verfügbar."));
     }
     for (const entry of toItems) {
       const item = toActor.items.get(entry.itemId);
-      if (!item || itemQuantity(item) < entry.quantity) throw new Error("Ein angeforderter Gegenstand ist nicht mehr verfügbar.");
+      if (!item || itemQuantity(item) < entry.quantity) throw new Error(uiText("TOVF.Interface.ARequestedItemIsNoLongerAvailable_2827d7", "Ein angeforderter Gegenstand ist nicht mehr verfügbar."));
     }
     if (fromCopper !== toCopper) {
       await changeCurrency(fromActor, -fromCopper + toCopper);

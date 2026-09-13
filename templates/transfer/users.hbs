@@ -1,21 +1,21 @@
 <div class="tovf-campaign-body">
-  <h3>Benutzer exportieren</h3>
-  <p>Profile, Rollen, gewählter Charakter, Charakterrechte und Kampagnen-Personenzuordnungen. Passwörter, Berechtigungs-Sonderregeln und Makroleisten werden nicht übertragen.</p>
-  <details><summary>Benutzer auswählen</summary>{{#each users}}<label style="display:block"><input type="checkbox" name="exportUsers" value="{{id}}" checked> {{name}} · {{role}}</label>{{/each}}</details>
-  <button type="button" data-action="export">Ausgewählte Benutzer exportieren</button>
-  <h3>Benutzer importieren</h3>
+  <h3>{{localize 'TOVF.Interface.ExportUsers_0bb366'}}</h3>
+  <p>{{localize 'TOVF.Interface.ProfilesRolesSelectedCharactersCharacterPermissionsAnd_9f1f19'}}</p>
+  <details><summary>{{localize 'TOVF.Interface.SelectUsers_1b7ee2'}}</summary>{{#each users}}<label style="display:block"><input type="checkbox" name="exportUsers" value="{{id}}" checked> {{name}} · {{role}}</label>{{/each}}</details>
+  <button type="button" data-action="export">{{localize 'TOVF.Interface.ExportSelectedUsers_eebf77'}}</button>
+  <h3>{{localize 'TOVF.Interface.ImportUsers_373f65'}}</h3>
   <input type="file" name="usersFile" accept=".json,application/json">
-  <button type="button" data-action="preview">Importvorschau öffnen</button>
+  <button type="button" data-action="preview">{{localize 'TOVF.Interface.OpenImportPreview_f756ce'}}</button>
   {{#if plan}}
-    <p>Vorhandene Zugänge gezielt zuordnen. Namensvorschläge bitte prüfen. Neue Benutzer erhalten die angezeigte Rolle; bestehende Rollen und Zugangsdaten werden nicht überschrieben.</p>
-    <table><thead><tr><th>Quellbenutzer</th><th>Rolle bei Neuanlage</th><th>Ziel / Aktion</th></tr></thead><tbody>
-      {{#each plan.rows}}<tr><td>{{source.name}}</td><td>{{role}}</td><td><select name="user.{{source.id}}"><option value="new" {{#if create}}selected{{/if}}>Neu anlegen</option><option value="skip">Überspringen</option>{{#each targets}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select><small>{{reason}}</small></td></tr>{{/each}}
+    <p>{{localize 'TOVF.Interface.AssignExistingAccountsExplicitlyReviewNameSuggestions_378d8e'}}</p>
+    <table><thead><tr><th>{{localize 'TOVF.Interface.SourceUser_dae5d5'}}</th><th>{{localize 'TOVF.Interface.RoleForNewAccount_dccfd4'}}</th><th>{{localize 'TOVF.Interface.TargetAction_219615'}}</th></tr></thead><tbody>
+      {{#each plan.rows}}<tr><td>{{source.name}}</td><td>{{role}}</td><td><select name="user.{{source.id}}"><option value="new" {{#if create}}selected{{/if}}>{{localize 'TOVF.Interface.CreateNew_d095db'}}</option><option value="skip">{{localize 'TOVF.Interface.Skip_3af1d9'}}</option>{{#each targets}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select><small>{{reason}}</small></td></tr>{{/each}}
     </tbody></table>
-    <h4>Charakterrechte und gewählter Charakter</h4>
-    <p>Fehlende Charaktere werden nicht angelegt. Nach ihrem Transfer kannst du denselben Benutzerexport erneut importieren und die Zuordnungen ergänzen.</p>
-    <table><thead><tr><th>Quellcharakter</th><th>Zielcharakter</th></tr></thead><tbody>
-      {{#each plan.actors}}<tr><td>{{source.name}}</td><td><select name="actor.{{source.id}}"><option value="skip" {{#if skipped}}selected{{/if}}>Nicht übertragen / Charakter fehlt</option>{{#each targets}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select><small>{{reason}}</small></td></tr>{{/each}}
+    <h4>{{localize 'TOVF.Interface.CharacterPermissionsAndSelectedCharacter_1263c5'}}</h4>
+    <p>{{localize 'TOVF.Interface.MissingCharactersAreNotCreatedAfterTransferring_f37dae'}}</p>
+    <table><thead><tr><th>{{localize 'TOVF.Interface.SourceCharacter_a7dbd7'}}</th><th>{{localize 'TOVF.Interface.TargetCharacter_1c6716'}}</th></tr></thead><tbody>
+      {{#each plan.actors}}<tr><td>{{source.name}}</td><td><select name="actor.{{source.id}}"><option value="skip" {{#if skipped}}selected{{/if}}>{{localize 'TOVF.Interface.DoNotTransferCharacterMissing_3eeda9'}}</option>{{#each targets}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select><small>{{reason}}</small></td></tr>{{/each}}
     </tbody></table>
-    <button type="button" data-action="import">Zuordnungen prüfen und importieren</button>
+    <button type="button" data-action="import">{{localize 'TOVF.Interface.ReviewAndImportAssignments_6d5aa7'}}</button>
   {{/if}}
 </div>

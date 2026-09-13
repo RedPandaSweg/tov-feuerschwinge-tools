@@ -1,3 +1,4 @@
+import { uiText } from "../core/localization.mjs";
 import { sessionMonth, sessionDate, milestoneWeek, effectiveSessionStatus } from "./data.mjs";
 import { activeServerteam } from "./serverteam.mjs";
 
@@ -11,25 +12,25 @@ export function defaultRules() {
 }
 
 function number(value, label, integer = false) {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || (integer && !Number.isSafeInteger(value))) throw new Error(`Ungültiger Wert: ${label}`);
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || (integer && !Number.isSafeInteger(value))) throw new Error(uiText("TOVF.Interface.InvalidValueP0_27c131", "Ungültiger Wert: {p0}", { p0: (label) }));
 }
 
 export function validateRules(rules) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(rules.effectiveFrom) || new Date(rules.effectiveFrom).toISOString().slice(0, 10) !== rules.effectiveFrom) throw new Error("Ungültiges Gültigkeitsdatum.");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(rules.effectiveFrom) || new Date(rules.effectiveFrom).toISOString().slice(0, 10) !== rules.effectiveFrom) throw new Error(uiText("TOVF.Interface.InvalidEffectiveDate_0d181f", "Ungültiges Gültigkeitsdatum."));
   new Intl.DateTimeFormat("de", { timeZone: rules.timeZone }).format();
   number(rules.gm.count, "SL-Belohnungen", true);
-  if (typeof rules.gm.enabled !== "boolean" || typeof rules.community.enabled !== "boolean") throw new Error("Ungültige Aktivierung.");
+  if (typeof rules.gm.enabled !== "boolean" || typeof rules.community.enabled !== "boolean") throw new Error(uiText("TOVF.Interface.InvalidActivation_27a723", "Ungültige Aktivierung."));
   const c = rules.community;
-  if (!["activeWeeks", "ratio", "fixed", "sessions"].includes(c.mode) || !["ceil", "floor", "round"].includes(c.rounding) || !["each", "pool"].includes(c.distribution)) throw new Error("Ungültige Serverteamregel.");
+  if (!["activeWeeks", "ratio", "fixed", "sessions"].includes(c.mode) || !["ceil", "floor", "round"].includes(c.rounding) || !["each", "pool"].includes(c.distribution)) throw new Error(uiText("TOVF.Interface.InvalidServerTeamRule_df7afc", "Ungültige Serverteamregel."));
   for (const key of ["fixed", "factor", "minimum"]) number(c[key], key, key !== "factor");
-  if (c.maximum !== null) { number(c.maximum, "Maximum", true); if (c.maximum < c.minimum) throw new Error("Maximum liegt unter Minimum."); }
+  if (c.maximum !== null) { number(c.maximum, "Maximum", true); if (c.maximum < c.minimum) throw new Error(uiText("TOVF.Interface.MaximumIsBelowMinimum_4b484d", "Maximum liegt unter Minimum.")); }
   for (const r of [rules.gm.reward, c.reward]) {
-    if (![undefined, "session", "custom"].includes(r.mode)) throw new Error("Ungültige Belohnungsquelle.");
-    number(r.milestones, "Meilensteine", true);
-    if (r.milestones > 1000) throw new Error("Höchstens 1000 Meilensteine je Belohnung.");
-    number(r.gold, "Gold"); number(r.goldFactor, "Goldfaktor");
-    if (!["level", "fixed", "none"].includes(r.goldMode) || !Array.isArray(r.items)) throw new Error("Ungültiger Belohnungsinhalt.");
-    for (const item of r.items) { if (!item.uuid?.trim()) throw new Error("Gegenstands-UUID fehlt."); number(item.quantity, "Gegenstandsanzahl"); }
+    if (![undefined, "session", "custom"].includes(r.mode)) throw new Error(uiText("TOVF.Interface.InvalidRewardSource_f225e6", "Ungültige Belohnungsquelle."));
+    number(r.milestones, uiText("TOVF.Interface.Milestones_a38757", "Meilensteine"), true);
+    if (r.milestones > 1000) throw new Error(uiText("TOVF.Interface.AtMost1000MilestonesPerReward_db94aa", "Höchstens 1000 Meilensteine je Belohnung."));
+    number(r.gold, uiText("TOVF.Interface.Gold_c57604", "Gold")); number(r.goldFactor, uiText("TOVF.Interface.GoldFactor_b491a7", "Goldfaktor"));
+    if (!["level", "fixed", "none"].includes(r.goldMode) || !Array.isArray(r.items)) throw new Error(uiText("TOVF.Interface.InvalidRewardContents_d13e19", "Ungültiger Belohnungsinhalt."));
+    for (const item of r.items) { if (!item.uuid?.trim()) throw new Error(uiText("TOVF.Interface.ItemUUIDIsMissing_4263cb", "Gegenstands-UUID fehlt.")); number(item.quantity, "Gegenstandsanzahl"); }
   }
   return rules;
 }
@@ -40,7 +41,7 @@ export function communityAmount(sessions, gms, rule, activeWeeks = 0) {
   // An empty ratio month has no award, even if a minimum is configured.
   const amount = (rule.mode === "ratio" && gms === 0) || (rule.mode === "activeWeeks" && activeWeeks === 0) ? 0
     : Math.min(rule.maximum ?? Infinity, Math.max(rule.minimum, Math[rule.rounding](base * rule.factor)));
-  if (!Number.isSafeInteger(amount) || amount < 0) throw new Error("Belohnungsanzahl außerhalb des gültigen Bereichs.");
+  if (!Number.isSafeInteger(amount) || amount < 0) throw new Error(uiText("TOVF.Interface.RewardCountIsOutsideTheValidRange_b8303e", "Belohnungsanzahl außerhalb des gültigen Bereichs."));
   return { base, amount };
 }
 
@@ -56,14 +57,14 @@ export function sessionRelevantToMonth(session, month, rule) {
 }
 
 export function settlementPreview(state, month) {
-  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error("Ungültiger Monat.");
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error(uiText("TOVF.Interface.InvalidMonth_11dc51", "Ungültiger Monat."));
   const rule = ruleForDate(state.rules, `${month}-01`);
-  if (!rule) throw new Error("Für diesen Monat fehlt eine Regelversion.");
+  if (!rule) throw new Error(uiText("TOVF.Interface.NoRuleVersionExistsForThisMonth_b14ba9", "Für diesen Monat fehlt eine Regelversion."));
   const sessions = (state.snapshot?.sessions ?? []).filter(s => sessionRelevantToMonth(s, month, rule));
   const reviewed = sessions.filter(s => effectiveSessionStatus(state, s) === "played" && sessionMonth(s.startTime, rule.timeZone) === month);
   const unresolved = sessions.filter(s => effectiveSessionStatus(state, s) === "unknown");
   const missingGms = reviewed.filter(s => !s.gmUserId);
-  if (missingGms.length) throw new Error("Gespielte Sessions ohne Spielleiter müssen zuerst korrigiert werden.");
+  if (missingGms.length) throw new Error(uiText("TOVF.Interface.PlayedSessionsWithoutAGMMustBe_7f1fd1", "Gespielte Sessions ohne Spielleiter müssen zuerst korrigiert werden."));
   const gms = new Set(reviewed.map(s => s.gmUserId));
   const counts = new Map();
   for (const s of reviewed) counts.set(s.gmUserId, (counts.get(s.gmUserId) ?? 0) + 1);
@@ -85,11 +86,11 @@ export function settlementPreview(state, month) {
       let sum = 0;
       for (const [personId, count] of Object.entries(allocation)) {
         number(count, "Poolzuweisung", true);
-        if (!recipients.includes(personId)) throw new Error("Poolzuweisung an nicht berechtigten Empfänger.");
+        if (!recipients.includes(personId)) throw new Error(uiText("TOVF.Interface.PoolAssignedToAnIneligibleRecipient_730853", "Poolzuweisung an nicht berechtigten Empfänger."));
         sum += count;
         if (count) claims.push({ key: `community:${month}:${personId}`, kind: "community", sourceId: month, personId, count, ruleId: rule.id, reward: rule.community.reward });
       }
-      if (sum > community.amount) throw new Error("Poolzuweisungen übersteigen den verfügbaren Pool.");
+      if (sum > community.amount) throw new Error(uiText("TOVF.Interface.PoolAllocationsExceedTheAvailablePool_ba976c", "Poolzuweisungen übersteigen den verfügbaren Pool."));
       community.unassigned = community.amount - sum;
     }
   }

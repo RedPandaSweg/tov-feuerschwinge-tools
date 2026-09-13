@@ -1,3 +1,4 @@
+import { uiText } from "./core/localization.mjs";
 import { MODULE_ID } from "./core/constants.mjs";
 
 const FLAG = "simpleTileTrigger";
@@ -102,8 +103,8 @@ async function selectOwnedActor(config) {
   if (!actors.length) throw new Error("Du besitzt keine Charaktere.");
   const options = actors.map(actor => `<option value="${actor.id}">${escapeHtml(actor.name)}</option>`).join("");
   const actorId = await foundry.applications.api.DialogV2.prompt({
-    window: { title: "Charakter auswählen" },
-    content: `<div class="form-group"><label for="tovf-spawn-actor">Charakter</label><select id="tovf-spawn-actor" name="actorId">${options}</select></div>`,
+    window: { title: uiText("TOVF.Interface.SelectCharacter_e184bb", "Charakter auswählen") },
+    content: `<div class="form-group"><label for="tovf-spawn-actor">${uiText("TOVF.Interface.Character_19365b", "Charakter")}</label><select id="tovf-spawn-actor" name="actorId">${options}</select></div>`,
     ok: { label: "Spawnen", callback: (_event, button) => button.form.elements.actorId.value },
     rejectClose: false
   });
@@ -133,7 +134,7 @@ async function removeSpawnedTokens() {
 }
 
 async function viewScene(action) {
-  if (!action.sceneUuid) throw new Error("Für diese Aktion wurde keine Zielszene festgelegt.");
+  if (!action.sceneUuid) throw new Error(uiText("TOVF.Interface.NoTargetSceneIsConfiguredForThis_c9f5b1", "Für diese Aktion wurde keine Zielszene festgelegt."));
   const scene = await fromUuid(action.sceneUuid);
   if (scene?.documentName !== "Scene") throw new Error("Die Zielszene wurde nicht gefunden.");
   if (!scene.testUserPermission(game.user, "OBSERVER")) throw new Error("Du darfst diese Szene nicht ansehen.");
@@ -141,7 +142,7 @@ async function viewScene(action) {
 }
 
 async function executeMacroLocal(action, tile, { user = game.user, actor = null, token = null, scene = null } = {}) {
-  if (!action.macroUuid) throw new Error("Für diese Aktion wurde kein Makro festgelegt.");
+  if (!action.macroUuid) throw new Error(uiText("TOVF.Interface.NoMacroIsConfiguredForThisAction_8215c0", "Für diese Aktion wurde kein Makro festgelegt."));
   const macro = await fromUuid(action.macroUuid);
   if (macro?.documentName !== "Macro") throw new Error("Das hinterlegte Makro wurde nicht gefunden.");
   let args;
@@ -171,7 +172,7 @@ async function executeMacroLocal(action, tile, { user = game.user, actor = null,
 async function executeMacroAsGM(action, tile) {
   if (game.user.isGM) return executeMacroLocal(action, tile);
   const gm = activeGM();
-  if (!gm) throw new Error("Für diese Makro-Aktion muss eine Spielleitung verbunden sein.");
+  if (!gm) throw new Error(uiText("TOVF.Interface.AGMMustBeConnectedForThis_ae87b2", "Für diese Makro-Aktion muss eine Spielleitung verbunden sein."));
   const requestId = foundry.utils.randomID();
   const controlled = canvas.tokens?.controlled?.[0] ?? null;
   const promise = new Promise((resolve, reject) => {
@@ -208,7 +209,7 @@ async function trigger(tile) {
   running.add(tile.uuid);
   try {
     const config = tileConfiguration(tile);
-    if (!canUseTrigger(config)) throw new Error("Keiner deiner Charaktere darf diesen Auslöser verwenden.");
+    if (!canUseTrigger(config)) throw new Error(uiText("TOVF.Interface.NoneOfYourCharactersMayUseThis_172c29", "Keiner deiner Charaktere darf diesen Auslöser verwenden."));
     for (const action of config.actions) {
       if (action.type === "spawnCharacter") await spawnCharacter(action, config);
       else if (action.type === "removeSpawned") await removeSpawnedTokens();
@@ -277,7 +278,7 @@ async function selectTriggerCharacters(currentIds = []) {
     const ownerIds = players.filter(user => actor.testUserPermission(user, "OWNER")).map(user => user.id);
     return `<label data-trigger-actor data-search="${esc(actor.name.toLocaleLowerCase())}" data-folder="${actor.folder?.id ?? ""}" data-owners="${ownerIds.join(",")}" data-connected="${connectedIds.has(actor.id)}"><input type="checkbox" name="actors" value="${actor.id}" ${selected.has(actor.id) ? "checked" : ""}><img src="${esc(actor.img)}" alt=""><span><strong>${esc(actor.name)}</strong><small>${esc(actor.folder?.name ?? "Ohne Ordner")}</small></span></label>`;
   }).join("");
-  const content = `<div class="tovf-trigger-character-picker"><div class="tovf-trigger-character-filters"><label><i class="fa-solid fa-magnifying-glass"></i><input type="search" data-trigger-search placeholder="Charaktere durchsuchen …" autocomplete="off"></label><select data-trigger-player><option value="">Alle Spieler</option>${players.map(user => `<option value="${user.id}">${esc(user.name)}</option>`).join("")}</select><select data-trigger-folder><option value="*">Alle Ordner</option>${folders.map(([id, name]) => `<option value="${id}">${esc(name)}</option>`).join("")}</select></div><div class="tovf-actor-selection-actions"><button type="button" data-picker-mode="all"><i class="fa-solid fa-check-double"></i> Alle</button><button type="button" data-picker-mode="none"><i class="fa-solid fa-xmark"></i> Keine</button><button type="button" data-picker-mode="connected"><i class="fa-solid fa-users"></i> Verbundene Spieler</button><button type="button" data-picker-mode="tokens"><i class="fa-solid fa-location-dot"></i> Ausgewählte Token</button></div><p class="hint">Ohne Auswahl können alle Spieler den Trigger benutzen. Ansonsten genügt der Besitz eines ausgewählten Charakters.</p><div class="tovf-actor-list">${rows || "<p>Keine Spielercharaktere vorhanden.</p>"}</div></div>`;
+  const content = `<div class="tovf-trigger-character-picker"><div class="tovf-trigger-character-filters"><label><i class="fa-solid fa-magnifying-glass"></i><input type="search" data-trigger-search placeholder="Charaktere durchsuchen …" autocomplete="off"></label><select data-trigger-player><option value="">Alle Spieler</option>${players.map(user => `<option value="${user.id}">${esc(user.name)}</option>`).join("")}</select><select data-trigger-folder><option value="*">Alle Ordner</option>${folders.map(([id, name]) => `<option value="${id}">${esc(name)}</option>`).join("")}</select></div><div class="tovf-actor-selection-actions"><button type="button" data-picker-mode="all"><i class="fa-solid fa-check-double"></i> Alle</button><button type="button" data-picker-mode="none"><i class="fa-solid fa-xmark"></i> Keine</button><button type="button" data-picker-mode="connected"><i class="fa-solid fa-users"></i> Verbundene Spieler</button><button type="button" data-picker-mode="tokens"><i class="fa-solid fa-location-dot"></i> Ausgewählte Token</button></div><p class="hint">Ohne Auswahl können alle Spieler den Trigger benutzen. Ansonsten genügt der Besitz eines ausgewählten Charakters.</p><div class="tovf-actor-list">${rows || `<p>${uiText("TOVF.Interface.NoPlayerCharactersAvailable_9add4f", "Keine Spielercharaktere vorhanden.")}</p>`}</div></div>`;
   return foundry.applications.api.DialogV2.prompt({ classes: ["tovf-commerce-dialog", "tovf-trigger-character-dialog"], window: { title: "Triggerberechtigungen" }, position: { width: 700, height: 650 }, content,
     render: (_event, dialog) => {
       const root = dialog.element.querySelector(".tovf-trigger-character-picker");
@@ -306,7 +307,7 @@ async function selectTriggerCharacters(currentIds = []) {
         }
       });
     },
-    ok: { label: "Auswahl übernehmen", icon: "fa-solid fa-check", callback: (_event, button) => [...button.form.querySelectorAll('[name="actors"]:checked')].map(input => input.value) },
+    ok: { label: uiText("TOVF.Interface.ApplySelection_285fa7", "Auswahl übernehmen"), icon: "fa-solid fa-check", callback: (_event, button) => [...button.form.querySelectorAll('[name="actors"]:checked')].map(input => input.value) },
     rejectClose: false });
 }
 
@@ -350,7 +351,7 @@ function activateEditor(app, html) {
       target.classList.remove("dragover");
       const data = TextEditor.getDragEventData(event);
       const scene = data.uuid ? await fromUuid(data.uuid) : null;
-      if (scene?.documentName !== "Scene") return ui.notifications.warn("Bitte eine Szene aus der Szenenleiste hierher ziehen.");
+      if (scene?.documentName !== "Scene") return ui.notifications.warn(uiText("TOVF.Interface.PleaseDropASceneFromTheScene_3316e9", "Bitte eine Szene aus der Szenenleiste hierher ziehen."));
       const config = synchronizeEditor(app);
       const action = config.actions?.find(entry => entry.id === target.closest("[data-action-id]")?.dataset.actionId);
       if (!action) return;
@@ -367,7 +368,7 @@ function activateEditor(app, html) {
       target.classList.remove("dragover");
       const data = TextEditor.getDragEventData(event);
       const macro = data.uuid ? await fromUuid(data.uuid) : null;
-      if (macro?.documentName !== "Macro") return ui.notifications.warn("Bitte ein Makro aus dem Makroverzeichnis hierher ziehen.");
+      if (macro?.documentName !== "Macro") return ui.notifications.warn(uiText("TOVF.Interface.PleaseDropAMacroFromTheMacro_99b5e4", "Bitte ein Makro aus dem Makroverzeichnis hierher ziehen."));
       const config = synchronizeEditor(app);
       const action = config.actions?.find(entry => entry.id === target.closest("[data-action-id]")?.dataset.actionId);
       if (!action) return;
@@ -497,23 +498,23 @@ function exposeApi() {
 
 async function handleGMExecutionRequest(message) {
   const user = game.users.get(message.userId);
-  if (!user?.active) throw new Error("Der auslösende Benutzer ist nicht mehr verbunden.");
+  if (!user?.active) throw new Error(uiText("TOVF.Interface.TheTriggeringUserIsNoLongerConnected_1668e8", "Der auslösende Benutzer ist nicht mehr verbunden."));
   const tile = await fromUuid(message.tileUuid);
-  if (tile?.documentName !== "Tile" || tile.parent?.id !== message.sceneId) throw new Error("Das auslösende Tile wurde nicht gefunden.");
-  if (tile.hidden && !user.isGM) throw new Error("Dieses Tile darf nicht ausgelöst werden.");
+  if (tile?.documentName !== "Tile" || tile.parent?.id !== message.sceneId) throw new Error(uiText("TOVF.Interface.TheTriggeringTileWasNotFound_cc397b", "Das auslösende Tile wurde nicht gefunden."));
+  if (tile.hidden && !user.isGM) throw new Error(uiText("TOVF.Interface.ThisTileCannotBeTriggered_22e807", "Dieses Tile darf nicht ausgelöst werden."));
   const config = tileConfiguration(tile);
-  if (!config.enabled || !canUseTrigger(config, user)) throw new Error("Du darfst diesen Auslöser nicht verwenden.");
+  if (!config.enabled || !canUseTrigger(config, user)) throw new Error(uiText("TOVF.Interface.YouMayNotUseThisTrigger_f7befd", "Du darfst diesen Auslöser nicht verwenden."));
   const action = config.actions.find(entry => entry.id === message.actionId && entry.type === "executeMacro" && entry.runAsGM);
   if (!action) throw new Error("Die GM-Makro-Aktion ist nicht mehr hinterlegt.");
 
   const tokenDocument = message.tokenUuid ? await fromUuid(message.tokenUuid) : null;
   if (tokenDocument && (tokenDocument.documentName !== "Token" || tokenDocument.parent?.id !== tile.parent.id
     || !tokenDocument.actor?.testUserPermission(user, "OWNER"))) {
-    throw new Error("Der übergebene Token gehört nicht zum auslösenden Benutzer.");
+    throw new Error(uiText("TOVF.Interface.TheSuppliedTokenDoesNotBelongTo_24a541", "Der übergebene Token gehört nicht zum auslösenden Benutzer."));
   }
   let actor = tokenDocument?.actor ?? (message.actorUuid ? await fromUuid(message.actorUuid) : user.character);
   if (actor && !actor.testUserPermission(user, "OWNER") && user.character?.id !== actor.id) {
-    throw new Error("Der übergebene Charakter gehört nicht zum auslösenden Benutzer.");
+    throw new Error(uiText("TOVF.Interface.TheSuppliedCharacterDoesNotBelongTo_b7c695", "Der übergebene Charakter gehört nicht zum auslösenden Benutzer."));
   }
   const token = tokenDocument?.object ?? tokenDocument;
   await executeMacroLocal(action, tile, { user, actor, token, scene: tile.parent });

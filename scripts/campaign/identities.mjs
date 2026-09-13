@@ -1,3 +1,4 @@
+import { uiText } from "../core/localization.mjs";
 /** Campaign people can have separate player and GM logins. */
 export function personAccountIds(state, personId) {
   return [state.personLinks[personId]].filter(Boolean);
@@ -11,7 +12,7 @@ export function personName(state, personId) {
   return state.personNames?.[personId]?.trim()
     || game.users.get(state.personLinks[personId])?.name
     || personAccountIds(state, personId).map(id => game.users.get(id)?.name).find(Boolean)
-    || "Spieler noch nicht zugeordnet";
+    || uiText("TOVF.Interface.PlayerNotAssignedYet_d454cf", "Spieler noch nicht zugeordnet");
 }
 
 /** Match only unique character names, then explicit player ownership. Never GM-wide permissions. */

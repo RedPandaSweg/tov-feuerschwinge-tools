@@ -1,3 +1,4 @@
+import { uiText } from "./core/localization.mjs";
 import { MODULE_ID } from "./core/constants.mjs";
 
 const FLAG = "tokenPresets";
@@ -32,9 +33,9 @@ async function authorize(userId, { actorUuid, tokenUuid }) {
     || user?.character?.uuid === actor?.uuid;
   const ownsTokenActor = token?.actor?.testUserPermission?.(user, "OWNER");
   if (!user || !actor || (!user.isGM && !ownsActor && !ownsTokenActor)) {
-    throw new Error("Du besitzt diesen Charakter nicht.");
+    throw new Error(uiText("TOVF.Interface.YouDoNotOwnThisCharacter_f356e9", "Du besitzt diesen Charakter nicht."));
   }
-  if (token && baseActor(token)?.uuid !== actor.uuid) throw new Error("Token und Charakter stimmen nicht überein.");
+  if (token && baseActor(token)?.uuid !== actor.uuid) throw new Error(uiText("TOVF.Interface.TokenAndCharacterDoNotMatch_94a72e", "Token und Charakter stimmen nicht überein."));
   return { actor, token };
 }
 
@@ -68,7 +69,7 @@ async function execute(action, payload, userId = game.user.id) {
 async function request(action, payload) {
   if (game.user.isGM) return execute(action, payload);
   const gm = activeGM();
-  if (!gm) throw new Error("Zum Ändern der Token-Presets muss eine Spielleitung verbunden sein.");
+  if (!gm) throw new Error(uiText("TOVF.Interface.AGMMustBeConnectedToChange_ff409a", "Zum Ändern der Token-Presets muss eine Spielleitung verbunden sein."));
   const requestId = foundry.utils.randomID();
   const promise = new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
