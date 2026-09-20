@@ -168,6 +168,8 @@ export class ProjectSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     project.description = String(value("description") ?? "");
     project.categories = parseCategories(Array.from(this.element.querySelectorAll('[name="categories"]'), input => input.value));
     project.requiredProgress = Math.max(0.000001, numberOr(value("requiredProgress"), 1));
+    const minimumLevel = value("minimumCraftingLevel");
+    project.minimumCraftingLevel = minimumLevel === "" || minimumLevel == null ? null : Math.max(1, Math.min(20, Math.floor(Number(minimumLevel) || 1)));
     project.repeatable = checked("repeatable");
     project.collaborative = checked("collaborative");
     project.completionCheck = {

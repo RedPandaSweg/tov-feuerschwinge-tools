@@ -670,7 +670,7 @@ export async function importSession(file) {
   if (!accepted) return;
 
   let userImport = null;
-  if (bundle.users?.users?.length && game.user.role === CONST.USER_ROLES.GAMEMASTER) {
+  if (bundle.users?.users?.length) {
     const selection = await reviewSessionUsers(bundle.users);
     if (!selection) return;
     if (!selection.skip) userImport = await importUserBundle(bundle.users, { choices: selection.choices, applyActors: false, sessionPlayers: true });

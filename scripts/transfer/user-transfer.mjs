@@ -4,7 +4,7 @@ import { MODULE_ID } from "../core/constants.mjs";
 const FORMAT = "tov-feuerschwinge-users";
 const IDENTITIES = "userTransferIds";
 const copy = value => foundry.utils.deepClone(value);
-const assertGM = () => { if (game.user.role !== CONST.USER_ROLES.GAMEMASTER) throw new Error(uiText("TOVF.Interface.UserImportsAndExportsRequireTheFull_1770f8", "Benutzerimporte und -exporte erfordern die Rolle Spielleiter.")); };
+const assertGM = () => { if (!game.user.isGM) throw new Error(uiText("TOVF.Interface.UserImportsAndExportsRequireTheFull_1770f8", "Benutzerimporte und -exporte erfordern mindestens die Rolle Spielleiter-Assistent.")); };
 const actorId = actor => actor.getFlag(MODULE_ID, "transfer")?.id ?? `world:${game.world.id}:Actor:${actor.id}`;
 export const userIdentity = user => user.getFlag(MODULE_ID, IDENTITIES)?.[0] ?? `world:${game.world.id}:User:${user.id}`;
 export const roleLabel = role => ({ 0: "Deaktiviert", 1: uiText("TOVF.Interface.Player_1f52fa", "Spieler"), 2: uiText("TOVF.Interface.TrustedPlayer_5b60ca", "Vertrauenswürdiger Spieler"), 3: "Spielleiterassistent", 4: uiText("TOVF.Interface.GM_016a67", "Spielleiter") }[role] ?? uiText("TOVF.Interface.Unknown_d0b00a", "Unbekannt"));
@@ -153,6 +153,10 @@ export async function importUserBundle(bundle, { choices = {}, actorChoices = {}
   if (busy) throw new Error(uiText("TOVF.Interface.AUserImportIsAlreadyRunning_fda359", "Ein Benutzerimport läuft bereits."));
   const plan = planUserImport(bundle, choices, actorChoices);
   if (sessionPlayers && plan.rows.some(r => r.target && r.target.role !== 1)) throw new Error(uiText("TOVF.Interface.ForSessionUsersSelectANewAccount_f22f95", "Für Sessionbenutzer bitte einen neuen Zugang oder einen bestehenden Player auswählen. Spielleiterzugänge der Sessionwelt bleiben erhalten."));
+  // Check every new account before making changes; Assistants cannot create full GMs.
+  if (plan.rows.some(row => row.targetId === "new" && (sessionPlayers ? CONST.USER_ROLES.PLAYER : row.source.role) > game.user.role)) {
+    throw new Error(uiText("TOVF.Interface.UserTransferRoleTooHigh", "Du kannst keine Benutzer mit einer höheren Rolle als deiner eigenen anlegen. Ordne sie bestehenden Benutzern zu oder überspringe sie."));
+  }
   // Detect conflicts before creating a user or changing any Actor.
   mergePersonAssignments(copy(game.settings.get(MODULE_ID, "campaignLedger") ?? {}), bundle,
     new Map(plan.rows.filter(r => r.targetId !== "skip").map(r => [r.source.id, r.target?.id ?? `new:${r.source.id}`])));

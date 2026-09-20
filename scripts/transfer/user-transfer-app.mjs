@@ -13,7 +13,7 @@ export class UserTransferApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this.element.addEventListener("submit", event => event.preventDefault());
   }
   async _prepareContext() {
-    if (game.user.role !== CONST.USER_ROLES.GAMEMASTER) throw new Error(uiText("TOVF.Interface.UserTransferRequiresTheFullGMRole_a818c7", "Benutzertransfer erfordert die Rolle Spielleiter."));
+    if (!game.user.isGM) throw new Error(uiText("TOVF.Interface.UserTransferRequiresTheFullGMRole_a818c7", "Benutzertransfer erfordert mindestens die Rolle Spielleiter-Assistent."));
     const plan = this._bundle ? planUserImport(this._bundle) : null;
     return {
       users: game.users.map(u => ({ id: u.id, name: u.name, role: roleLabel(u.role) })),

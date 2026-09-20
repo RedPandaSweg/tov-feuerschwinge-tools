@@ -1,3 +1,4 @@
+import { assertCraftingAccess } from "./crafting-access.mjs";
 import { FLAGS, MODULE_ID } from "./constants.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
 import { GoldService } from "./gold-service.mjs";
@@ -32,16 +33,18 @@ export class ProjectService {
     ) ?? null;
   }
 
-  static async project(projectUuid) {
+  static async project(projectUuid, actor = null) {
     const item = await fromUuid(projectUuid);
     if (!item || item.documentName !== "Item") {
       throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ProjectMissing"));
     }
-    return { item, definition: recipeData(item, { sourceUuid: projectUuid }) };
+    const definition = recipeData(item, { sourceUuid: projectUuid });
+    if (actor) await assertCraftingAccess(actor, item, definition);
+    return { item, definition };
   }
 
   static async start(actor, stationActor, projectUuid, batchQuantity = 1) {
-    const { item, definition } = await this.project(projectUuid);
+    const { item, definition } = await this.project(projectUuid, actor);
     const station = getStationData(stationActor);
     if (!station.enabled) {
       throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.StationDisabled"));
@@ -115,7 +118,7 @@ export class ProjectService {
 
   static async invest(actor, stationActor, projectUuid, requestedDowntime, check = null) {
     const station = getStationData(stationActor);
-    const { definition } = await this.project(projectUuid);
+    const { definition } = await this.project(projectUuid, actor);
     const states = this.get(actor);
     const state = states.find(entry =>
       entry.stationUuid === stationActor.uuid &&
@@ -178,7 +181,7 @@ export class ProjectService {
 
   static async useProgressItem(actor, stationActor, projectUuid, itemUuid, requestedQuantity = 1) {
     const station = getStationData(stationActor);
-    const { definition } = await this.project(projectUuid);
+    const { definition } = await this.project(projectUuid, actor);
     const states = this.get(actor);
     const state = states.find(entry => entry.stationUuid === stationActor.uuid && (entry.projectUuid === projectUuid || entry.recipeUuid === projectUuid));
     if (!station.enabled) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.StationDisabled"));
@@ -217,7 +220,7 @@ export class ProjectService {
 
   static async resolveRoll(actor, stationActor, projectUuid, check) {
     const station = getStationData(stationActor);
-    const { definition } = await this.project(projectUuid);
+    const { definition } = await this.project(projectUuid, actor);
     const states = this.get(actor);
     const state = states.find(entry =>
       entry.stationUuid === stationActor.uuid &&
@@ -370,7 +373,7 @@ export class ProjectService {
 
   static async resolveCompletionCheck(actor, stationActor, projectUuid, check) {
     const station = getStationData(stationActor);
-    const { definition } = await this.project(projectUuid);
+    const { definition } = await this.project(projectUuid, actor);
     const states = this.get(actor);
     const state = states.find(entry => entry.stationUuid === stationActor.uuid && (entry.projectUuid === projectUuid || entry.recipeUuid === projectUuid));
     if (!state?.awaitingCompletionCheck || state.completed || state.active === false) {

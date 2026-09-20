@@ -13,7 +13,7 @@ function actors() {
 }
 
 function responsible(actor) {
-  const gm = game.users.activeGM;
+  const gm = game.users.find(user => user.active && user.isGM);
   if (gm) return gm.id === game.user.id;
   return game.users.find(user => user.active && actor.testUserPermission(user, "OWNER"))?.id === game.user.id;
 }

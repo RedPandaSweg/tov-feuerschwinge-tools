@@ -12,6 +12,24 @@
     }
   },
   "TOVF": {
+"CraftingLevel": {
+  "Override": "Minimum level (optional)",
+  "Default": "Rarity rule",
+  "Hint": "Empty: use the module rarity unlock levels of the output items. A value overrides them for this recipe; level 1 allows everyone. Uses milestone level.",
+  "Locked": "Craftable from level {level}"
+},
+"GMBackfill": {
+  "Action": "Record missing GM balance",
+  "Hint": "Books missing credit using the rules for the session date. Afterwards, record rewards already received elsewhere as used under balance corrections. No character rewards are granted.",
+  "AssignFirst": "Please link the GM to a Foundry user.",
+  "NoRule": "No GM reward is enabled for the session date. Please check the applicable rule version."
+},
+"RewardTotals": {
+  "Open": "Available rewards",
+  "Used": "Already used",
+  "Total": "Total booked",
+  "Reserved": "Reserved / under review"
+},
 "AutoSessions": {
   "Action": "Automatically link unambiguous sessions",
   "Hint": "Unambiguous session links are detected during import. Run matching here for existing data. Ambiguous matches remain open for manual review."
@@ -1077,7 +1095,8 @@
   "RuleVersionIsMissing_d75856": "Rule version is missing.",
   "InvalidReviewOfTheInterruptedRedemption_4afa66": "Invalid review of the interrupted redemption.",
   "UnknownCampaignAction_1a9c9b": "Unknown campaign action.",
-  "AUserWithTheFullGMRole_1b384e": "A user with the full GM role must be connected.",
+  "CampaignWriterRequired": "A GM or Assistant GM with permission to modify world settings must be connected.",
+    "AUserWithTheFullGMRole_1b384e": "A user with the full GM role must be connected.",
   "ACampaignActionIsAlreadyBeingProcessed_19c9a3": "A campaign action is already being processed.",
   "AnEarlierRequestIsStillPendingCheck_8a3822": "An earlier request is still pending. Check its booking status first or resend the same request.",
   "NoResponseYetCheckTheBookingStatus_251306": "No response yet. Check the booking status before retrying; requests are not retried automatically.",
@@ -1198,7 +1217,7 @@
   "PleasePurchaseBetween1And100Animals_e77563": "Please purchase between 1 and 100 animals.",
   "TheAnimalActorCouldNotBeCreated_6db6ab": "The animal Actor could not be created.",
   "AnimalPurchaseInterruptedRollbackIncompleteAGM_54c220": "Animal purchase interrupted; rollback incomplete. A GM must check animals, money, and stock before retrying.",
-  "UserImportsAndExportsRequireTheFull_1770f8": "User imports and exports require the full GM role.",
+  "UserImportsAndExportsRequireTheFull_1770f8": "User imports and exports require at least the Assistant GM role.",
   "TrustedPlayer_5b60ca": "Trusted player",
   "InvalidUserPackage_ddef48": "Invalid user package.",
   "MissingOrDuplicateTransferID_031a7f": "Missing or duplicate transfer ID.",
@@ -1219,7 +1238,8 @@
   "MultipleSourceCharactersAreAssignedToThe_306b1d": "Multiple source characters are assigned to the same target character.",
   "AUserImportIsAlreadyRunning_fda359": "A user import is already running.",
   "ForSessionUsersSelectANewAccount_f22f95": "For session users, select a new account or an existing Player. GM accounts in the session world are retained.",
-  "UserTransferRequiresTheFullGMRole_a818c7": "User transfer requires the full GM role.",
+  "UserTransferRoleTooHigh": "You cannot create users with a higher role than your own. Link them to existing users or skip them.",
+    "UserTransferRequiresTheFullGMRole_a818c7": "User transfer requires at least the Assistant GM role.",
   "PleaseSelectAUserExportFile_e68b0a": "Please select a user export file.",
   "ApplyUserImport_e85511": "Apply user import",
   "AssignSessionUsers_9e1efc": "Assign session users",

@@ -12,6 +12,24 @@
     }
   },
   "TOVF": {
+"CraftingLevel": {
+  "Override": "Mindestlevel (optional)",
+  "Default": "Raritätenregel",
+  "Hint": "Leer: Raritätenfreischaltung der Ergebnis-Items aus der Modulkonfiguration. Ein Wert überschreibt sie für dieses Rezept; Level 1 gibt es für alle frei. Es gilt das Meilensteinlevel.",
+  "Locked": "Ab Level {level} craftbar"
+},
+"GMBackfill": {
+  "Action": "Spielleitungs-Guthaben nachtragen",
+  "Hint": "Bucht das fehlende Guthaben nach den Regeln zum Sessiondatum. Bereits anderweitig erhaltene Belohnungen danach unter Guthaben korrigieren als verwendet erfassen. Keine Auszahlung auf einen Charakter.",
+  "AssignFirst": "Bitte die Spielleitung einem Foundry-Nutzer zuordnen.",
+  "NoRule": "Zum Sessiondatum ist keine Spielleitungs-Belohnung aktiviert. Bitte die damalige Regelversion prüfen."
+},
+"RewardTotals": {
+  "Open": "Offene Belohnungen",
+  "Used": "Bereits verwendet",
+  "Total": "Insgesamt gebucht",
+  "Reserved": "Reserviert / in Prüfung"
+},
 "AutoSessions": {
   "Action": "Eindeutige Sessions automatisch verknüpfen",
   "Hint": "Eindeutige Sessionverbindungen werden beim Import automatisch erkannt. Hier kannst du die Zuordnung für vorhandene Daten nachholen. Unklare Treffer bleiben zur manuellen Prüfung offen."
@@ -1076,7 +1094,8 @@
   "RuleVersionIsMissing_d75856": "Regelversion fehlt.",
   "InvalidReviewOfTheInterruptedRedemption_4afa66": "Ungültige Prüfung der unterbrochenen Einlösung.",
   "UnknownCampaignAction_1a9c9b": "Unbekannte Kampagnenaktion.",
-  "AUserWithTheFullGMRole_1b384e": "Ein Nutzer mit der Rolle Spielleiter muss verbunden sein.",
+  "CampaignWriterRequired": "Eine Spielleitung mit dem Recht zum Ändern der Welteneinstellungen muss verbunden sein.",
+    "AUserWithTheFullGMRole_1b384e": "Ein Nutzer mit der Rolle Spielleiter muss verbunden sein.",
   "ACampaignActionIsAlreadyBeingProcessed_19c9a3": "Eine Kampagnenaktion wird bereits verarbeitet.",
   "AnEarlierRequestIsStillPendingCheck_8a3822": "Eine frühere Anfrage ist noch offen. Zuerst deren Buchungsstand prüfen beziehungsweise dieselbe Anfrage erneut senden.",
   "NoResponseYetCheckTheBookingStatus_251306": "Noch keine Antwort. Vor einer Wiederholung den Buchungsstand prüfen; es erfolgt keine automatische Wiederholung.",
@@ -1197,7 +1216,7 @@
   "PleasePurchaseBetween1And100Animals_e77563": "Bitte zwischen 1 und 100 Tieren kaufen.",
   "TheAnimalActorCouldNotBeCreated_6db6ab": "Der Tier-Actor konnte nicht erstellt werden.",
   "AnimalPurchaseInterruptedRollbackIncompleteAGM_54c220": "Tierkauf unterbrochen; Rückabwicklung unvollständig. Spielleitung muss Tiere, Gold und Bestand prüfen, bevor erneut gekauft wird.",
-  "UserImportsAndExportsRequireTheFull_1770f8": "Benutzerimporte und -exporte erfordern die Rolle Spielleiter.",
+  "UserImportsAndExportsRequireTheFull_1770f8": "Benutzerimporte und -exporte erfordern mindestens die Rolle Spielleiter-Assistent.",
   "TrustedPlayer_5b60ca": "Vertrauenswürdiger Spieler",
   "InvalidUserPackage_ddef48": "Ungültiges Benutzerpaket.",
   "MissingOrDuplicateTransferID_031a7f": "Fehlende oder doppelte Transferkennung.",
@@ -1218,7 +1237,8 @@
   "MultipleSourceCharactersAreAssignedToThe_306b1d": "Mehrere Quellcharaktere sind demselben Zielcharakter zugeordnet.",
   "AUserImportIsAlreadyRunning_fda359": "Ein Benutzerimport läuft bereits.",
   "ForSessionUsersSelectANewAccount_f22f95": "Für Sessionbenutzer bitte einen neuen Zugang oder einen bestehenden Player auswählen. Spielleiterzugänge der Sessionwelt bleiben erhalten.",
-  "UserTransferRequiresTheFullGMRole_a818c7": "Benutzertransfer erfordert die Rolle Spielleiter.",
+  "UserTransferRoleTooHigh": "Du kannst keine Benutzer mit einer höheren Rolle als deiner eigenen anlegen. Ordne sie bestehenden Benutzern zu oder überspringe sie.",
+    "UserTransferRequiresTheFullGMRole_a818c7": "Benutzertransfer erfordert mindestens die Rolle Spielleiter-Assistent.",
   "PleaseSelectAUserExportFile_e68b0a": "Bitte eine Benutzerexport-Datei auswählen.",
   "ApplyUserImport_e85511": "Benutzerimport übernehmen",
   "AssignSessionUsers_9e1efc": "Sessionbenutzer zuordnen",

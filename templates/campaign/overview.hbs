@@ -3,6 +3,7 @@
     {{#each tabs}}<button type="button" data-action="command" data-command="tab" data-tab="{{id}}" class="{{#if active}}active{{/if}}">{{label}}</button>{{/each}}
     <button type="button" data-action="command" data-command="refresh" title="{{localize 'TOVF.Interface.Refresh_87c65f'}}"><i class="fa-solid fa-rotate"></i></button>
   </nav>
+  {{#if assistant}}<button type="button" data-action="command" data-command="userTransfer">{{localize 'TOVF.Interface.ImportExportUsers_006bc8'}}</button>{{/if}}
   <p class="hint">{{summary}}{{#if exportedAt}} {{localize 'TOVF.Interface.DataAsOf_ffa317'}} {{exportedAt}}{{/if}}</p>
 
   {{#if rewardsTab}}
@@ -11,6 +12,12 @@
     {{else}}<p>{{localize 'TOVF.Interface.YouCanDistributeYourBalanceAmongYour_9c12b0'}}</p>
       <div class="form-group"><label>{{localize 'TOVF.Interface.BalanceOf_bb96ac'}}</label><select disabled>{{#each rewardPeople}}<option selected>{{name}}</option>{{else}}<option selected>{{localize 'TOVF.Interface.YourUserIsNotAssignedToA_f611f0'}}</option>{{/each}}</select></div>
     {{/if}}
+    <p class="tovf-reward-totals" aria-live="polite">
+      {{localize 'TOVF.RewardTotals.Open'}}: <strong>{{rewardTotals.open}}</strong> ·
+      {{localize 'TOVF.RewardTotals.Used'}}: <strong>{{rewardTotals.used}}</strong> ·
+      {{localize 'TOVF.RewardTotals.Total'}}: <strong>{{rewardTotals.total}}</strong>
+      {{#if rewardTotals.reserved}} · {{localize 'TOVF.RewardTotals.Reserved'}}: <strong>{{rewardTotals.reserved}}</strong>{{/if}}
+    </p>
     <p class="hint">{{localize 'TOVF.Interface.GoldIsBasedOnTheCharacterS_0ab34c'}}</p>
     {{#if rewardUnlinked}}<p class="hint">{{localize 'TOVF.Interface.ThisFoundryUserIsNotAssignedTo_c5ec74'}}</p>{{/if}}
     <div class="form-group"><label>{{localize 'TOVF.Interface.CharacterForRedemption_bfd8c4'}}</label><select name="redeemActor"><option value="">{{localize 'TOVF.Interface.PleaseSelect_888fc4'}}</option>{{#each ownCharacters}}<option value="{{actorUuid}}">{{name}} · {{foundryMilestones}} {{localize 'TOVF.Interface.MilestonesLevel_dc2202'}} {{expectedLevel}}</option>{{/each}}</select></div>
@@ -26,8 +33,8 @@
         <label>{{localize 'TOVF.Interface.AlreadyUsedOutsideTheModule_998782'}} <input type="number" name="claimUsed.{{id}}" value="{{historicalUsed}}" min="0" step="1"></label>
         <label>{{localize 'TOVF.Interface.Reason_e1ce09'}} <input type="text" name="claimReason.{{id}}"></label>
         <button type="button" data-action="command" data-command="correctClaim" data-id="{{id}}">{{localize 'TOVF.Interface.SaveCorrection_7cfcdf'}}</button>
-      </fieldset>{{/each}}
       {{#each corrections}}<p>{{date}} · {{userName}}{{localize 'TOVF.Interface.Total_fd2c11'}} {{before.total}} → {{after.total}}{{localize 'TOVF.Interface.UsedExternally_8dbd55'}} {{before.historicalUsed}} → {{after.historicalUsed}}. {{reason}}</p>{{/each}}
+      </fieldset>{{/each}}
     </details>
     {{/if}}
     <h3>{{localize 'TOVF.Interface.Redemptions_529da1'}}</h3>
@@ -91,6 +98,10 @@
         <fieldset><legend>{{title}}</legend>
           <p>{{localize 'TOVF.Interface.FoundryEntry_4943c0'}} {{dateLabel}} · {{reason}}{{#if missingRemote}} {{localize 'TOVF.Interface.LinkedWestmarchesSessionIsMissingFromThe_305204'}}{{/if}}</p>
           <label>{{localize 'TOVF.Interface.GM_016a67'}} <select name="historyGm.{{id}}"><option value="">{{localize 'TOVF.Interface.PleaseAssign_e9ab3d'}}</option>{{#each gmOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
+          {{#if gmBooked}}<p>{{localize 'TOVF.Interface.GMRewardAlreadyBooked_98380d'}}</p>{{else}}
+            <p class="hint">{{localize 'TOVF.GMBackfill.Hint'}}</p>
+            <button type="button" data-action="command" data-command="completedGM" data-id="{{id}}">{{localize 'TOVF.GMBackfill.Action'}}</button>
+          {{/if}}
           <label>{{localize 'TOVF.Interface.WestmarchesSession_bb7922'}} <select name="historyLink.{{id}}"><option value="">{{localize 'TOVF.Interface.NotLinked_ffd6fd'}}</option>{{#if missingRemote}}<option value="{{link.westmarchesId}}" selected>{{localize 'TOVF.Interface.KeepSavedLink_ec1014'}}</option>{{/if}}{{#each options}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{date}} · {{title}}</option>{{/each}}</select></label>
         </fieldset>
       {{else}}<p>{{localize 'TOVF.Interface.ThisWorldHasNoStructuredSessionHistory_12f150'}}</p>{{/each}}

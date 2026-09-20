@@ -17,7 +17,10 @@ const REQUEST = "campaignRequest";
 const RESPONSE = "campaignResponse";
 export const fullGM = (user = game.user) => user?.role === CONST.USER_ROLES.GAMEMASTER;
 export const isCampaignWorld = () => game.settings.get(MODULE_ID, "worldRole") === "primary";
-const coordinator = () => game.users.filter(u => u.active && fullGM(u)).sort((a, b) => a.id.localeCompare(b.id))[0];
+// Keep one writer for the ledger, including when only normal game masters are online.
+// Request authorization remains in execute/redemptionPreview, independent of the writer.
+const coordinator = () => game.users.filter(u => u.active && u.isGM && u.can("SETTINGS_MODIFY"))
+  .sort((a, b) => Number(fullGM(b)) - Number(fullGM(a)) || a.id.localeCompare(b.id))[0];
 const clone = value => foundry.utils.deepClone(value);
 
 export function campaignState() {
@@ -126,9 +129,12 @@ async function execute(user, request) {
   const state = campaignState();
   const { action, payload = {}, id } = request;
   if (action === "redeem") return redeem(state, user, payload, id);
-  requiredGM(user);
+  // Assistants can finish sessions. This request only books the reward from
+  // persisted history; changing recipients or other ledger data remains GM-only.
+  const automaticCompletion = action === "completedGM" && !payload.personId;
+  if (!(automaticCompletion && user?.role === CONST.USER_ROLES.ASSISTANT)) requiredGM(user);
   if (state.audit.some(row => row.requestId === id)) return;
-  if (payload.revision !== state.revision) throw new Error(uiText("TOVF.Interface.CampaignDataHasChangedRefreshTheView_833e72", "Die Kampagnendaten wurden inzwischen geändert. Ansicht aktualisieren und erneut prüfen."));
+  if (!automaticCompletion && payload.revision !== state.revision) throw new Error(uiText("TOVF.Interface.CampaignDataHasChangedRefreshTheView_833e72", "Die Kampagnendaten wurden inzwischen geändert. Ansicht aktualisieren und erneut prüfen."));
   if (action === "assignHistorical") {
     const entry = state.redemptions.find(r => r.id === payload.redemptionId);
     const actor = await fromUuid(payload.actorUuid);
@@ -238,12 +244,22 @@ async function execute(user, request) {
     saveRecipients(state, payload);
   } else if (action === "completedGM") {
     const record = SessionService.historyEntries().find(r => String(r.id) === payload.historyId);
+    if (payload.personId) {
+      if (!record || !state.snapshot?.people.some(p => p.id === payload.personId) || !state.personLinks[payload.personId]) {
+        throw new Error(game.i18n.localize("TOVF.GMBackfill.AssignFirst"));
+      }
+      const existing = state.claims.find(c => c.historyId === payload.historyId
+        || c.key === `gm:${state.sessionLinks?.[payload.historyId]?.westmarchesId}`);
+      if (existing) return;
+      state.historyGms ??= {};
+      state.historyGms[payload.historyId] = payload.personId;
+    }
     const personId = state.historyGms?.[payload.historyId] || Object.keys(state.personLinks).find(p => state.personLinks[p] === record?.gmUserId);
     if (!record || !personId) throw new Error(uiText("TOVF.Interface.SelectAGMAndLinkThemUnder_ec1ff5", "Spielleiter auswählen und unter Spielerzuordnung zuordnen."));
     const remoteId = state.sessionLinks?.[payload.historyId]?.westmarchesId;
     const remote = state.snapshot?.sessions.find(s => s.id === remoteId);
     const rule = ruleForDate(state.rules, sessionDate(remote?.startTime ?? record.awardedAt));
-    if (!rule?.gm.enabled || !rule.gm.count) return;
+    if (!rule?.gm.enabled || !rule.gm.count) throw new Error(game.i18n.localize("TOVF.GMBackfill.NoRule"));
     const key = remoteId ? `gm:${remoteId}` : `gm:foundry:${record.id}`;
     if (!state.claims.some(c => c.key === key || c.historyId === String(record.id))) state.claims.push({ id: foundry.utils.randomID(), key, historyId: String(record.id), kind: "gm", sourceId: remoteId ?? record.title, personId, count: rule.gm.count, ruleId: rule.id, reward: clone(rule.gm.reward), createdAt: Date.now() });
   } else if (action === "correctClaim") {
@@ -348,7 +364,7 @@ export function registerCampaignService() {
 let sending = false;
 export async function campaignAction(action, payload = {}) {
   primaryWorld();
-  if (!coordinator()) throw new Error(uiText("TOVF.Interface.AUserWithTheFullGMRole_1b384e", "Ein Nutzer mit der Rolle Spielleiter muss verbunden sein."));
+  if (!coordinator()) throw new Error(uiText("TOVF.Interface.CampaignWriterRequired", "Eine Spielleitung mit dem Recht zum Ändern der Welteneinstellungen muss verbunden sein."));
   if (sending) throw new Error(uiText("TOVF.Interface.ACampaignActionIsAlreadyBeingProcessed_19c9a3", "Eine Kampagnenaktion wird bereits verarbeitet."));
   const previous = game.user.getFlag(MODULE_ID, REQUEST);
   const unanswered = previous?.id && game.user.getFlag(MODULE_ID, RESPONSE)?.id !== previous.id;

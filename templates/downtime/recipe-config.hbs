@@ -3,6 +3,8 @@
     <summary title="{{localize 'DOWNTIME_MANAGER.Tooltips.Project.General'}}">{{localize
       "DOWNTIME_MANAGER.Project.General"}}</summary>
     <fieldset>
+      <label>{{localize "TOVF.CraftingLevel.Override"}} <input type="number" name="minimumCraftingLevel" value="{{project.minimumCraftingLevel}}" min="1" max="20" step="1" placeholder="{{localize 'TOVF.CraftingLevel.Default'}}"></label>
+      <p class="hint">{{localize "TOVF.CraftingLevel.Hint"}}</p>
       <div class="sc-project-identity"><button type="button" class="sc-project-image-picker" data-action="chooseImage"
           title="{{localize 'DOWNTIME_MANAGER.Project.ChooseImage'}}"><img src="{{itemImg}}" alt=""></button><input
           type="hidden" name="img" value="{{itemImg}}">

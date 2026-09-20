@@ -28,7 +28,7 @@ function summonerName(actor, user) {
 }
 
 async function organizeSummonedActor(actor, userId) {
-  const activeGM = game.users.activeGM;
+  const activeGM = game.users.find(user => user.active && user.isGM);
   const responsible = activeGM ? activeGM.id === game.user.id : userId === game.user.id;
   if (!responsible || actor.pack || !actor.getFlag(game.system.id, "summonedCopy")) return;
   const user = game.users.get(userId);

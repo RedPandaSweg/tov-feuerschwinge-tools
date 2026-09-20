@@ -41,7 +41,7 @@ export class SharedProjectService {
   static async #documents(stationUuid, projectUuid, actorUuid = "") {
     const stationActor = await fromUuid(stationUuid);
     const actor = actorUuid ? await fromUuid(actorUuid) : null;
-    const { item, definition } = await ProjectService.project(projectUuid);
+    const { item, definition } = await ProjectService.project(projectUuid, actor);
     if (!stationActor || stationActor.documentName !== "Actor") throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.NotStation"));
     return { stationActor, station: getStationData(stationActor), actor, item, definition };
   }

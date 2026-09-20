@@ -1,3 +1,4 @@
+import { craftingAccess } from "./crafting-access.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
 import { GoldService } from "./gold-service.mjs";
 import { ProjectService } from "./project-service.mjs?v=3.4.2-roll-result-only-1";
@@ -360,13 +361,15 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const sharedMaxInvestment = sharedState && sharedJoined
         ? StationEngine.maxInvestment(station, sharedState, DowntimeService.get(actor))
         : 0;
-      const sharedEligible = station.enabled && stationToolOk && projectToolsOk && !knownSpell;
+      const levelAccess = await craftingAccess(actor, item, definition);
+      const sharedEligible = !levelAccess.blocked && station.enabled && stationToolOk && projectToolsOk && !knownSpell;
       const active = Boolean(state && !state.completed && state.active !== false);
       const paused = Boolean(state && !state.completed && state.active === false);
       const projectStatus = active || paused || sharedState
         ? "active"
         : state?.completed ? "completed" : "available";
       projects.push({
+        levelBlocked: levelAccess.blocked, levelMessage: levelAccess.message,
         uuid: source.uuid,
         name: item.name,
         img: item.img,
@@ -386,7 +389,7 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
         sharedLeader: sharedState?.leaderUuid === actor.uuid,
         sharedEligible,
         sharedCanInvest: sharedEligible && sharedMaxInvestment > 0,
-        sharedCanRoll: sharedState?.lastContributorUuid === actor.uuid,
+        sharedCanRoll: !levelAccess.blocked && sharedState?.lastContributorUuid === actor.uuid,
         sharedParticipants,
         sharedMaxInvestment,
         sharedInvestmentDefault: Math.min(1, sharedMaxInvestment),
@@ -420,12 +423,12 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
         checks,
         requiresRoll: station.requiresRoll !== false,
         showCheckSelection: checkSelectionRequired,
-        canStart: !knownSpell && station.enabled && stationToolOk && projectToolsOk &&
+        canStart: !levelAccess.blocked && !knownSpell && station.enabled && stationToolOk && projectToolsOk &&
           Boolean(definition.rewards?.length || definition.characterRewards?.length) &&
           (paused || (startItemsOk && startGoldOk && (!state || (state.completed && definition.repeatable)))),
-        canInvest: station.enabled && Boolean(active && !state.pendingRoll && !state.awaitingCompletionCheck && maxInvestment > 0 && (!checkSelectionRequired || checks.length)),
-        canRoll: station.enabled && Boolean(active && state.pendingRoll && checks.length),
-        canCompletionRoll: station.enabled && Boolean(active && state.awaitingCompletionCheck && checks.length && DowntimeService.get(actor) + 1e-9 >= (state.completionCheckFailed ? Number(definition.completionCheck?.retryDowntime ?? 1) : 0))
+        canInvest: !levelAccess.blocked && station.enabled && Boolean(active && !state.pendingRoll && !state.awaitingCompletionCheck && maxInvestment > 0 && (!checkSelectionRequired || checks.length)),
+        canRoll: !levelAccess.blocked && station.enabled && Boolean(active && state.pendingRoll && checks.length),
+        canCompletionRoll: !levelAccess.blocked && station.enabled && Boolean(active && state.awaitingCompletionCheck && checks.length && DowntimeService.get(actor) + 1e-9 >= (state.completionCheckFailed ? Number(definition.completionCheck?.retryDowntime ?? 1) : 0))
       });
     }
     projects.sort((a, b) => Number(b.projectStatus === "active") - Number(a.projectStatus === "active") || a.name.localeCompare(b.name));

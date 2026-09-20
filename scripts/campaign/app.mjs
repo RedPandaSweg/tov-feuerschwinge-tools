@@ -76,9 +76,19 @@ export class CampaignApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this._reconciliation = admin && this._tab === "characters" ? characters.filter(c => c.actorUuid).map(c => reconciliationPlan(state, c, milestoneEntries(game.actors.find(a => a.uuid === c.actorUuid)))) : [];
     const claims = state.claims.filter(c => c.personId === rewardPerson && (c.count || admin)).map(c => {
       const used = state.redemptions.filter(r => r.claimId === c.id && r.status !== "void").length;
-      return { ...c, historicalUsed: state.redemptions.filter(r => r.claimId === c.id && r.historical && r.status !== "void").length, sourceLabel: snapshot?.sessions.find(s => s.id === c.sourceId)?.title ?? c.sourceId, name: personName(c.personId), kindLabel: sourceNames()[c.kind], remaining: c.count - used, used, canRedeem: (admin || c.personId === ownPerson) && used < c.count,
+      const corrections = admin ? (state.claimCorrections ?? []).filter(row => row.claimId === c.id).slice().reverse().map(row => ({ ...row, date: new Date(row.at).toLocaleString(game.i18n.lang), userName: game.users.get(row.userId)?.name ?? row.userId })) : [];
+      return { ...c, corrections, historicalUsed: state.redemptions.filter(r => r.claimId === c.id && r.historical && r.status !== "void").length, sourceLabel: snapshot?.sessions.find(s => s.id === c.sourceId)?.title ?? c.sourceId, name: personName(c.personId), kindLabel: sourceNames()[c.kind], remaining: c.count - used, used, canRedeem: (admin || c.personId === ownPerson) && used < c.count,
         rewardLabel: c.reward.mode === "session" ? uiText("TOVF.Interface.1MilestoneFullSessionRewardForThe_23beaf", "1 Meilenstein + vollständige Sessionbelohnung nach Charakterlevel") : `${c.reward.milestones} Meilensteine · ${c.reward.goldMode === "level" ? uiText("TOVF.Interface.GoldByLevel_d174ae", "Gold nach Level") : c.reward.goldMode === "fixed" ? uiText("TOVF.Interface.P0Gold_6359a8", "{p0} Gold", { p0: (c.reward.gold) }) : uiText("TOVF.Interface.NoGold_a7b8cb", "kein Gold")} · Faktor ${c.reward.goldFactor}` };
     });
+    const rewardTotals = claims.reduce((totals, claim) => {
+      totals.total += Number(claim.count) || 0;
+      totals.open += Math.max(0, claim.remaining);
+      for (const redemption of state.redemptions.filter(r => r.claimId === claim.id && r.status !== "void")) {
+        if (redemption.status === "redeemed") totals.used++;
+        else totals.reserved++;
+      }
+      return totals;
+    }, { total: 0, open: 0, used: 0, reserved: 0 });
     let preview = null; let previewError = null;
     try { preview = settlementPreview(state, this._month); } catch (e) { previewError = e.message; }
     if (preview) preview.claims = preview.claims.filter(c => c.kind === "community").map(c => ({ ...c, sourceLabel: snapshot?.sessions.find(s => s.id === c.sourceId)?.title ?? c.sourceId, personName: personName(c.personId), kindLabel: sourceNames()[c.kind], booked: state.claims.some(old => old.key === c.key) }));
@@ -92,6 +102,7 @@ export class CampaignApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const history = this._tab === "rewards" || (admin && this._tab === "sessions") ? SessionService.historyEntries() : [];
     this._historySignature = JSON.stringify(history);
     const sessionMatches = sessionLinkPreview(state, history).map(row => ({ ...row,
+      gmBooked: state.claims.some(c => c.historyId === row.id || c.key === `gm:${row.link?.westmarchesId}`),
       dateLabel: row.awardedAt ? new Date(row.awardedAt).toLocaleString(game.i18n.lang) : uiText("TOVF.Interface.Unknown_d0b00a", "Unbekannt"),
       gmOptions: people.map(p => ({ id: p.id, name: p.name, selected: p.id === row.gm })),
       options: (snapshot?.sessions ?? []).filter(s => s.gmUserId === row.gm || s.id === row.link?.westmarchesId).map(s => ({ id: s.id, title: s.title, date: s.startTime.slice(0, 10), selected: s.id === (row.link?.westmarchesId ?? row.proposed) })),
@@ -100,12 +111,11 @@ export class CampaignApp extends HandlebarsApplicationMixin(ApplicationV2) {
     return {
       admin, tab: this._tab, month: this._month, hasSnapshot: !!snapshot, exportedAt: snapshot?.exportedAt,
       tabs: tabs.map(([id, label]) => ({ id, label, active: id === this._tab })),
-      rewardsTab: this._tab === "rewards", charactersTab: this._tab === "characters", sessionsTab: admin && this._tab === "sessions", peopleTab: admin && this._tab === "people", rulesTab: admin && this._tab === "rules", importTab: admin && this._tab === "import",
-      characters, sessionMatches, reconciliation: this._reconciliation, people,
+      assistant, rewardsTab: this._tab === "rewards", charactersTab: this._tab === "characters", sessionsTab: admin && this._tab === "sessions", peopleTab: admin && this._tab === "people", rulesTab: admin && this._tab === "rules", importTab: admin && this._tab === "import",
+      characters, sessionMatches, reconciliation: this._reconciliation, people, rewardTotals,
       rewardPeople: people.concat(unlinkedGms.map(p => ({ ...p, rewardSelected: p.id === rewardPerson }))).filter(p => admin ? eligiblePeople.some(e => e.id === p.id) : p.id === ownPerson),
       rewardUnlinked: unlinkedGms.some(p => p.id === rewardPerson),
       openClaims: claims.filter(claim => claim.remaining > 0), claims, weeks: admin ? weeklyPreview(state, this._month).map(w => ({ ...w, historical: this._month < new Date().toISOString().slice(0, 7), options: people.map(p => ({ id: p.id, name: p.name, selected: w.recipients.includes(p.id) })) })) : [], sessions, preview, previewError, settled: state.settlements[this._month],
-      corrections: admin ? (state.claimCorrections ?? []).filter(c => state.claims.some(claim => claim.id === c.claimId && claim.personId === rewardPerson)).slice().reverse().map(c => ({ ...c, date: new Date(c.at).toLocaleString(game.i18n.lang), userName: game.users.get(c.userId)?.name ?? c.userId })) : [],
       poolMode: ruleForDate(state.rules, `${this._month}-01`)?.community.distribution === "pool",
       localUsers: game.users.filter(u => !snapshot?.people.some(p => personAccountIds(state, p.id).includes(u.id))).map(u => ({ id: u.id, name: u.name })),
       ownCharacters: charactersForPerson(state, rewardPerson).map(actor => ({ actorUuid: actor.uuid, name: actor.name, foundryMilestones: sessionProgress(actor).milestones, expectedLevel: levelFromMilestones(sessionProgress(actor).milestones) })),
@@ -204,6 +214,9 @@ export class CampaignApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const serverteam = this._tab === "people" ? { month: this._month, people: recipients, localUsers: form.getAll("localUsers"), allocations: Object.fromEntries(recipients.map(id => [id, Number(form.get(`allocation.${id}`) ?? state.allocations[this._month]?.[id] ?? 0)])) } : undefined;
         await campaignAction("links", { ...base, people: this._tab === "people" ? people : state.personLinks, accounts: {}, names: this._tab === "people" ? names : state.personNames, characters: this._tab === "characters" ? characters : state.characterLinks, serverteam });
         if (serverteam) ui.notifications.info(uiText("TOVF.Interface.PlayerAssignmentsAndPermanentServerTeamSaved_50b302", "Spielerzuordnung und dauerhaftes Serverteam gespeichert."));
+      } else if (command === "completedGM") {
+        await campaignAction("completedGM", { ...base, historyId: target.dataset.id,
+          personId: form.get(`historyGm.${target.dataset.id}`) });
       } else if (command === "autoSessionLinks") {
         await campaignAction("autoSessionLinks", base);
       } else if (command === "sessionGms" || command === "sessionLinks") {

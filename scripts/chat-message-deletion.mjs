@@ -2,6 +2,10 @@ import { MODULE_ID } from "./core/constants.mjs";
 
 const SOCKET_SCOPE = "chat-message-deletion";
 
+function activeGM() {
+  return game.users.find(user => user.active && user.isGM);
+}
+
 function messageIdFrom(element) {
   return element?.dataset?.messageId ?? element?.closest?.("[data-message-id]")?.dataset?.messageId ?? "";
 }
@@ -23,7 +27,7 @@ async function requestDeletion(_event, element) {
   });
   if (!confirmed) return;
 
-  if (!game.users.activeGM) {
+  if (!activeGM()) {
     ui.notifications.warn(game.i18n.localize("TOVF.ChatMessageDeletion.NoGM"));
     return;
   }
@@ -66,7 +70,7 @@ function addDeleteButton(message, html) {
 
 async function handleSocket(message) {
   if (message?.scope !== SOCKET_SCOPE || message.type !== "request") return;
-  if (game.users.activeGM?.id !== game.user?.id) return;
+  if (activeGM()?.id !== game.user?.id) return;
 
   const requester = game.users.get(message.userId);
   const chatMessage = game.messages.get(message.messageId);
