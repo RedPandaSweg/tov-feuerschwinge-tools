@@ -19,10 +19,17 @@
   "Locked": "Ab Level {level} craftbar"
 },
 "GMBackfill": {
+  "Section": "Fehlende Spielleitungs-Guthaben nachtragen",
+  "HistoryHint": "Die Einträge stammen direkt aus dem Foundry-Sessionverlauf. Eine Westmarches-Verknüpfung ist nicht erforderlich.",
   "Action": "Spielleitungs-Guthaben nachtragen",
   "Hint": "Bucht das fehlende Guthaben nach den Regeln zum Sessiondatum. Bereits anderweitig erhaltene Belohnungen danach unter Guthaben korrigieren als verwendet erfassen. Keine Auszahlung auf einen Charakter.",
   "AssignFirst": "Bitte die Spielleitung einem Foundry-Nutzer zuordnen.",
   "NoRule": "Zum Sessiondatum ist keine Spielleitungs-Belohnung aktiviert. Bitte die damalige Regelversion prüfen."
+},
+"FoundrySettlement": {
+  "Section": "Foundry-Sessions des Abrechnungsmonats",
+  "Hint": "Für den Abrechnungsmonat zählen die in Foundry abgeschlossenen Sessions. Einzelne Einträge können ausdrücklich ausgeschlossen werden.",
+  "Included": "Automatisch aus dem Foundry-Sessionverlauf"
 },
 "RewardTotals": {
   "Open": "Offene Belohnungen",

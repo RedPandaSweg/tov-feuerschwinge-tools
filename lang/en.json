@@ -19,10 +19,17 @@
   "Locked": "Craftable from level {level}"
 },
 "GMBackfill": {
+  "Section": "Record missing GM balances",
+  "HistoryHint": "Entries come directly from Foundry's session history. No Westmarches link is required.",
   "Action": "Record missing GM balance",
   "Hint": "Books missing credit using the rules for the session date. Afterwards, record rewards already received elsewhere as used under balance corrections. No character rewards are granted.",
   "AssignFirst": "Please link the GM to a Foundry user.",
   "NoRule": "No GM reward is enabled for the session date. Please check the applicable rule version."
+},
+"FoundrySettlement": {
+  "Section": "Foundry sessions in the settlement month",
+  "Hint": "Sessions completed in Foundry count toward the settlement month. Individual entries can be explicitly excluded.",
+  "Included": "Automatically from Foundry session history"
 },
 "RewardTotals": {
   "Open": "Available rewards",

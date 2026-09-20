@@ -90,35 +90,36 @@
   {{/if}}
 
   {{#if sessionsTab}}
-    <p>{{localize 'TOVF.AutoSessions.Hint'}}</p>
-    <button type="button" data-action="command" data-command="autoSessionLinks">{{localize 'TOVF.AutoSessions.Action'}}</button>
     <details><summary>{{localize 'TOVF.Interface.LinkFoundrySessionsToWestmarches_d5b712'}}</summary>
       <p>{{localize 'TOVF.Interface.CompleteFoundryHistoryRegardlessOfTheSettlement_692e74'}}</p>
+      <p>{{localize 'TOVF.AutoSessions.Hint'}}</p>
+      <button type="button" data-action="command" data-command="autoSessionLinks">{{localize 'TOVF.AutoSessions.Action'}}</button>
       {{#each sessionMatches}}
         <fieldset><legend>{{title}}</legend>
           <p>{{localize 'TOVF.Interface.FoundryEntry_4943c0'}} {{dateLabel}} · {{reason}}{{#if missingRemote}} {{localize 'TOVF.Interface.LinkedWestmarchesSessionIsMissingFromThe_305204'}}{{/if}}</p>
           <label>{{localize 'TOVF.Interface.GM_016a67'}} <select name="historyGm.{{id}}"><option value="">{{localize 'TOVF.Interface.PleaseAssign_e9ab3d'}}</option>{{#each gmOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
-          {{#if gmBooked}}<p>{{localize 'TOVF.Interface.GMRewardAlreadyBooked_98380d'}}</p>{{else}}
-            <p class="hint">{{localize 'TOVF.GMBackfill.Hint'}}</p>
-            <button type="button" data-action="command" data-command="completedGM" data-id="{{id}}">{{localize 'TOVF.GMBackfill.Action'}}</button>
-          {{/if}}
           <label>{{localize 'TOVF.Interface.WestmarchesSession_bb7922'}} <select name="historyLink.{{id}}"><option value="">{{localize 'TOVF.Interface.NotLinked_ffd6fd'}}</option>{{#if missingRemote}}<option value="{{link.westmarchesId}}" selected>{{localize 'TOVF.Interface.KeepSavedLink_ec1014'}}</option>{{/if}}{{#each options}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{date}} · {{title}}</option>{{/each}}</select></label>
         </fieldset>
       {{else}}<p>{{localize 'TOVF.Interface.ThisWorldHasNoStructuredSessionHistory_12f150'}}</p>{{/each}}
       <button type="button" data-action="command" data-command="sessionGms">{{localize 'TOVF.Interface.SaveGMsCalculateSuggestions_b7c24a'}}</button>
       <button type="button" data-action="command" data-command="sessionLinks">{{localize 'TOVF.Interface.SaveSelectedSessionLinks_d5d049'}}</button>
     </details>
-    <div class="form-group"><label>{{localize 'TOVF.Interface.SettlementMonth_7eec61'}}</label><input type="month" name="month" value="{{month}}"></div>
-    <p>{{localize 'TOVF.Interface.WestmarchesSessionsThatHadEndedAtExport_783d0e'}}</p>
-    {{#each sessions}}
-      <details><summary>{{displayDate}} · {{title}}</summary>
-        <p><strong>{{localize 'TOVF.Interface.GM_c514c9'}}</strong> {{name}} · <strong>{{localize 'TOVF.Interface.SessionStatus_955c01'}}</strong> {{statusLabel}}</p>
-        <div class="form-group"><label>{{localize 'TOVF.Interface.IncludeSession_267be1'}}</label><select name="session.{{id}}"><option value="">{{localize 'TOVF.Interface.AutomaticFromExport_c2cbe9'}}</option><option value="excluded" {{#if excluded}}selected{{/if}}>{{localize 'TOVF.Interface.Excluded_139af0'}}</option></select></div>
-        <ul>{{#each participants}}<li>{{name}} {{localize 'TOVF.Interface.Registration_141030'}} {{registrationStatus}}</li>{{/each}}</ul>
-        {{#if gmBooked}}<p>{{localize 'TOVF.Interface.GMRewardAlreadyBooked_98380d'}}</p>{{else}}{{#if played}}<label>{{localize 'TOVF.Interface.AlreadyUsedOutsideTheModule_998782'}} <input type="number" name="gmUsed.{{id}}" value="0" min="0" step="1"></label><button type="button" data-action="command" data-command="grantGM" data-id="{{id}}">{{localize 'TOVF.Interface.ReviewAndBookGMReward_3e0232'}}</button>{{/if}}{{/if}}
-      </details>
-    {{else}}<p>{{localize 'TOVF.Interface.NoSessionsInThisMonth_590eaf'}}</p>{{/each}}
-    <button type="button" data-action="command" data-command="review">{{localize 'TOVF.Interface.SaveSessionExceptions_439dc8'}}</button>
+    <details open><summary>{{localize 'TOVF.FoundrySettlement.Section'}}</summary>
+      <div class="form-group"><label>{{localize 'TOVF.Interface.SettlementMonth_7eec61'}}</label><input type="month" name="month" value="{{month}}"></div>
+      <p>{{localize 'TOVF.FoundrySettlement.Hint'}}</p>
+      {{#each sessions}}
+        <details><summary>{{displayDate}} · {{title}}</summary>
+          <p><strong>{{localize 'TOVF.Interface.GM_c514c9'}}</strong> <span data-session-gm-name>{{name}}</span></p>
+          <div class="form-group"><label>{{localize 'TOVF.Interface.IncludeSession_267be1'}}</label><select name="session.{{id}}" data-session-review="{{id}}" data-saved-value="{{#if excluded}}excluded{{/if}}"><option value="">{{localize 'TOVF.FoundrySettlement.Included'}}</option><option value="excluded" {{#if excluded}}selected{{/if}}>{{localize 'TOVF.Interface.Excluded_139af0'}}</option></select></div>
+          <ul>{{#each participants}}<li>{{actorName}}</li>{{/each}}</ul>
+          <label>{{localize 'TOVF.Interface.GM_016a67'}} <select name="backfillGm.{{id}}"><option value="">{{localize 'TOVF.Interface.PleaseAssign_e9ab3d'}}</option>{{#each gmOptions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}</select></label>
+          <div data-gm-backfill>{{#if gmBooked}}<p>{{localize 'TOVF.Interface.GMRewardAlreadyBooked_98380d'}}</p>{{else}}
+            <p class="hint">{{localize 'TOVF.GMBackfill.Hint'}}</p>
+            <button type="button" data-action="command" data-command="completedGM" data-id="{{id}}">{{localize 'TOVF.GMBackfill.Action'}}</button>
+          {{/if}}</div>
+        </details>
+      {{else}}<p>{{localize 'TOVF.Interface.NoSessionsInThisMonth_590eaf'}}</p>{{/each}}
+    </details>
     <h3>{{localize 'TOVF.Interface.BookServerTeamRewardsByWeek_2558f9'}}</h3>
     <p>{{localize 'TOVF.Interface.ThePermanentActiveServerTeamIsPreselected_3b8c99'}}</p>
     {{#each weeks}}<details><summary>{{week}} · {{count}} {{localize 'TOVF.Interface.RewardsPerMember_fec9bb'}}{{#if booked}} {{localize 'TOVF.Interface.AlreadySettled_8cd033'}}{{/if}}</summary>

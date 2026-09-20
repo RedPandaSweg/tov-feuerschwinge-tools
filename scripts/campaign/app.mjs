@@ -1,8 +1,8 @@
 import { uiText } from "../core/localization.mjs";
 import { MODULE_ID } from "../downtime/constants.mjs";
 import { campaignState, campaignAction, fullGM, redemptionPreview, isCampaignWorld } from "./service.mjs";
-import { compareSnapshots, validateSnapshot, effectiveSessionStatus } from "./data.mjs";
-import { defaultRules, settlementPreview, ruleForDate, sessionRelevantToMonth } from "./rules.mjs";
+import { compareSnapshots, validateSnapshot, sessionMonth } from "./data.mjs";
+import { defaultRules, settlementPreview, ruleForDate } from "./rules.mjs";
 import { playerCharacters, sessionProgress, milestoneEntries, levelFromMilestones, SessionService } from "../downtime/session-service.mjs";
 import { reconciliationPlan } from "./reconciliation.mjs";
 import { sessionLinkPreview } from "./session-links.mjs";
@@ -89,20 +89,30 @@ export class CampaignApp extends HandlebarsApplicationMixin(ApplicationV2) {
       }
       return totals;
     }, { total: 0, open: 0, used: 0, reserved: 0 });
+    const history = SessionService.historyEntries();
     let preview = null; let previewError = null;
-    try { preview = settlementPreview(state, this._month); } catch (e) { previewError = e.message; }
+    try { preview = settlementPreview(state, this._month, history); } catch (e) { previewError = e.message; }
     if (preview) preview.claims = preview.claims.filter(c => c.kind === "community").map(c => ({ ...c, sourceLabel: snapshot?.sessions.find(s => s.id === c.sourceId)?.title ?? c.sourceId, personName: personName(c.personId), kindLabel: sourceNames()[c.kind], booked: state.claims.some(old => old.key === c.key) }));
     this._draft ??= copy(ruleForDate(state.rules, `${this._month}-01`) ?? defaultRules());
     const rules = this._draft;
-    const sessions = (snapshot?.sessions ?? []).filter(s => {
-      return sessionRelevantToMonth(s, this._month, rules);
-    }).map(s => ({ ...s, name: personName(s.gmUserId), displayDate: new Date(s.startTime).toLocaleString(game.i18n.lang), statusLabel: statusNames()[effectiveSessionStatus(state, s)],
-      played: effectiveSessionStatus(state, s) === "played", excluded: state.sessionReviews[s.id]?.status === "excluded", gmBooked: state.claims.some(c => c.key === `gm:${s.id}`),
-      participants: s.participants.map(p => ({ ...p, name: snapshot.characters.find(c => c.id === p.characterId)?.name ?? `Fehlender Charakter: ${p.characterId}` })) }));
-    const history = this._tab === "rewards" || (admin && this._tab === "sessions") ? SessionService.historyEntries() : [];
+    const sessions = history.filter(record => Number.isFinite(Number(record.awardedAt))
+      && sessionMonth(record.awardedAt, rules.timeZone) === this._month)
+      .map(record => {
+      const id = String(record.id);
+      const gm = state.historyGms?.[id] || record.gmPersonId
+        || (record.gmUserId && (snapshot?.people ?? []).find(p => state.personLinks[p.id] === record.gmUserId)?.id);
+      const legacyRemoteId = state.sessionLinks?.[id]?.westmarchesId;
+      return {
+        ...record, id,
+        name: gm ? personName(gm) : game.users.get(record.gmUserId)?.name ?? record.gmUserId ?? uiText("TOVF.Interface.Unknown_d0b00a", "Unbekannt"),
+        displayDate: new Date(record.awardedAt).toLocaleString(game.i18n.lang),
+        excluded: state.sessionReviews[id]?.status === "excluded",
+        gmBooked: state.claims.some(c => c.historyId === id || (legacyRemoteId && c.key === `gm:${legacyRemoteId}`)),
+        gmOptions: people.map(p => ({ id: p.id, name: p.name, selected: p.id === gm }))
+      };
+    });
     this._historySignature = JSON.stringify(history);
     const sessionMatches = sessionLinkPreview(state, history).map(row => ({ ...row,
-      gmBooked: state.claims.some(c => c.historyId === row.id || c.key === `gm:${row.link?.westmarchesId}`),
       dateLabel: row.awardedAt ? new Date(row.awardedAt).toLocaleString(game.i18n.lang) : uiText("TOVF.Interface.Unknown_d0b00a", "Unbekannt"),
       gmOptions: people.map(p => ({ id: p.id, name: p.name, selected: p.id === row.gm })),
       options: (snapshot?.sessions ?? []).filter(s => s.gmUserId === row.gm || s.id === row.link?.westmarchesId).map(s => ({ id: s.id, title: s.title, date: s.startTime.slice(0, 10), selected: s.id === (row.link?.westmarchesId ?? row.proposed) })),
@@ -115,7 +125,7 @@ export class CampaignApp extends HandlebarsApplicationMixin(ApplicationV2) {
       characters, sessionMatches, reconciliation: this._reconciliation, people, rewardTotals,
       rewardPeople: people.concat(unlinkedGms.map(p => ({ ...p, rewardSelected: p.id === rewardPerson }))).filter(p => admin ? eligiblePeople.some(e => e.id === p.id) : p.id === ownPerson),
       rewardUnlinked: unlinkedGms.some(p => p.id === rewardPerson),
-      openClaims: claims.filter(claim => claim.remaining > 0), claims, weeks: admin ? weeklyPreview(state, this._month).map(w => ({ ...w, historical: this._month < new Date().toISOString().slice(0, 7), options: people.map(p => ({ id: p.id, name: p.name, selected: w.recipients.includes(p.id) })) })) : [], sessions, preview, previewError, settled: state.settlements[this._month],
+      openClaims: claims.filter(claim => claim.remaining > 0), claims, weeks: admin ? weeklyPreview(state, this._month, history).map(w => ({ ...w, historical: this._month < new Date().toISOString().slice(0, 7), options: people.map(p => ({ id: p.id, name: p.name, selected: w.recipients.includes(p.id) })) })) : [], sessions, preview, previewError, settled: state.settlements[this._month],
       poolMode: ruleForDate(state.rules, `${this._month}-01`)?.community.distribution === "pool",
       localUsers: game.users.filter(u => !snapshot?.people.some(p => personAccountIds(state, p.id).includes(u.id))).map(u => ({ id: u.id, name: u.name })),
       ownCharacters: charactersForPerson(state, rewardPerson).map(actor => ({ actorUuid: actor.uuid, name: actor.name, foundryMilestones: sessionProgress(actor).milestones, expectedLevel: levelFromMilestones(sessionProgress(actor).milestones) })),
@@ -139,6 +149,21 @@ export class CampaignApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     this.element.querySelector('[name="rewardPerson"]')?.addEventListener("change", e => { this._rewardPerson = e.target.value; this.render({ force: true }); });
     this.element.querySelector('[name="month"]')?.addEventListener("change", e => { this._month = e.target.value; this._draft = null; this.render({ force: true }); });
+    for (const select of this.element.querySelectorAll("[data-session-review]")) {
+      select.addEventListener("change", async () => {
+        const previous = select.dataset.savedValue ?? "";
+        select.disabled = true;
+        try {
+          await campaignAction("review", { revision: this._revision, reviews: { [select.dataset.sessionReview]: select.value } });
+          this._revision = campaignState().revision;
+          await this._renderPreservingView();
+        } catch (error) {
+          select.value = previous;
+          select.disabled = false;
+          ui.notifications.error(error.message);
+        }
+      });
+    }
     this.element.querySelector('[name="search"]')?.addEventListener("input", e => {
       const query = e.target.value.toLocaleLowerCase();
       for (const row of this.element.querySelectorAll("[data-search]")) row.hidden = !row.dataset.search.toLocaleLowerCase().includes(query);
@@ -157,6 +182,17 @@ export class CampaignApp extends HandlebarsApplicationMixin(ApplicationV2) {
         await this.render({ force: true });
       } catch (error) { ui.notifications.error(error.message); }
     });
+  }
+
+  async _renderPreservingView() {
+    const current = this.element.matches?.(".tovf-campaign-body") ? this.element : this.element.querySelector(".tovf-campaign-body");
+    const scrollTop = current?.scrollTop ?? 0;
+    const openDetails = [...this.element.querySelectorAll("details")].map((details, index) => details.open ? index : -1).filter(index => index >= 0);
+    await this.render({ force: true });
+    const updated = this.element.matches?.(".tovf-campaign-body") ? this.element : this.element.querySelector(".tovf-campaign-body");
+    const details = [...this.element.querySelectorAll("details")];
+    for (const index of openDetails) if (details[index]) details[index].open = true;
+    if (updated) updated.scrollTop = scrollTop;
   }
 
   #readRules() {
@@ -215,8 +251,16 @@ export class CampaignApp extends HandlebarsApplicationMixin(ApplicationV2) {
         await campaignAction("links", { ...base, people: this._tab === "people" ? people : state.personLinks, accounts: {}, names: this._tab === "people" ? names : state.personNames, characters: this._tab === "characters" ? characters : state.characterLinks, serverteam });
         if (serverteam) ui.notifications.info(uiText("TOVF.Interface.PlayerAssignmentsAndPermanentServerTeamSaved_50b302", "Spielerzuordnung und dauerhaftes Serverteam gespeichert."));
       } else if (command === "completedGM") {
-        await campaignAction("completedGM", { ...base, historyId: target.dataset.id,
-          personId: form.get(`historyGm.${target.dataset.id}`) });
+        const personId = form.get(`backfillGm.${target.dataset.id}`);
+        await campaignAction("completedGM", { ...base, historyId: target.dataset.id, personId });
+        this._revision = campaignState().revision;
+        const session = target.closest("details");
+        const selectedName = session?.querySelector(`[name="backfillGm.${CSS.escape(target.dataset.id)}"] option:checked`)?.textContent;
+        const gmName = session?.querySelector("[data-session-gm-name]");
+        if (gmName && selectedName) gmName.textContent = selectedName;
+        const result = target.closest("[data-gm-backfill]");
+        if (result) result.innerHTML = `<p>${uiText("TOVF.Interface.GMRewardAlreadyBooked_98380d", "SL-Belohnung bereits gebucht.")}</p>`;
+        return;
       } else if (command === "autoSessionLinks") {
         await campaignAction("autoSessionLinks", base);
       } else if (command === "sessionGms" || command === "sessionLinks") {
@@ -258,7 +302,7 @@ export class CampaignApp extends HandlebarsApplicationMixin(ApplicationV2) {
         if (!await this.#confirm(uiText("TOVF.Interface.BookGMReward_f692da", "SL-Belohnung buchen"), `<p>${uiText("TOVF.Interface.RecordTheSessionClaimAndSubtractThe_81dd63", "Sessionanspruch erfassen und den eingetragenen historischen Verbrauch abziehen? Es werden keine Charakterwerte verändert.")}</p>`)) return;
         await campaignAction("grantGM", { ...base, sessionId: target.dataset.id, baselineReviewed: true, alreadyUsed: Number(form.get(`gmUsed.${target.dataset.id}`) ?? 0) });
       } else if (command === "settle") {
-        const p = settlementPreview(state, this._month);
+        const p = settlementPreview(state, this._month, SessionService.historyEntries());
         const count = p.claims.filter(c => c.kind === "community" && !state.claims.some(old => old.key === c.key)).reduce((sum, c) => sum + c.count, 0);
         if (!await this.#confirm(uiText("TOVF.Interface.BookMonth_72de22", "Monat buchen"), `<p>${uiText("TOVF.Interface.P0P1PlayedSessionsP2ActiveGMs_0b936c", "{p0}: {p1} gespielte Sessions, {p2} aktive Spielleiter. Insgesamt {p3} neue Belohnungsansprüche laut Vorschau.", { p0: (escape(this._month)), p1: (p.sessions), p2: (p.gms), p3: (count) })}</p><p>${uiText("TOVF.Interface.ConfirmThatTheseClaimsHaveNotAlready_6bc2fc", "Bestätige, dass diese Ansprüche noch nicht anderweitig vergeben wurden. Importierte Charakterstände werden nicht verändert. Die Monatsabrechnung wird anschließend festgeschrieben.")}</p>`)) return;
         await campaignAction("settle", { ...base, month: this._month, baselineReviewed: true });
@@ -287,7 +331,7 @@ export class CampaignApp extends HandlebarsApplicationMixin(ApplicationV2) {
         if (!await this.#confirm(uiText("TOVF.Interface.CompleteRedemptionAfterReview_5a0ca8", "Einlösung nach Prüfung abschließen"), `<p>${uiText("TOVF.Interface.CheckTheCharacterAndRecordedStepsAnd_169e1e", "Charakter und dokumentierte Schritte prüfen und fehlende Vergaben beziehungsweise Rücknahmen vorher manuell durchführen. Diese Aktion verändert ausschließlich den Buchungsstatus.")}</p>`)) return;
         await campaignAction("resolve", { ...base, redemptionId: target.dataset.id, status, reason });
       }
-      await this.render({ force: true });
+      await this._renderPreservingView();
     } catch (error) { ui.notifications.error(error.message); }
   }
 }

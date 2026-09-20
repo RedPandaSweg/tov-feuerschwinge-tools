@@ -1,5 +1,5 @@
 import { uiText } from "../core/localization.mjs";
-import { sessionMonth, sessionDate, milestoneWeek, effectiveSessionStatus } from "./data.mjs";
+import { sessionMonth, milestoneWeek } from "./data.mjs";
 import { activeServerteam } from "./serverteam.mjs";
 
 export function defaultRules() {
@@ -56,26 +56,21 @@ export function sessionRelevantToMonth(session, month, rule) {
   } catch { return false; }
 }
 
-export function settlementPreview(state, month) {
+export function settlementPreview(state, month, history = []) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error(uiText("TOVF.Interface.InvalidMonth_11dc51", "Ungültiger Monat."));
   const rule = ruleForDate(state.rules, `${month}-01`);
   if (!rule) throw new Error(uiText("TOVF.Interface.NoRuleVersionExistsForThisMonth_b14ba9", "Für diesen Monat fehlt eine Regelversion."));
-  const sessions = (state.snapshot?.sessions ?? []).filter(s => sessionRelevantToMonth(s, month, rule));
-  const reviewed = sessions.filter(s => effectiveSessionStatus(state, s) === "played" && sessionMonth(s.startTime, rule.timeZone) === month);
-  const unresolved = sessions.filter(s => effectiveSessionStatus(state, s) === "unknown");
+  const reviewed = history.filter(s => Number.isFinite(Number(s.awardedAt))
+    && sessionMonth(s.awardedAt, rule.timeZone) === month
+    && state.sessionReviews?.[String(s.id)]?.status !== "excluded");
   const missingGms = reviewed.filter(s => !s.gmUserId);
   if (missingGms.length) throw new Error(uiText("TOVF.Interface.PlayedSessionsWithoutAGMMustBe_7f1fd1", "Gespielte Sessions ohne Spielleiter müssen zuerst korrigiert werden."));
   const gms = new Set(reviewed.map(s => s.gmUserId));
   const counts = new Map();
   for (const s of reviewed) counts.set(s.gmUserId, (counts.get(s.gmUserId) ?? 0) + 1);
   const claims = [];
-  for (const s of reviewed) {
-    const dateKey = sessionDate(s.startTime, rule.timeZone);
-    const sessionRule = ruleForDate(state.rules, dateKey);
-    if (sessionRule?.gm.enabled && sessionRule.gm.count) claims.push({ key: `gm:${s.id}`, kind: "gm", sourceId: s.id, personId: s.gmUserId, count: sessionRule.gm.count, ruleId: sessionRule.id, reward: sessionRule.gm.reward });
-  }
-  const weeks = [...new Set(sessions.filter(s => effectiveSessionStatus(state, s) === "played")
-    .map(s => milestoneWeek(s.startTime, rule.timeZone)).filter(w => w.month === month).map(w => w.key))].sort();
+  const weeks = [...new Set(reviewed.map(s => milestoneWeek(s.awardedAt, rule.timeZone))
+    .filter(w => w.month === month).map(w => w.key))].sort();
   const community = communityAmount(reviewed.length, gms.size, rule.community, weeks.length);
   const recipients = [...new Set(state.settlements?.[month]?.recipients ?? activeServerteam(state))];
   if (community.amount) {
@@ -94,5 +89,5 @@ export function settlementPreview(state, month) {
       community.unassigned = community.amount - sum;
     }
   }
-  return { month, ruleId: rule.id, sessions: reviewed.length, gms: gms.size, weeks, activeWeeks: weeks.length, weekly: rule.community.mode === "activeWeeks", counts: Object.fromEntries(counts), community, recipients, unresolved: unresolved.map(s => s.id), claims };
+  return { month, ruleId: rule.id, sessions: reviewed.length, gms: gms.size, weeks, activeWeeks: weeks.length, weekly: rule.community.mode === "activeWeeks", counts: Object.fromEntries(counts), community, recipients, unresolved: [], claims };
 }

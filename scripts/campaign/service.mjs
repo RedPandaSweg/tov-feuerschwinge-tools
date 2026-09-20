@@ -229,9 +229,8 @@ async function execute(user, request) {
     if (payload.serverteam) saveRecipients(state, clone(payload.serverteam));
   } else if (action === "review") {
     for (const [sessionId, status] of Object.entries(payload.reviews)) {
-      const session = state.snapshot?.sessions.find(s => s.id === sessionId);
-      if (!session || !["played", "excluded", ""].includes(status)) throw new Error(uiText("TOVF.Interface.InvalidSessionReview_57ddfc", "Ungültige Sessionprüfung."));
-      if (status === "played" && (session.status === "cancelled" || Date.parse(session.endTime) > Date.now() || !Number.isFinite(Date.parse(session.endTime)))) throw new Error(uiText("TOVF.Interface.CancelledSessionsOrSessionsThatHaveNot_24e71b", "Abgesagte oder noch nicht beendete Sessions können nicht als gespielt zählen."));
+      const session = SessionService.historyEntries().find(s => String(s.id) === sessionId);
+      if (!session || !["excluded", ""].includes(status)) throw new Error(uiText("TOVF.Interface.InvalidSessionReview_57ddfc", "Ungültige Sessionprüfung."));
       if (status) state.sessionReviews[sessionId] = { status, userId: user.id, at: Date.now() };
       else delete state.sessionReviews[sessionId];
     }
@@ -256,12 +255,10 @@ async function execute(user, request) {
     }
     const personId = state.historyGms?.[payload.historyId] || Object.keys(state.personLinks).find(p => state.personLinks[p] === record?.gmUserId);
     if (!record || !personId) throw new Error(uiText("TOVF.Interface.SelectAGMAndLinkThemUnder_ec1ff5", "Spielleiter auswählen und unter Spielerzuordnung zuordnen."));
-    const remoteId = state.sessionLinks?.[payload.historyId]?.westmarchesId;
-    const remote = state.snapshot?.sessions.find(s => s.id === remoteId);
-    const rule = ruleForDate(state.rules, sessionDate(remote?.startTime ?? record.awardedAt));
+    const rule = ruleForDate(state.rules, sessionDate(record.awardedAt));
     if (!rule?.gm.enabled || !rule.gm.count) throw new Error(game.i18n.localize("TOVF.GMBackfill.NoRule"));
-    const key = remoteId ? `gm:${remoteId}` : `gm:foundry:${record.id}`;
-    if (!state.claims.some(c => c.key === key || c.historyId === String(record.id))) state.claims.push({ id: foundry.utils.randomID(), key, historyId: String(record.id), kind: "gm", sourceId: remoteId ?? record.title, personId, count: rule.gm.count, ruleId: rule.id, reward: clone(rule.gm.reward), createdAt: Date.now() });
+    const key = `gm:foundry:${record.id}`;
+    if (!state.claims.some(c => c.key === key || c.historyId === String(record.id))) state.claims.push({ id: foundry.utils.randomID(), key, historyId: String(record.id), kind: "gm", sourceId: record.title, personId, count: rule.gm.count, ruleId: rule.id, reward: clone(rule.gm.reward), createdAt: Date.now() });
   } else if (action === "correctClaim") {
     const claim = state.claims.find(c => c.id === payload.claimId);
     const total = Number(payload.total), historicalUsed = Number(payload.historicalUsed);
@@ -275,7 +272,7 @@ async function execute(user, request) {
     for (const entry of old.slice(historicalUsed)) { entry.status = "void"; entry.resolution = { reason: payload.reason.trim(), userId: user.id, at: Date.now() }; }
     for (let i = old.length; i < historicalUsed; i++) state.redemptions.push({ id: foundry.utils.randomID(), claimId: claim.id, personId: claim.personId, requestedBy: user.id, actorName: uiText("TOVF.Interface.AlreadyUsedCharacterUnknown_54602c", "Bereits verwendet – Charakter unbekannt"), kind: claim.kind, sourceId: claim.sourceId, status: "redeemed", historical: true, createdAt: Date.now(), steps: [payload.reason.trim()] });
   } else if (action === "settleWeek") {
-    const week = weeklyPreview(state, payload.month).find(w => w.week === payload.week);
+    const week = weeklyPreview(state, payload.month, SessionService.historyEntries()).find(w => w.week === payload.week);
     if (!week || !week.closed || week.booked) throw new Error(uiText("TOVF.Interface.ThisWeekHasNotEndedIsUnavailable_af74ce", "Diese Woche ist nicht abgeschlossen, nicht verfügbar oder bereits gebucht."));
     if (payload.recipients !== undefined) {
       if (!Array.isArray(payload.recipients) || payload.recipients.some(id => !state.snapshot?.people.some(p => p.id === id))) throw new Error(uiText("TOVF.Interface.InvalidServerTeamSelection_ebd60d", "Ungültige Serverteam-Auswahl."));
@@ -303,7 +300,7 @@ async function execute(user, request) {
   } else if (action === "settle") {
     if (Object.values(state.weeklySettlements ?? {}).some(w => w.month === payload.month)) throw new Error(uiText("TOVF.Interface.ServerTeamRewardsForThisMonthAre_22ee5d", "Für diesen Monat werden Serverteam-Belohnungen bereits wochenweise gebucht."));
     if (Object.hasOwn(state.settlements, payload.month)) throw new Error(uiText("TOVF.Interface.ThisMonthIsAlreadyBooked_fffc5c", "Dieser Monat ist bereits gebucht."));
-    const preview = settlementPreview(state, payload.month);
+    const preview = settlementPreview(state, payload.month, SessionService.historyEntries());
     const rule = state.rules.find(r => r.id === preview.ruleId);
     const currentMonth = new Intl.DateTimeFormat("en-CA", { timeZone: rule.timeZone, year: "numeric", month: "2-digit" }).formatToParts(new Date());
     const now = ["year", "month"].map(k => currentMonth.find(p => p.type === k).value).join("-");
