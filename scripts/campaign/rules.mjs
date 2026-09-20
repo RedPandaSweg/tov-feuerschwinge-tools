@@ -63,11 +63,15 @@ export function settlementPreview(state, month, history = []) {
   const reviewed = history.filter(s => Number.isFinite(Number(s.awardedAt))
     && sessionMonth(s.awardedAt, rule.timeZone) === month
     && state.sessionReviews?.[String(s.id)]?.status !== "excluded");
-  const missingGms = reviewed.filter(s => !s.gmUserId);
+  const gmFor = session => state.historyGms?.[String(session.id)] || session.gmPersonId || session.gmUserId;
+  const missingGms = reviewed.filter(s => !gmFor(s));
   if (missingGms.length) throw new Error(uiText("TOVF.Interface.PlayedSessionsWithoutAGMMustBe_7f1fd1", "Gespielte Sessions ohne Spielleiter müssen zuerst korrigiert werden."));
-  const gms = new Set(reviewed.map(s => s.gmUserId));
+  const gms = new Set(reviewed.map(gmFor));
   const counts = new Map();
-  for (const s of reviewed) counts.set(s.gmUserId, (counts.get(s.gmUserId) ?? 0) + 1);
+  for (const s of reviewed) {
+    const gm = gmFor(s);
+    counts.set(gm, (counts.get(gm) ?? 0) + 1);
+  }
   const claims = [];
   const weeks = [...new Set(reviewed.map(s => milestoneWeek(s.awardedAt, rule.timeZone))
     .filter(w => w.month === month).map(w => w.key))].sort();
