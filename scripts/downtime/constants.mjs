@@ -50,6 +50,7 @@ export const SETTINGS = Object.freeze({
 
 export const DEFAULT_STATION_CATEGORIES = Object.freeze([
   { id: "research", label: "Research" },
+  { id: "spell-scribing", label: "Spell Scribing" },
   { id: "training", label: "Training" },
   { id: "working", label: "Working" },
   { id: "carousing", label: "Carousing" }
@@ -322,6 +323,7 @@ export const DEFAULT_STATION_CONFIG = Object.freeze({
   evaluationMode: "total",
   requiredTool: null,
   progressItems: [],
+  spellScrollRecipes: false,
   recipes: [],
   modifiers: [],
   rollTable: [],

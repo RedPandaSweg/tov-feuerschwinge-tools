@@ -257,6 +257,7 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
     station.enabled = checked("enabled");
     station.displayName = String(value("displayName") ?? "").trim();
     station.description = String(value("description") ?? "");
+    station.spellScrollRecipes = checked("spellScrollRecipes");
     station.categories = parseCategories(Array.from(this.element.querySelectorAll('[name="categories"]'), input => input.value));
     station.baseProgress = numberOr(value("baseProgress"));
     station.requiresRoll = checked("requiresRoll");

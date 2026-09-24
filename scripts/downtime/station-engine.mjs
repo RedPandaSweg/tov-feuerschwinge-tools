@@ -4,6 +4,27 @@ import { round } from "./utils.mjs";
 const EPSILON = 1e-9;
 
 export class StationEngine {
+  static projectConfiguration(station, project) {
+    if (!project?.spellScroll) return station;
+    return {
+      ...station,
+      fixedProgressPerDowntime: 50,
+      baseProgress: 50,
+      requiresRoll: false,
+      rollInterval: Math.max(1, Number(project.requiredProgress ?? 0) / 50),
+      progressSources: {
+        level: { enabled: false, multiplier: 1 },
+        proficiency: { enabled: false, multiplier: 1 },
+        checkProficiency: { enabled: false, multiplier: 1 }
+      },
+      allowedChecks: [],
+      progressItems: [],
+      modifiers: [],
+      rollTable: [],
+      actorValue: { ...(station.actorValue ?? {}), enabled: false, completionChange: 0 }
+    };
+  }
+
   static normalizeValueTiers(tiers) {
     const normalized = (Array.isArray(tiers) ? tiers : []).map(tier => ({ ...tier }));
     const minimums = [...new Set(normalized
@@ -187,6 +208,11 @@ export class StationEngine {
 
   static maxInvestment(station, state, availableDowntime) {
     if (state.pendingRoll) return 0;
+    const fixedProgress = Number(station.fixedProgressPerDowntime);
+    if (Number.isFinite(fixedProgress) && fixedProgress > 0) {
+      const remaining = Math.max(0, Number(state.requiredProgress) - Number(state.progress ?? 0));
+      return round(Math.min(remaining / fixedProgress, Math.max(0, Number(availableDowntime) || 0)), 6);
+    }
     const interval = Math.max(EPSILON, Number(station.rollInterval) || 1);
     const missing = Math.max(0, interval - Number(state.intervalProgress ?? 0));
     return round(Math.min(missing, Math.max(0, Number(availableDowntime) || 0)), 6);

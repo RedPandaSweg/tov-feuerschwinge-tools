@@ -301,7 +301,8 @@ Hooks.once("ready", async () => {
       label: check.localized ? check.label : game.i18n.localize(check.label)
     }));
     await game.settings.set(MODULE_ID, SETTINGS.STATION_CATEGORIES, { entries: createDefaultStationCategories(checks) });
-  } else if (storedCategories.entries.some(category => String(category.id).startsWith("tool:"))) {
+  } else if (storedCategories.entries.some(category => String(category.id).startsWith("tool:"))
+    || !storedCategories.entries.some(category => category.id === "spell-scribing")) {
     const checks = getSystemAdapter().getCheckDefinitions();
     const semantic = createDefaultStationCategories(checks);
     const preserved = storedCategories.entries.filter(category => !String(category.id).startsWith("tool:"));
@@ -309,6 +310,34 @@ Hooks.once("ready", async () => {
     await game.settings.set(MODULE_ID, SETTINGS.STATION_CATEGORIES, {
       entries: [...preserved, ...semantic.filter(category => !ids.has(category.id))]
     });
+  }
+  if (game.user.isGM) {
+    for (const actor of game.actors.filter(entry => entry.getFlag?.(MODULE_ID, "preset")?.stationId === "scriptorium")) {
+      const station = actor.getFlag(MODULE_ID, FLAGS.STATION);
+      const preset = actor.getFlag(MODULE_ID, "preset");
+      if (!station?.spellScrollRecipes || Number(preset?.version ?? 0) >= 2) continue;
+      await actor.update({
+        [`flags.${MODULE_ID}.${FLAGS.STATION}`]: {
+          ...station,
+          categories: ["spell-scribing"],
+          baseProgress: 50,
+          requiresRoll: false,
+          rollInterval: 1,
+          progressSources: {
+            level: { enabled: false, multiplier: 1 },
+            proficiency: { enabled: false, multiplier: 1 },
+            checkProficiency: { enabled: false, multiplier: 1 }
+          },
+          allowedChecks: [],
+          progressItems: [],
+          modifiers: [],
+          rollTable: [],
+          rollTablePreset: "",
+          actorValue: { ...(station.actorValue ?? {}), enabled: false, completionChange: 0 }
+        },
+        [`flags.${MODULE_ID}.preset.version`]: 2
+      });
+    }
   }
   getSystemAdapter().registerHooks({
     redeemDowntimeItem: (item, options) => DowntimeItemService.redeem(item, options)

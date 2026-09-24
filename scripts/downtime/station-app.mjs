@@ -17,7 +17,9 @@ import {
   hasRequiredTool,
   isRecipeItem,
   recipeData,
-  round
+  round,
+  spellScrollRecipeData,
+  spellScrollReference
 } from "./utils.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -308,21 +310,32 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
       if (!categoriesMatch(station.categories, definition.categories)) continue;
       sources.set(item.uuid, { uuid: item.uuid, item, personal: true });
     }
+    if (station.spellScrollRecipes) {
+      for (const item of actor.items) {
+        const reference = spellScrollReference(item);
+        if (!reference || reference.circle < 1 || sources.has(item.uuid)) continue;
+        sources.set(item.uuid, { uuid: item.uuid, item, personal: true, spellScroll: true });
+      }
+    }
 
     const projects = [];
     for (const source of sources.values()) {
       const item = source.item ?? await fromUuid(source.uuid);
       if (!item || item.documentName !== "Item") continue;
-      const definition = recipeData(item, { sourceUuid: source.uuid });
+      const scrollProject = source.spellScroll ? await spellScrollRecipeData(item) : null;
+      if (source.spellScroll && !scrollProject) continue;
+      const definition = scrollProject?.definition ?? recipeData(item, { sourceUuid: source.uuid });
+      const projectStation = StationEngine.projectConfiguration(station, definition);
       const resultUuid = definition.resultUuid || definition.rewards?.[0]?.uuid || "";
       const resultItem = definition.isCustom && resultUuid
         ? await fromUuid(resultUuid).catch(() => null)
         : item;
-      const knownSpell = actorKnowsSpell(actor, resultItem);
+      const knownSpell = actorKnowsSpell(actor, resultItem, definition.spellScroll ? { origin: "wizard" } : {});
       const classification = projectClassification(resultItem);
+      const descriptionDocument = scrollProject?.spell ?? item;
       const description = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
         String(definition.description ?? ""),
-        { async: true, secrets: item.isOwner, relativeTo: item }
+        { async: true, secrets: descriptionDocument.isOwner, relativeTo: descriptionDocument }
       );
       const state = ProjectService.findState(actor, this.stationActor, source.uuid);
       const sharedState = definition.collaborative ? SharedProjectService.find(this.stationActor, source.uuid) : null;
@@ -342,9 +355,9 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
         } });
       }
       const checks = StationEngine.checkDefinitions(
-        StationEngine.availableChecks(station, definition)
+        StationEngine.availableChecks(projectStation, definition)
       );
-      const checkSelectionRequired = Boolean(station.progressSources?.checkProficiency?.enabled);
+      const checkSelectionRequired = Boolean(projectStation.progressSources?.checkProficiency?.enabled);
       const stationToolOk = hasRequiredTool(actor, station.requiredTool);
       const projectToolsOk = (definition.requiredTools ?? []).every(tool => hasRequiredTool(actor, tool));
       const startItemsOk = await ResourceService.has(actor, definition.ingredients ?? []);
@@ -356,12 +369,13 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const progress = Number(state?.progress ?? 0);
       const requiredProgress = Number(state?.requiredProgress ?? definition.requiredProgress);
       const maxInvestment = state
-        ? StationEngine.maxInvestment(station, state, DowntimeService.get(actor))
+        ? StationEngine.maxInvestment(projectStation, state, DowntimeService.get(actor))
         : 0;
       const sharedMaxInvestment = sharedState && sharedJoined
-        ? StationEngine.maxInvestment(station, sharedState, DowntimeService.get(actor))
+        ? StationEngine.maxInvestment(projectStation, sharedState, DowntimeService.get(actor))
         : 0;
       const levelAccess = await craftingAccess(actor, item, definition);
+      if (definition.spellScroll && (state?.completed || (!state && (knownSpell || levelAccess.blocked)))) continue;
       const sharedEligible = !levelAccess.blocked && station.enabled && stationToolOk && projectToolsOk && !knownSpell;
       const active = Boolean(state && !state.completed && state.active !== false);
       const paused = Boolean(state && !state.completed && state.active === false);
@@ -378,6 +392,7 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
         showGoldCost: adapter.capabilities.currency && displayedGoldCost > 0,
         personal: source.personal,
         repeatable: definition.repeatable,
+        singleQuantity: Boolean(definition.spellScroll),
         knownSpell,
         classification,
         projectStatus,
@@ -396,11 +411,11 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
         sharedProgress: round(Number(sharedState?.progress ?? 0), 6),
         sharedRequiredProgress: round(Number(sharedState?.requiredProgress ?? definition.requiredProgress), 6),
         sharedPercent: Math.max(0, Math.min(100, Math.floor(Number(sharedState?.progress ?? 0) / Number(sharedState?.requiredProgress ?? definition.requiredProgress) * 100))),
-        progressItems,
+        progressItems: definition.spellScroll ? [] : progressItems,
         state,
         lastResult: lastResultView(
           state?.lastResult,
-          Boolean(station.actorValue.enabled),
+          Boolean(projectStation.actorValue.enabled),
           station.actorValue.label || station.actorValue.key || game.i18n.localize("DOWNTIME_MANAGER.Station.ActorValue"),
           definition.isCustom
         ),
@@ -421,7 +436,7 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
         maxInvestment,
         investmentDefault: Math.min(1, maxInvestment),
         checks,
-        requiresRoll: station.requiresRoll !== false,
+        requiresRoll: projectStation.requiresRoll !== false,
         showCheckSelection: checkSelectionRequired,
         canStart: !levelAccess.blocked && !knownSpell && station.enabled && stationToolOk && projectToolsOk &&
           Boolean(definition.rewards?.length || definition.characterRewards?.length) &&

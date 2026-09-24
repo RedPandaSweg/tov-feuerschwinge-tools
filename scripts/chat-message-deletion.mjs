@@ -1,9 +1,16 @@
 import { MODULE_ID } from "./core/constants.mjs";
 
 const SOCKET_SCOPE = "chat-message-deletion";
+const pending = new Map();
 
 function activeGM() {
-  return game.users.find(user => user.active && user.isGM);
+  const connected = game.users.filter(user => user.active && user.isGM);
+  const isBot = user => /\[bot\]/i.test(String(user.name ?? "")) || user.getFlag?.(MODULE_ID, "serviceBot") === true;
+  return connected.find(user => !isBot(user) && user.viewedScene)
+    ?? connected.find(user => !isBot(user))
+    ?? connected.find(user => user.viewedScene)
+    ?? connected[0]
+    ?? null;
 }
 
 function messageIdFrom(element) {
@@ -27,17 +34,36 @@ async function requestDeletion(_event, element) {
   });
   if (!confirmed) return;
 
-  if (!activeGM()) {
+  const gm = activeGM();
+  if (!gm) {
     ui.notifications.warn(game.i18n.localize("TOVF.ChatMessageDeletion.NoGM"));
     return;
   }
 
+  const requestId = foundry.utils.randomID();
+  const result = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      pending.delete(requestId);
+      reject(new Error(game.i18n.localize("TOVF.ChatMessageDeletion.Timeout")));
+    }, 12000);
+    pending.set(requestId, {
+      resolve: value => { clearTimeout(timeout); resolve(value); },
+      reject: error => { clearTimeout(timeout); reject(error); }
+    });
+  });
   game.socket.emit(`module.${MODULE_ID}`, {
     scope: SOCKET_SCOPE,
     type: "request",
+    requestId,
+    targetGMId: gm.id,
     messageId,
     userId: game.user.id
   });
+  try {
+    await result;
+  } catch (error) {
+    ui.notifications.error(error?.message ?? game.i18n.localize("TOVF.ChatMessageDeletion.Failed"));
+  }
 }
 
 function addContextOption(_html, options) {
@@ -69,21 +95,37 @@ function addDeleteButton(message, html) {
 }
 
 async function handleSocket(message) {
-  if (message?.scope !== SOCKET_SCOPE || message.type !== "request") return;
-  if (activeGM()?.id !== game.user?.id) return;
+  if (message?.scope !== SOCKET_SCOPE) return;
+  if (message.type === "response") {
+    if (message.targetUserId !== game.user?.id) return;
+    const entry = pending.get(message.requestId);
+    if (!entry) return;
+    pending.delete(message.requestId);
+    if (message.error) entry.reject(new Error(message.error));
+    else entry.resolve(true);
+    return;
+  }
+  if (message.type !== "request" || message.targetGMId !== game.user?.id || !game.user?.isGM) return;
 
   const requester = game.users.get(message.userId);
   const chatMessage = game.messages.get(message.messageId);
-  if (!requester?.active || requester.isGM || !chatMessage) return;
-  if (chatMessage.author?.id !== requester.id) {
-    console.warn(`${MODULE_ID} | Rejected unauthorized chat-message deletion request.`, {
-      messageId: message.messageId,
-      userId: message.userId
-    });
-    return;
+  let error = "";
+  if (!requester?.active || requester.isGM || !chatMessage || chatMessage.author?.id !== requester?.id) {
+    error = game.i18n.localize("TOVF.ChatMessageDeletion.Rejected");
+  } else {
+    try {
+      await chatMessage.delete();
+    } catch (caught) {
+      error = caught?.message ?? game.i18n.localize("TOVF.ChatMessageDeletion.Failed");
+    }
   }
-
-  await chatMessage.delete();
+  game.socket.emit(`module.${MODULE_ID}`, {
+    scope: SOCKET_SCOPE,
+    type: "response",
+    requestId: message.requestId,
+    targetUserId: message.userId,
+    ...(error ? { error } : { result: true })
+  });
 }
 
 export function registerChatMessageDeletion() {

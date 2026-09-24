@@ -119,6 +119,7 @@ export class RewardService {
       const wantedIdentifier = stableIdentifier(source);
       const existing = actor.items.find(item => {
         if (item.type !== source.type) return false;
+        if (reward.spellbookOrigin && String(item.getFlag?.(game.system.id, "relationship.origin.identifier") ?? "").trim().toLowerCase() !== String(reward.spellbookOrigin).trim().toLowerCase()) return false;
         const itemSource = String(sourceUuid(item)).toLowerCase();
         const rewardSource = String(
           item.getFlag?.(MODULE_ID, "rewardSourceUuid") ?? ""
@@ -144,6 +145,12 @@ export class RewardService {
         `flags.${MODULE_ID}.rewardSourceUuid`,
         reward.uuid
       );
+      if (source.type === "spell" && reward.spellbookOrigin) {
+        foundry.utils.setProperty(data, `flags.${game.system.id}.relationship.mode`, "standard");
+        foundry.utils.setProperty(data, `flags.${game.system.id}.relationship.prepared`, false);
+        foundry.utils.setProperty(data, `flags.${game.system.id}.relationship.origin.identifier`, String(reward.spellbookOrigin));
+        foundry.utils.setProperty(data, `flags.${game.system.id}.relationship.origin.spellbookOrigin`, "paid");
+      }
       if (foundry.utils.hasProperty(data, "system.quantity.value")) {
         data.system.quantity.value = quantity;
       } else {

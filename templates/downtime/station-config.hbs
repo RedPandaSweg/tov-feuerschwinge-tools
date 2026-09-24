@@ -189,6 +189,8 @@
     <summary title="{{localize 'DOWNTIME_MANAGER.Tooltips.Station.PublicProjects'}}">{{localize "DOWNTIME_MANAGER.Station.PublicProjects"}}</summary>
     <fieldset>
     <div class="sc-section-actions sc-project-create-actions"><button type="button" data-action="createRecipe" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.CreateProject'}}"><i class="fa-solid fa-plus"></i> {{localize "DOWNTIME_MANAGER.Station.CreateProject"}}</button><span class="sc-template-picker"><select data-project-template aria-label="{{localize 'DOWNTIME_MANAGER.Project.Template'}}">{{#each projectTemplates}}<option value="{{id}}">{{name}}</option>{{/each}}</select><button type="button" data-action="createRecipeTemplate"><i class="fa-solid fa-wand-magic-sparkles"></i> {{localize "DOWNTIME_MANAGER.Project.CreateFromTemplate"}}</button></span></div>
+    <label class="checkbox sc-checkbox-control"><input type="checkbox" name="spellScrollRecipes" {{checked station.spellScrollRecipes}}> {{localize "DOWNTIME_MANAGER.Station.SpellScrollRecipes"}}</label>
+    <p class="notes">{{localize "DOWNTIME_MANAGER.Station.SpellScrollRecipesHint"}}</p>
     <div class="project-drop-zone">{{localize "DOWNTIME_MANAGER.Station.DropPublicProject"}}</div>
     <div class="sc-list">{{#each recipes}}<div class="sc-row"><img src="{{img}}" alt=""><span class="grow">{{name}} <small>({{kind}})</small></span><button type="button" data-action="removeRecipe" data-uuid="{{uuid}}" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.RemoveProject'}}"><i class="fa-solid fa-trash"></i></button></div>{{else}}<p class="notes">{{localize "DOWNTIME_MANAGER.Station.NoPublicProjects"}}</p>{{/each}}</div>
     </fieldset>

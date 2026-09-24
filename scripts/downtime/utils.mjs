@@ -57,7 +57,7 @@ export function toolRequirementStatus(actor, requiredTool) {
     name: String(requiredTool.name || configuredName || requiredTool.identifier || "").trim()
   };
 }
-export function actorKnowsSpell(actor, spell) {
+export function actorKnowsSpell(actor, spell, { origin = "" } = {}) {
   if (!actor || spell?.type !== "spell") return false;
   const targetIdentifier = itemIdentifier(spell);
   const targetSource = String(sourceUuid(spell)).toLowerCase();
@@ -65,6 +65,7 @@ export function actorKnowsSpell(actor, spell) {
   const targetCircle = Number(spell.system?.circle?.value ?? spell.system?.circle?.base ?? spell.system?.circle ?? spell.system?.level ?? 0);
   return actor.items.some(item => {
     if (item.type !== "spell") return false;
+    if (origin && String(item.getFlag?.(game.system.id, "relationship.origin.identifier") ?? "").trim().toLowerCase() !== origin) return false;
     if (targetIdentifier && itemIdentifier(item) === targetIdentifier) return true;
     if (targetSource && String(sourceUuid(item)).toLowerCase() === targetSource) return true;
     const name = String(item.name ?? "").trim().toLocaleLowerCase();
@@ -252,6 +253,41 @@ function spellRecipeCosts(item) {
   const circle = Math.max(0, Math.floor(Number(rawCircle) || 0));
   const goldCost = circle === 0 ? 10 : circle * 50;
   return { circle, goldCost, requiredProgress: goldCost * 2 };
+}
+
+export function spellScrollReference(item) {
+  const data = item?.getFlag?.(MODULE_ID, "spellScroll");
+  const spellUuid = String(data?.spellUuid ?? "").trim();
+  const circle = Number(data?.circle);
+  if (item?.type !== "consumable" || !spellUuid || !Number.isInteger(circle)) return null;
+  return { ...data, spellUuid, circle };
+}
+
+export async function spellScrollRecipeData(item) {
+  const reference = spellScrollReference(item);
+  if (!reference) return null;
+  const spell = await fromUuid(reference.spellUuid).catch(() => null);
+  if (spell?.documentName !== "Item" || spell.type !== "spell") return null;
+  const definition = recipeData(spell, { sourceUuid: spell.uuid });
+  return {
+    spell,
+    definition: {
+      ...definition,
+      isCustom: true,
+      spellScroll: true,
+      scrollUuid: item.uuid,
+      resultUuid: spell.uuid,
+      description: game.i18n.format("DOWNTIME_MANAGER.Project.SpellScrollTransferDescription", {
+        spell: spell.name,
+        circle: reference.circle
+      }),
+      repeatable: false,
+      collaborative: false,
+      ingredients: [],
+      completionCosts: [],
+      rewards: [{ uuid: spell.uuid, quantity: 1, spellbookOrigin: "wizard" }]
+    }
+  };
 }
 
 export function recipeData(item, { sourceUuid: explicitUuid = "" } = {}) {

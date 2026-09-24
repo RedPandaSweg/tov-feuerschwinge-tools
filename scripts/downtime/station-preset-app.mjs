@@ -104,7 +104,7 @@ export class StationPresetApp extends HandlebarsApplicationMixin(ApplicationV2) 
         flags: {
           [MODULE_ID]: {
             [FLAGS.STATION]: station,
-            preset: { type: "station", stationId: preset.id, version: 1 }
+            preset: { type: "station", stationId: preset.id, version: 2 }
           }
         }
       }, { renderSheet: false });

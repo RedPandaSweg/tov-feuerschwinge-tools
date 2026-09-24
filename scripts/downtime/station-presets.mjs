@@ -117,6 +117,28 @@ export const STATION_PRESETS = Object.freeze([
     }
   },
   {
+    id: "scriptorium",
+    category: "spell-scribing",
+    icon: "fa-solid fa-book-sparkles",
+    img: "icons/sundries/books/book-open-purple.webp",
+    projectTemplate: "research",
+    stationConfig: {
+      baseProgress: 50,
+      requiresRoll: false,
+      rollInterval: 1,
+      progressSources: {
+        level: { enabled: false, multiplier: 1 },
+        proficiency: { enabled: false, multiplier: 1 },
+        checkProficiency: { enabled: false, multiplier: 1 }
+      },
+      spellScrollRecipes: true,
+      allowedChecks: [],
+      rollTable: [],
+      rollTablePreset: "",
+      actorValue: { enabled: false }
+    }
+  },
+  {
     id: "training-grounds",
     category: "training",
     icon: "fa-solid fa-dumbbell",
