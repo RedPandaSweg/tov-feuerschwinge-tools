@@ -2,6 +2,33 @@ import { MODULE_ID } from "../core/constants.mjs";
 
 let cubeTemplateFixInstalled = false;
 let currencyStackingInstalled = false;
+let damageFormulaToggleInstalled = false;
+
+/** Black Flag's formula button can look for a hidden input absent from the rendered damage row. */
+function installDamageFormulaToggleFix() {
+  if (damageFormulaToggleInstalled) return;
+  const DamageListElement = BlackFlag?.applications?.components?.DamageListElement;
+  const original = DamageListElement?.prototype?._onAction;
+  if (typeof original !== "function" || !original.toString().includes("this._createFormula(index)")) return;
+  damageFormulaToggleInstalled = true;
+  DamageListElement.prototype._onAction = async function(target, action) {
+    if (action !== "customize") return original.call(this, target, action);
+    if (!this.isEditable) return;
+    const index = Number(target.closest("li")?.dataset.index);
+    const source = foundry.utils.getProperty(this.activity.toObject(), this.name);
+    const damage = this.single ? source : source?.[index];
+    if (!damage) return;
+    const custom = {
+      ...damage.custom,
+      enabled: !damage.custom?.enabled,
+      formula: damage.custom?.formula || this._createFormula(index)
+    };
+    const updated = this.single ? { ...source, custom } : source.map((part, partIndex) =>
+      partIndex === index ? { ...part, custom } : part);
+    const path = `system.activities.${this.activity.id}.${this.name}`;
+    return this.activity.item.update({ [path]: updated });
+  };
+}
 
 function installOtherInventorySection() {
   const sections = CONFIG.BlackFlag?.sheetSections?.pc;
@@ -172,6 +199,7 @@ function installSpellManagerTooltipCoverage() {
  * self-disabling so a corrected system implementation is never replaced.
  */
 export function installBlackFlagCompatibility() {
+  installDamageFormulaToggleFix();
   installOtherInventorySection();
   installExhaustionFormatNumberFix();
   installCubeTemplateFix();

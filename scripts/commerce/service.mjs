@@ -4,7 +4,7 @@ import { purchaseAnimals } from "./animals.mjs";
 import { offerPurchaseAccess } from "./offer-access.mjs";
 import { levelFromMilestones, sessionProgress } from "../downtime/session-service.mjs";
 import { balanceInCopper, changeCurrency, formatCopper, itemQuantity, priceInCopper, quantityForPrice, validateCurrencyChange } from "./currency.mjs?v=3.5.0-item-quantity-1";
-import { addItem, cleanTransferredItem, exchange, removeItem, transferItem } from "./transactions.mjs?v=3.5.0-item-quantity-1";
+import { addItem, cleanTransferredItem, exchange, removeItem, transferItem } from "./transactions.mjs?v=3.7.6-shop-table-stacking-1";
 import {
   createSpellScrollData, merchantSpellScrollOffers, resolveSpellScrollOffer, saveMerchantSpellScrollOffers
 } from "../spell-scrolls.mjs?v=3.7.1-offer-access-1";

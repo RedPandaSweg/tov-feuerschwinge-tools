@@ -8,7 +8,7 @@ import {
 } from "./core/namespace-migration.mjs";
 import { exposeTransferApi } from "./transfer/compendium-transfer.mjs?v=3.6.2-transfer-integrity-9";
 import { registerSessionTransfer, sessionTransferApi } from "./transfer/session-transfer.mjs";
-import { installBlackFlagCompatibility } from "./integrations/black-flag-compatibility.mjs?v=3.6.2-compat-log-1";
+import { installBlackFlagCompatibility } from "./integrations/black-flag-compatibility.mjs?v=3.7.6-damage-formula-4";
 import {
   characterCreationOverridesApi,
   installCharacterCreationOverrides
@@ -38,7 +38,7 @@ import { installChatImagePopouts } from "./chat-image-popout.mjs";
 import { registerChatMessageDeletion } from "./chat-message-deletion.mjs";
 import { installChatTimestamps } from "./chat-timestamps.mjs";
 import { createMagicalDrinkWorldItems, effectGroupsApi, installEffectGroups } from "./effect-groups.mjs?v=3.2.5-effect-groups-7";
-import { activateTokenPresetSocket, registerTokenPresets } from "./token-presets.mjs";
+import { activateTokenPresetSocket, registerTokenPresets } from "./token-presets.mjs?v=3.7.6-actor-presets-1";
 import { activateTokenLightAuraSocket, toggleTokenLightAura } from "./token-light-aura.mjs";
 import { activateSimpleTileTriggers, registerSimpleTileTriggers } from "./simple-tile-triggers.mjs?v=3.2.2";
 import { activateSummonCompatibility } from "./summon-compat.mjs?v=3.6.2-character-summon-folder-1";

@@ -24,6 +24,12 @@
       </button>
       <label class="tovf-token-preset-name">Presetname <input type="text" name="name" value="{{name}}" placeholder="Name"></label>
       <label class="tovf-token-name">Tokenname <input type="text" name="tokenName" value="{{tokenName}}" placeholder="Unverändert"></label>
+      <label>Charakterbogen
+        <select name="actorId">
+          <option value="" {{#unless actorId}}selected{{/unless}}>Ursprünglicher Charakter</option>
+          {{#each actors}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}
+        </select>
+      </label>
       <input type="hidden" name="image" value="{{image}}">
       <label>Scale <input type="number" name="scale" value="{{scale}}" min="0.1" max="3" step="0.05"></label>
       <label>Breite <input type="number" name="width" value="{{width}}" min="0.5" max="20" step="0.5"></label>

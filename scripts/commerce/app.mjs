@@ -5,7 +5,7 @@ import { getSystemAdapter } from "../downtime/system-adapter.mjs";
 import { formatCopper, itemQuantity, priceInCopper, purse, quantityForPrice, quantityUpdate } from "./currency.mjs?v=3.5.0-item-quantity-1";
 import { broadcastPeerTrade, commerceRequest } from "./socket.mjs?v=3.7.1-offer-access-1";
 import { AUCTION_HOUSE_FLAG, commerceState, isAuctionHouse, merchantAccess, merchantAllowsActor, merchantAvailableToUser, merchantConfig, merchantItemPurchaseAccess, merchantStockQuantity, ownedCharacters, rarityMinimumLevel } from "./service.mjs?v=3.7.1-offer-access-1";
-import { addItem, cleanTransferredItem } from "./transactions.mjs?v=3.5.0-item-quantity-1";
+import { addItem, cleanTransferredItem } from "./transactions.mjs?v=3.7.6-shop-table-stacking-1";
 import {
   addMerchantSpellScrollOffer, createSpellScrollData, merchantSpellScrollOffers,
   resolveSpellScrollOffer, saveMerchantSpellScrollOffers
@@ -896,7 +896,7 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     let total = 0;
     for (const { document, quantity } of items) {
       if (document.type === "spell") await addMerchantSpellScrollOffer(actor, document, quantity);
-      else await addItem(actor, cleanTransferredItem(document, quantity), quantity, { stackWeapons: true });
+      else await addItem(actor, cleanTransferredItem(document, quantity), quantity, { stackWeapons: true, merchantStock: true });
       total += quantity;
     }
     ui.notifications.info(uiText("TOVF.Interface.AddedP0ItemsFromP1RollsP2_40bd0b", "{p0} Gegenstände aus {p1} Würfen hinzugefügt ({p2} verschiedene Items).", { p0: (total), p1: (count), p2: (items.length) })); await this.render({ force: true }); }

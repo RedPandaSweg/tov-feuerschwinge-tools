@@ -1,4 +1,5 @@
 import { uiText } from "../core/localization.mjs";
+import { MODULE_ID } from "../core/constants.mjs";
 import { changeCurrency, itemQuantity, quantityUpdate, setItemQuantity, validateCurrencyChange } from "./currency.mjs?v=3.5.0-item-quantity-1";
 
 const locks = new Map();
@@ -32,20 +33,27 @@ export function cleanTransferredItem(item, quantity) {
   return data;
 }
 
-function stackSignature(item) {
+function stackSignature(item, { merchantStock = false } = {}) {
   const data = item?.toObject ? item.toObject() : foundry.utils.deepClone(item);
   delete data._id;
   delete data._stats;
   delete data.sort;
+  delete data.folder;
+  delete data.ownership;
   foundry.utils.deleteProperty(data, "system.quantity");
   foundry.utils.deleteProperty(data, "system.container");
   foundry.utils.deleteProperty(data, "flags.core.sourceId");
+  if (merchantStock) {
+    foundry.utils.deleteProperty(data, `flags.${MODULE_ID}.merchantItem`);
+    if (foundry.utils.isEmpty(data.flags?.[MODULE_ID] ?? {})) delete data.flags?.[MODULE_ID];
+  }
+  if (foundry.utils.isEmpty(data.flags ?? {})) delete data.flags;
   return JSON.stringify(data);
 }
 
-export async function addItem(actor, itemData, quantity, { stackWeapons = false } = {}) {
-  const signature = stackSignature(itemData);
-  const existing = itemData.type === "weapon" && !stackWeapons ? null : actor.items.find(item => stackSignature(item) === signature);
+export async function addItem(actor, itemData, quantity, { stackWeapons = false, merchantStock = false } = {}) {
+  const signature = stackSignature(itemData, { merchantStock });
+  const existing = itemData.type === "weapon" && !stackWeapons ? null : actor.items.find(item => stackSignature(item, { merchantStock }) === signature);
   if (existing) {
     await existing.update(quantityUpdate(existing, itemQuantity(existing) + quantity));
     return existing;
