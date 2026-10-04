@@ -386,7 +386,16 @@ function installItemSheetFilter() {
 }
 
 export function installActivityChaining() {
-  if (installed || game.system.id !== "black-flag") return;
+  if (installed) return { status: "already-installed" };
+  if (game.system.id !== "black-flag") return { status: "inactive", reason: "Requires the black-flag system." };
+  const missing = [];
+  if (!CONFIG.Activity?.types) missing.push("CONFIG.Activity.types");
+  if (typeof BlackFlag?.applications?.item?.BaseItemSheet?.prototype?._prepareDetailsContext !== "function") {
+    missing.push("BlackFlag.applications.item.BaseItemSheet._prepareDetailsContext");
+  }
+  if (missing.length) {
+    return { status: "incompatible", reason: `Missing Black Flag APIs: ${missing.join(", ")}.` };
+  }
   installed = true;
   queueMicrotask(installSheetPart);
   installItemSheetFilter();
@@ -413,6 +422,7 @@ export function installActivityChaining() {
       resultActor: subject
     });
   })());
+  return { status: "completed" };
 }
 
 export const activityChainingApi = { runTransitions };

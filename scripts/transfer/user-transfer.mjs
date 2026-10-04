@@ -158,7 +158,7 @@ export async function importUserBundle(bundle, { choices = {}, actorChoices = {}
     throw new Error(uiText("TOVF.Interface.UserTransferRoleTooHigh", "Du kannst keine Benutzer mit einer höheren Rolle als deiner eigenen anlegen. Ordne sie bestehenden Benutzern zu oder überspringe sie."));
   }
   // Detect conflicts before creating a user or changing any Actor.
-  mergePersonAssignments(copy(game.settings.get(MODULE_ID, "campaignLedger") ?? {}), bundle,
+  if (!sessionPlayers) mergePersonAssignments(copy(game.settings.get(MODULE_ID, "campaignLedger") ?? {}), bundle,
     new Map(plan.rows.filter(r => r.targetId !== "skip").map(r => [r.source.id, r.target?.id ?? `new:${r.source.id}`])));
   busy = true;
   try {
@@ -181,9 +181,9 @@ export async function importUserBundle(bundle, { choices = {}, actorChoices = {}
   } finally { busy = false; }
 }
 
-export async function applyUserAssignments(bundle, identityMap, actorMap) {
+export async function applyUserAssignments(bundle, identityMap, actorMap, { sessionPlayers = false } = {}) {
   assertGM();
-  const state = mergePersonAssignments(copy(game.settings.get(MODULE_ID, "campaignLedger") ?? {}), bundle, identityMap);
+  const state = sessionPlayers ? null : mergePersonAssignments(copy(game.settings.get(MODULE_ID, "campaignLedger") ?? {}), bundle, identityMap);
   for (const source of bundle.users) {
     const userId = identityMap.get(source.id); if (!userId) continue;
     const user = game.users.get(userId);
@@ -198,10 +198,12 @@ export async function applyUserAssignments(bundle, identityMap, actorMap) {
       if (userId) updates[`ownership.${userId}`] = owner.level;
     }
     if (Object.keys(updates).length) await actor.update(updates);
-    for (const id of source.campaignCharacterIds) state.characterLinks[id] = actor.uuid;
+    if (state) for (const id of source.campaignCharacterIds) state.characterLinks[id] = actor.uuid;
   }
-  state.revision = Number(state.revision ?? 0) + 1;
-  await game.settings.set(MODULE_ID, "campaignLedger", state);
+  if (state) {
+    state.revision = Number(state.revision ?? 0) + 1;
+    await game.settings.set(MODULE_ID, "campaignLedger", state);
+  }
 }
 
 export function exportUsers(userIds = null) {

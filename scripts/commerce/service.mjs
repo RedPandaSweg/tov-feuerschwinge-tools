@@ -4,10 +4,10 @@ import { purchaseAnimals } from "./animals.mjs";
 import { offerPurchaseAccess } from "./offer-access.mjs";
 import { levelFromMilestones, sessionProgress } from "../downtime/session-service.mjs";
 import { balanceInCopper, changeCurrency, formatCopper, itemQuantity, priceInCopper, quantityForPrice, validateCurrencyChange } from "./currency.mjs?v=3.5.0-item-quantity-1";
-import { addItem, cleanTransferredItem, exchange, removeItem, transferItem } from "./transactions.mjs?v=3.7.6-shop-table-stacking-1";
+import { addItem, cleanTransferredItem, exchange, removeItem, transferItem } from "./transactions.mjs?v=3.7.8-runtime-audit-1";
 import {
   createSpellScrollData, merchantSpellScrollOffers, resolveSpellScrollOffer, saveMerchantSpellScrollOffers
-} from "../spell-scrolls.mjs?v=3.7.1-offer-access-1";
+} from "../spell-scrolls.mjs?v=3.7.8-clearance-label-1";
 
 export const COMMERCE_SETTING = "commerceState";
 export const COMMERCE_RARITY_LEVELS_SETTING = "commerceRarityLevels";
@@ -160,6 +160,30 @@ export function merchantConfig(actor) {
   const description = descriptionValue(source.description)
     || descriptionValue(actor?.system?.description)
     || descriptionValue(actor?.system?.details?.description);
+  const restockSource = source.restock ?? {};
+  const legacyRule = restockSource.tableId ? [restockSource] : [];
+  const restockRules = (Array.isArray(restockSource.rules) ? restockSource.rules : legacyRule).map(rule => ({
+    id: String(rule.id ?? foundry.utils.randomID()), enabled: rule.enabled !== false, tableId: String(rule.tableId ?? ""),
+    rolls: Math.max(1, Math.floor(Number(rule.rolls) || 1)), quantityMin: Math.max(1, Math.floor(Number(rule.quantityMin) || 1)),
+    quantityMax: Math.max(1, Math.floor(Number(rule.quantityMax) || 1)), intervalValue: Math.max(1, Number(rule.intervalValue) || 1),
+    intervalUnit: ["minutes", "hours", "days", "weeks", "months"].includes(rule.intervalUnit) ? rule.intervalUnit : "weeks",
+    discountValue: Math.max(0, Number(rule.discountValue) || 0), discountUnit: ["minutes", "hours", "days", "weeks", "months"].includes(rule.discountUnit) ? rule.discountUnit : "weeks",
+    discountPercent: Math.clamp(Math.round(Number(rule.discountPercent) || 0), 0, 100), removeValue: Math.max(0, Number(rule.removeValue) || 0),
+      removeUnit: ["minutes", "hours", "days", "weeks", "months"].includes(rule.removeUnit) ? rule.removeUnit : "weeks",
+      startAt: Math.max(0, Number(rule.startAt) || 0), lastRunAt: Math.max(0, Number(rule.lastRunAt) || 0), nextRunAt: Math.max(0, Number(rule.nextRunAt) || 0),
+      lastDelivery: Array.isArray(rule.lastDelivery) ? rule.lastDelivery.slice(0, 100).map(entry => ({
+        uuid: String(entry?.uuid ?? ""), name: String(entry?.name ?? ""), img: String(entry?.img ?? "icons/svg/item-bag.svg"),
+        quantity: Math.max(1, Math.floor(Number(entry?.quantity) || 1)), spell: entry?.spell === true
+      })).filter(entry => entry.name) : [],
+      deliveries: (Array.isArray(rule.deliveries) ? rule.deliveries : (rule.lastRunAt ? [{ at: rule.lastRunAt, items: rule.lastDelivery }] : []))
+        .slice(-100).map(delivery => ({ at: Math.max(0, Number(delivery?.at) || 0), items: Array.isArray(delivery?.items)
+          ? delivery.items.slice(0, 100).map(entry => ({
+            uuid: String(entry?.uuid ?? ""), name: String(entry?.name ?? ""), img: String(entry?.img ?? "icons/svg/item-bag.svg"),
+            quantity: Math.max(1, Math.floor(Number(entry?.quantity) || 1)), spell: entry?.spell === true,
+            discountAt: Math.max(0, Number(entry?.discountAt) || 0), removeAt: Math.max(0, Number(entry?.removeAt) || 0),
+            stockId: String(entry?.stockId ?? "")
+          })).filter(entry => entry.name) : [] })).filter(delivery => delivery.at)
+    }));
   return {
     enabled: source.enabled === true,
     buyModifier: Math.max(0, Number(source.buyModifier ?? 1) || 0),
@@ -180,8 +204,20 @@ export function merchantConfig(actor) {
     requiredItem: cleanRequiredItem(source.requiredItem),
     accessDeniedMessage: descriptionValue(source.accessDeniedMessage),
     description,
-    merchantImage: String(source.merchantImage ?? "")
+    merchantImage: String(source.merchantImage ?? ""),
+    restock: {
+      enabled: restockSource.enabled === true,
+      rules: restockRules
+    }
   };
+}
+
+/** Make a merchant and its embedded stock readable to all player roles. */
+export async function enableMerchantViewerAccess(actor) {
+  if (!actor || !game.user.isGM) return;
+  const observer = CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER;
+  if (Number(actor.ownership?.default ?? 0) >= observer) return;
+  await actor.update({ ownership: { ...foundry.utils.deepClone(actor.ownership ?? {}), default: observer } });
 }
 
 export function isAuctionHouse(actor) {

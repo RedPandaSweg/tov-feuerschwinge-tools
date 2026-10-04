@@ -18,9 +18,9 @@ import { SessionRewardConfigApp } from "./session-reward-config-app.mjs";
 import { HelpApp } from "./help-app.mjs";
 import { ProjectLibraryApp } from "./project-library-app.mjs";
 import { getSystemAdapter, registerSystemAdapter } from "./system-adapter.mjs";
-import { SessionApp } from "./session-app.mjs";
+import { SessionApp } from "./session-app.mjs?v=3.7.8-standard-effects-2";
 import { openCampaign } from "../campaign/app.mjs";
-import { registerCampaignService, isCampaignWorld } from "../campaign/service.mjs";
+import { registerCampaignService, isCampaignWorld } from "../campaign/service.mjs?v=3.7.8-permissions-1";
 import { UserTransferApp } from "../transfer/user-transfer-app.mjs";
 import { DowntimeItemApp } from "./downtime-item-app.mjs";
 import { StationPresetApp } from "./station-preset-app.mjs";
@@ -36,8 +36,8 @@ import {
 import { MIGRATION_SETTING, migrateIntegratedDowntime } from "./migration.mjs";
 import { openChallengeManager } from "../challenge-manager.mjs";
 import { openFeuerschwingeSettings } from "../settings-categories.mjs";
-import { createWorldSpellScroll } from "../spell-scrolls.mjs?v=3.7.1-offer-access-1";
-import { GMToolsApp } from "./gm-tools-app.mjs?v=3.5.0-actor-spell-migration-10";
+import { createWorldSpellScroll } from "../spell-scrolls.mjs?v=3.7.8-clearance-label-1";
+import { GMToolsApp } from "./gm-tools-app.mjs?v=3.7.8-standard-effects-2";
 import { isCompendiumItem, synchronizeCompendiumItem } from "../item-compendium-sync.mjs?v=3.5.0-cross-source-spell-sync-8";
 
 function documentFromApp(app, documentName) {
@@ -146,7 +146,7 @@ function registerTokenDoubleClick() {
     const auctionHouse = this.actor?.getFlag?.(MODULE_ID, "auctionHouse")?.enabled === true;
     if (merchant || auctionHouse) {
       event?.stopPropagation?.();
-      void import("../commerce/app.mjs?v=3.7.1-offer-access-1").then(({ openCommerce }) => openCommerce({
+      void import("../commerce/app.mjs?v=3.7.8-runtime-audit-1").then(({ openCommerce }) => openCommerce({
         mode: merchant ? "merchant" : "auction",
         merchantId: merchant ? this.actor.id : null,
         auctionHouseId: auctionHouse ? this.actor.id : null
@@ -164,7 +164,7 @@ function registerTokenDoubleClick() {
 
 }
 
-Hooks.once("init", async () => {
+export function registerDowntime() {
   if (game.system.id !== "black-flag") return;
   registerTokenDoubleClick();
   registerCampaignService();
@@ -174,9 +174,8 @@ Hooks.once("init", async () => {
     icon: "fa-solid fa-users", type: UserTransferApp, restricted: true
   });
 
-  await loadTemplates();
-
   game.settings.register(MODULE_ID, SETTINGS.ACTIVE_SESSION, { scope: "world", config: false, type: Object, default: {} });
+  game.settings.register(MODULE_ID, SETTINGS.SESSION_IMPORT_HISTORY, { scope: "world", config: false, type: Object, default: { schemaVersion: 1, entries: [] } });
   game.settings.register(MODULE_ID, SETTINGS.LAST_SESSION_RESULT, { scope: "world", config: false, type: Object, default: {} });
   game.settings.register(MODULE_ID, SETTINGS.SESSION_REWARDS, { scope: "world", config: false, type: Object, default: createDefaultSessionRewards(getSystemAdapter().getDefaultGoldItemUuid()) });
   game.settings.register(MODULE_ID, SETTINGS.SESSION_HISTORY_JOURNAL, { scope: "world", config: false, type: String, default: "" });
@@ -209,6 +208,10 @@ Hooks.once("init", async () => {
     config: false,
     type: Object,
     default: { folderId: "" }
+  });
+  game.settings.register(MODULE_ID, SETTINGS.SESSION_TRANSFER_SCENES, {
+    scope: "world", config: false, type: Object,
+    default: { scenes: [] }
   });
   game.settings.register(MODULE_ID, SETTINGS.PASSIVE_DOWNTIME, {
     scope: "world", config: false, type: Object,
@@ -277,10 +280,17 @@ Hooks.once("init", async () => {
     restricted: true
   });
 
-});
+  void loadTemplates().catch(error => {
+    console.error(`${MODULE_ID} | Loading downtime templates failed.`, error);
+  });
 
-Hooks.once("ready", async () => {
-  if (game.system.id !== "black-flag") return;
+}
+
+export async function activateDowntime() {
+  if (game.system.id !== "black-flag" || !game.user) return;
+  void game.user.setFlag(MODULE_ID, FLAGS.LAST_LOGIN_AT, Date.now()).catch(error =>
+    console.warn(`${MODULE_ID} | Could not record the current user's last login`, error));
+
   await migrateIntegratedDowntime();
   if (game.user.isGM && !game.settings.get(MODULE_ID, SETTINGS.RECIPE_BASE_ITEM_UUID)) {
     await game.settings.set(MODULE_ID, SETTINGS.RECIPE_BASE_ITEM_UUID, DEFAULT_RECIPE_BASE_ITEM_UUID);
@@ -369,7 +379,7 @@ Hooks.once("ready", async () => {
   game.downtimeManager = api;
   const module = game.modules.get(MODULE_ID);
   if (module) Object.assign(module.api ??= {}, api);
-});
+}
 
 async function loadTemplates() {
   return foundry.applications.handlebars.loadTemplates([
@@ -406,7 +416,7 @@ function actorHeaderControls(app, controls) {
       });
       if (action === "station") return configureStation(actor, app);
       if (action === "openStation") return openStation(actor);
-      const commerce = await import("../commerce/app.mjs?v=3.7.1-offer-access-1");
+      const commerce = await import("../commerce/app.mjs?v=3.7.8-runtime-audit-1");
       if (action === "merchant") return merchant ? commerce.openCommerce({ mode: "merchant", merchantId: actor.id, shopPage: "management" }) : commerce.configureMerchantActor(actor, app);
       if (action === "auction") return auctionHouse ? commerce.openCommerce({ mode: "auction", auctionHouseId: actor.id }) : commerce.configureAuctionHouseActor(actor, app);
     }

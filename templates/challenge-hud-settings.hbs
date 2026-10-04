@@ -1,0 +1,47 @@
+<div class="tovf-challenge-hud-settings-content">
+  <header>
+    <i class="fa-solid fa-swords" inert></i>
+    <div>
+      <h2>{{localize "TOVF.ChallengeManager.Settings.Menu.Title"}}</h2>
+      <p>{{localize "TOVF.ChallengeManager.Settings.Menu.Description"}}</p>
+    </div>
+  </header>
+
+  <fieldset>
+    <legend><i class="fa-solid fa-display" inert></i> {{localize "TOVF.ChallengeManager.Settings.Menu.Personal"}}</legend>
+    <div class="form-group">
+      <label for="tovf-challenge-max-cards">{{localize "TOVF.ChallengeManager.Settings.MaxInitiativeCards.Name"}}</label>
+      <div class="form-fields tovf-challenge-card-count">
+        <input id="tovf-challenge-max-cards" type="range" name="maxInitiativeCards" min="1" max="10" step="1" value="{{maxInitiativeCards}}">
+        <output>{{maxInitiativeCards}}</output>
+      </div>
+      <p class="hint">{{localize "TOVF.ChallengeManager.Settings.MaxInitiativeCards.Hint"}}</p>
+    </div>
+  </fieldset>
+
+  {{#if canConfigureWorld}}
+  <fieldset>
+    <legend><i class="fa-solid fa-globe" inert></i> {{localize "TOVF.ChallengeManager.Settings.Menu.World"}}</legend>
+    <label class="tovf-challenge-setting-toggle">
+      <input type="checkbox" name="autoOpen" {{checked autoOpen}}>
+      <span><strong>{{localize "TOVF.ChallengeManager.Settings.AutoOpen.Name"}}</strong><small>{{localize "TOVF.ChallengeManager.Settings.AutoOpen.Hint"}}</small></span>
+    </label>
+  </fieldset>
+
+  <fieldset>
+    <legend><i class="fa-solid fa-heart-pulse" inert></i> {{localize "TOVF.ChallengeManager.Settings.Menu.Health"}}</legend>
+    <label class="tovf-challenge-setting-toggle">
+      <input type="checkbox" name="showNpcHealth" {{checked showNpcHealth}}>
+      <span><strong>{{localize "TOVF.ChallengeManager.Settings.ShowNpcHealth.Name"}}</strong><small>{{localize "TOVF.ChallengeManager.Settings.ShowNpcHealth.Hint"}}</small></span>
+    </label>
+    <label class="tovf-challenge-setting-toggle">
+      <input type="checkbox" name="showOtherPlayerHealth" {{checked showOtherPlayerHealth}}>
+      <span><strong>{{localize "TOVF.ChallengeManager.Settings.ShowOtherPlayerHealth.Name"}}</strong><small>{{localize "TOVF.ChallengeManager.Settings.ShowOtherPlayerHealth.Hint"}}</small></span>
+    </label>
+  </fieldset>
+  {{/if}}
+
+  <footer>
+    <button type="submit"><i class="fa-solid fa-floppy-disk" inert></i> {{localize "TOVF.ChallengeManager.Settings.Menu.Save"}}</button>
+  </footer>
+</div>

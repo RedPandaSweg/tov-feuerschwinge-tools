@@ -3,7 +3,7 @@ import { StationApp } from "./station-app.mjs";
 import { getStationData, isStation, round } from "./utils.mjs";
 import { SessionApp } from "./session-app.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
-import { playerCharacters, SessionService } from "./session-service.mjs";
+import { isActiveCharacter, playerCharacters, SessionService } from "./session-service.mjs";
 import { ProjectLibraryApp } from "./project-library-app.mjs";
 import { StationPresetApp } from "./station-preset-app.mjs";
 
@@ -23,7 +23,8 @@ export class DowntimeDashboardApp extends HandlebarsApplicationMixin(Application
       openProjectLibrary: DowntimeDashboardApp.openProjectLibrary,
       openStationPresets: DowntimeDashboardApp.openStationPresets,
       grantSelectedDowntime: DowntimeDashboardApp.grantSelectedDowntime,
-      grantAllDowntime: DowntimeDashboardApp.grantAllDowntime
+      grantAllDowntime: DowntimeDashboardApp.grantAllDowntime,
+      toggleInactiveDowntime: DowntimeDashboardApp.toggleInactiveDowntime
     }
   };
 
@@ -65,6 +66,7 @@ export class DowntimeDashboardApp extends HandlebarsApplicationMixin(Application
           actorName: String(actor.name || game.i18n.localize("DOWNTIME_MANAGER.Dashboard.UnknownCharacter")),
           actorUuid: actor.uuid,
           actorImg: actor.img,
+          characterActive: isActiveCharacter(actor),
           stationName: String(stationActor
             ? getStationData(stationActor).displayName || stationActor.name
             : state.stationName || state.stationUuid || game.i18n.localize("DOWNTIME_MANAGER.Dashboard.UnknownStation")),
@@ -81,7 +83,8 @@ export class DowntimeDashboardApp extends HandlebarsApplicationMixin(Application
         });
       }
     }
-    rows.sort((a, b) => String(a.stationName).localeCompare(String(b.stationName))
+    rows.sort((a, b) => Number(b.characterActive) - Number(a.characterActive)
+      || String(a.stationName).localeCompare(String(b.stationName))
       || String(a.actorName).localeCompare(String(b.actorName))
       || String(a.projectName).localeCompare(String(b.projectName)));
     const lastDirectAll = game.settings.get(MODULE_ID, SETTINGS.LAST_DIRECT_DOWNTIME_ALL) ?? {};
@@ -95,7 +98,10 @@ export class DowntimeDashboardApp extends HandlebarsApplicationMixin(Application
       activeCount: rows.filter(row => row.status === "active").length,
       rollCount: rows.filter(row => row.status === "roll").length,
       completedCount: rows.filter(row => row.status === "completed").length,
-      characters: playerCharacters().map(actor => ({ uuid: actor.uuid, name: actor.name, img: actor.img, downtime: DowntimeService.get(actor) })),
+      characters: playerCharacters().filter(actor => this._showInactiveDowntime || isActiveCharacter(actor))
+        .map(actor => ({ uuid: actor.uuid, name: actor.name, img: actor.img, downtime: DowntimeService.get(actor), active: isActiveCharacter(actor) })),
+      hasInactiveCharacters: playerCharacters().some(actor => !isActiveCharacter(actor)),
+      showInactiveCharacters: Boolean(this._showInactiveDowntime),
       lastDirectAll: lastDirectAll.timestamp ? {
         ...lastDirectAll,
         date: new Intl.DateTimeFormat(game.i18n.lang, { dateStyle: "medium", timeStyle: "short" }).format(new Date(lastDirectAll.timestamp))
@@ -143,8 +149,10 @@ export class DowntimeDashboardApp extends HandlebarsApplicationMixin(Application
   }
   static async grantAllDowntime(event) {
     event.preventDefault();
-    await DowntimeDashboardApp.prototype.grantDowntime.call(this, playerCharacters().map(actor => actor.uuid), true);
+    const uuids = Array.from(this.element.querySelectorAll('[name="directDowntimeActors"]')).map(input => input.value);
+    await DowntimeDashboardApp.prototype.grantDowntime.call(this, uuids, true);
   }
+  static toggleInactiveDowntime(event) { event.preventDefault(); this._showInactiveDowntime = !this._showInactiveDowntime; this.render(); }
   async grantDowntime(uuids, allCharacters) {
     const amount = Number(this.element.querySelector('[name="directDowntimeAmount"]')?.value);
     if (!uuids.length) return ui.notifications.warn(game.i18n.localize("DOWNTIME_MANAGER.Dashboard.Errors.NoCharacters"));

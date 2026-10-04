@@ -2,7 +2,7 @@
   "id": "tov-feuerschwinge-tools",
   "title": "Feuerschwinge – Tools",
   "description": "Kampagnenspezifische Werkzeuge, Downtime- und Sessionverwaltung und Integrationen für Tales of the Valiant: Feuerschwinge.",
-  "version": "3.7.7",
+  "version": "3.8.0",
   "socket": true,
   "compatibility": {
     "minimum": "13.348",
@@ -44,30 +44,10 @@
         "type": "module"
       }
     ],
-    "systems": [
-      {
-        "id": "black-flag",
-        "type": "system",
-        "compatibility": {
-          "minimum": "2.0.074"
-        }
-      }
-    ],
-    "requires": [
-      {
-        "id": "tov-feuerschwinge",
-        "type": "module",
-        "compatibility": {
-          "minimum": "3.0.0"
-        }
-      }
-    ]
+    "systems": []
   },
   "esmodules": [
-    "scripts/main.mjs",
-    "scripts/macro-activity.mjs",
-    "scripts/weapon-customization.mjs",
-    "scripts/weapon-enchantment.mjs"
+    "scripts/main.mjs"
   ],
   "styles": [
     "styles/tov-feuerschwinge.css"

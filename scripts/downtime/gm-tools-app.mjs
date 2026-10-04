@@ -1,12 +1,18 @@
 import { uiText } from "../core/localization.mjs";
-import { MODULE_ID } from "./constants.mjs";
+import { isProjectAdministrator } from "../core/permissions.mjs?v=3.7.8-permissions-1";
+import { startupReport } from "../core/startup.mjs?v=3.7.8-lifecycle-phases-1";
+import { compatibilityReport } from "../integrations/compatibility-layer.mjs?v=3.7.8-argon-module-check-2";
+import { schedulerReport } from "../core/scheduler.mjs?v=3.7.8-central-scheduler-1";
+import { FLAGS, MODULE_ID } from "./constants.mjs";
 import { DowntimeDashboardApp } from "./dashboard-app.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
 import { evidenceKey, milestoneEvidence } from "../campaign/milestone-evidence.mjs";
-import { GMToolsService } from "./gm-tools-service.mjs?v=3.2.7-flag-database-2";
-import { milestoneEntries, actorLevel, highestMilestoneProgress, levelFromMilestones, sessionProgress } from "./session-service.mjs";
+import { GMToolsService } from "./gm-tools-service.mjs?v=3.7.8-activity-batch-1";
+import { isActiveCharacter, milestoneEntries, actorLevel, highestMilestoneProgress, isoWeekKey, levelFromMilestones, monthKey, passiveDowntimeConfig, SessionService, sessionProgress, tierOfPlay } from "./session-service.mjs";
 import { openVoidTaintConfig } from "../void-taint/config-app.mjs";
 import { applyActorSpellMigration, previewActorSpellMigration } from "../spell-actor-migration.mjs?v=3.5.0-actor-spell-migration-10";
+import { applyWorkingEffectMigration, previewWorkingEffectMigration } from "../effect-pack-migration.mjs?v=3.7.8-working-effects-2";
+import { migrateLegacyWorldActiveEffects, previewLegacyActiveEffects } from "../core/active-effect-migration.mjs?v=3.7.8-standard-effects-2";
 import {
   addVoidTaint,
   drawVoidTaintEffect,
@@ -32,17 +38,24 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       removeDashboardProject: DowntimeDashboardApp.removeProject,
       grantSelectedDowntime: DowntimeDashboardApp.grantSelectedDowntime,
       grantAllDowntime: DowntimeDashboardApp.grantAllDowntime,
+      toggleInactiveDowntime: DowntimeDashboardApp.toggleInactiveDowntime,
       saveDowntime: GMToolsApp.#saveDowntime,
       addMilestoneRow: GMToolsApp.#addMilestoneRow,
       removeMilestoneRow: GMToolsApp.#removeMilestoneRow,
       moveMilestoneRow: GMToolsApp.#moveMilestoneRow,
       selectTab: GMToolsApp.#selectTab,
       saveCharacter: GMToolsApp.#saveCharacter,
+      saveActivity: GMToolsApp.#saveActivity,
+      settlePassiveDowntime: GMToolsApp.#settlePassiveDowntime,
+      correctHistoricalSession: GMToolsApp.#correctHistoricalSession,
       saveProject: GMToolsApp.#saveProject,
       removeProject: GMToolsApp.#removeProject,
       unlockSession: GMToolsApp.#unlockSession,
       resetSession: GMToolsApp.#resetSession,
       repairSafe: GMToolsApp.#repairSafe,
+      deleteExpiredEffects: GMToolsApp.#deleteExpiredEffects,
+      migrateWorkingEffects: GMToolsApp.#migrateWorkingEffects,
+      migrateLegacyActiveEffects: GMToolsApp.#migrateLegacyActiveEffects,
       migrateActorSpells: GMToolsApp.#migrateActorSpells,
       undo: GMToolsApp.#undo,
       exportCharacter: GMToolsApp.#exportCharacter,
@@ -78,6 +91,9 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this.databaseDocumentUuid = null;
     this.databaseFlagAddress = "";
     this.databaseSelectedUuids = new Set();
+    this.effectCleanupResult = null;
+    this.effectPackMigrationResult = null;
+    this.legacyActiveEffectResult = null;
     this._milestoneAuditInitialized = false;
     this._updateHook = Hooks.on("updateActor", actor => {
       if (this.rendered && (["projects", "downtime"].includes(this.tab) || !this.actorUuid || actor.uuid === this.actorUuid)) this.render();
@@ -115,6 +131,30 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
         this.actorUuid = String(event.currentTarget.value ?? "");
         this.render();
       });
+    });
+    const activitySort = this.element.querySelector("[data-activity-sort]");
+    const activityLogin = this.element.querySelector("[data-activity-login]");
+    const updateActivityTable = () => {
+      const sort = activitySort?.value ?? "session";
+      const login = activityLogin?.value ?? "all";
+      for (const body of this.element.querySelectorAll("[data-activity-body]")) {
+        const rows = [...body.querySelectorAll("[data-activity-row]")];
+        for (const row of rows) row.hidden = login !== "all" && row.dataset.loginGroup !== login;
+        rows.sort((left, right) => {
+          if (sort === "name") return left.dataset.name.localeCompare(right.dataset.name, game.i18n.lang);
+          const key = sort === "login" ? "loginAt" : "sessionAt";
+          return Number(right.dataset[key]) - Number(left.dataset[key]) || left.dataset.name.localeCompare(right.dataset.name, game.i18n.lang);
+        });
+        for (const row of rows) body.append(row);
+      }
+    };
+    activitySort?.addEventListener("change", updateActivityTable);
+    activityLogin?.addEventListener("change", updateActivityTable);
+    updateActivityTable();
+    const sessionSearch = this.element.querySelector("[data-session-history-search]");
+    sessionSearch?.addEventListener("input", event => {
+      const query = event.currentTarget.value.trim().toLocaleLowerCase();
+      for (const row of this.element.querySelectorAll("[data-session-history-row]")) row.hidden = Boolean(query) && !row.dataset.search.includes(query);
     });
     const databaseType = this.element.querySelector("[data-database-type]");
     databaseType?.addEventListener("change", event => {
@@ -164,6 +204,74 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     const selected = this.actorUuid ? await GMToolsService.characterData(this.actorUuid) : null;
     const diagnostics = this.tab === "diagnostics" ? await GMToolsService.diagnostics() : [];
+    const legacyEffectFormulas = this.tab === "diagnostics" ? GMToolsService.legacyEffectFormulaSummary() : null;
+    const expiredTemporaryEffects = this.tab === "diagnostics" ? GMToolsService.expiredTemporaryEffectSummary() : null;
+    const effectCleanup = expiredTemporaryEffects ? {
+      ...expiredTemporaryEffects,
+      title: uiText("TOVF.EffectCleanup.Title", "Abgelaufene temporäre Effects"),
+      summary: uiText("TOVF.EffectCleanup.Summary", "{count} eindeutig abgelaufene temporäre Active Effects auf {actors} Actors gefunden.", expiredTemporaryEffects),
+      scope: uiText("TOVF.EffectCleanup.Scope", "Gelöscht werden nur Effects, die direkt auf einem Actor liegen, eine temporäre Dauer besitzen und von Foundry bereits als abgelaufen markiert wurden. Aktive, lediglich deaktivierte, dauerhafte und in Items eingebettete Effects bleiben erhalten."),
+      action: uiText("TOVF.EffectCleanup.Action", "Abgelaufene Effects löschen"),
+      result: this.effectCleanupResult
+    } : null;
+    const effectPackMigration = this.tab === "diagnostics" ? {
+      available: isProjectAdministrator() && game.packs.has("world.funktioniere-effekte"),
+      result: this.effectPackMigrationResult
+    } : null;
+    let legacyActiveEffects = null;
+    if (this.tab === "diagnostics") {
+      const available = isProjectAdministrator();
+      const entries = available ? await previewLegacyActiveEffects() : [];
+      const sources = new Map();
+      for (const entry of entries) {
+        const current = sources.get(entry.sourceKey) ?? { label: entry.sourceLabel, count: 0, repairable: entry.repairable };
+        current.count += 1;
+        sources.set(entry.sourceKey, current);
+      }
+      legacyActiveEffects = {
+        available,
+        count: entries.length,
+        repairable: entries.filter(entry => entry.repairable).length,
+        readOnly: entries.filter(entry => !entry.repairable).length,
+        sources: Array.from(sources.values()).sort((left, right) => right.count - left.count || left.label.localeCompare(right.label)),
+        result: this.legacyActiveEffectResult
+      };
+    }
+    let technicalDiagnostics = null;
+    if (this.tab === "diagnostics") {
+      const statusEntry = entry => ({
+        ...entry,
+        statusClass: ["failed", "incompatible"].includes(entry.status) ? "error"
+          : ["pending", "inactive", "skipped"].includes(entry.status) ? "warning" : "ok",
+        detail: entry.error?.message ?? entry.reason ?? "",
+        duration: Number.isFinite(entry.durationMs) ? `${entry.durationMs} ms` : ""
+      });
+      const scheduler = schedulerReport();
+      const startup = startupReport().map(statusEntry);
+      const compatibility = compatibilityReport().integrations.map(statusEntry);
+      const formatTechnicalDate = timestamp => timestamp
+        ? new Intl.DateTimeFormat(game.i18n.lang, { dateStyle: "medium", timeStyle: "medium" }).format(new Date(timestamp))
+        : game.i18n.localize("DOWNTIME_MANAGER.GMTools.Activity.Unknown");
+      technicalDiagnostics = {
+        startup,
+        startupSummary: `${startup.filter(entry => entry.status === "completed").length}/${startup.length}`,
+        startupClass: startup.some(entry => entry.statusClass === "error") ? "error" : startup.some(entry => entry.statusClass === "warning") ? "warning" : "ok",
+        compatibility,
+        compatibilitySummary: `${compatibility.filter(entry => ["completed", "inactive", "already-installed"].includes(entry.status)).length}/${compatibility.length}`,
+        compatibilityClass: compatibility.some(entry => entry.statusClass === "error") ? "error" : compatibility.some(entry => entry.statusClass === "warning") ? "warning" : "ok",
+        scheduler: {
+          active: scheduler.active,
+          statusClass: scheduler.tasks.some(task => task.lastError) ? "error" : scheduler.active ? "ok" : "warning",
+          responsibleGM: game.users.get(scheduler.responsibleGM)?.name ?? game.i18n.localize("DOWNTIME_MANAGER.Common.None"),
+          tasks: scheduler.tasks.map(task => ({ ...task,
+            statusClass: task.lastError ? "error" : task.running ? "warning" : "ok",
+            lastRun: formatTechnicalDate(task.lastFinishedAt),
+            nextRun: formatTechnicalDate(task.nextCheckAt),
+            error: task.lastError?.message ?? ""
+          }))
+        }
+      };
+    }
     let database = null;
     if (this.tab === "database") {
       const documents = GMToolsService.flagDocuments(this.databaseType, {
@@ -200,7 +308,70 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       };
     }
     const activeSession = GMToolsService.activeSession();
+    const sessionHistory = SessionService.historyEntries();
+    const formatDate = timestamp => timestamp
+      ? new Intl.DateTimeFormat(game.i18n.lang, { dateStyle: "medium", timeStyle: "short" }).format(new Date(timestamp))
+      : game.i18n.localize("DOWNTIME_MANAGER.GMTools.Activity.Unknown");
+    const relativeLogin = timestamp => {
+      if (!timestamp) return { label: game.i18n.localize("DOWNTIME_MANAGER.GMTools.Activity.Unknown"), group: "unknown" };
+      const weeks = Math.floor(Math.max(0, Date.now() - timestamp) / 604800000);
+      return weeks < 1
+        ? { label: game.i18n.localize("DOWNTIME_MANAGER.GMTools.Activity.WithinWeek"), group: "recent" }
+        : { label: weeks === 1 ? game.i18n.localize("DOWNTIME_MANAGER.GMTools.Activity.OverOneWeek")
+          : game.i18n.format("DOWNTIME_MANAGER.GMTools.Activity.OverWeeks", { weeks }), group: "older" };
+    };
+    const activityActors = actors.map(actor => {
+      const lastSession = sessionHistory.filter(record => (record.participants ?? []).some(participant => participant.actorUuid === actor.uuid))
+        .sort((left, right) => Number(right.awardedAt ?? right.correctedAt ?? 0) - Number(left.awardedAt ?? left.correctedAt ?? 0))[0];
+      const owners = game.users.filter(user => !user.isGM && ((user.character?.id ?? user.character) === actor.id
+        || actor.testUserPermission(user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER)));
+      const lastLoginAt = Math.max(0, ...owners.map(user => Number(user.getFlag(MODULE_ID, FLAGS.LAST_LOGIN_AT)) || 0));
+      const sessionAt = Number(lastSession?.awardedAt ?? lastSession?.correctedAt) || 0;
+      const login = relativeLogin(lastLoginAt);
+      return { uuid: actor.uuid, name: actor.name, img: actor.img, active: isActiveCharacter(actor),
+        sortName: actor.name.toLocaleLowerCase(game.i18n.lang), sessionAt, lastLoginAt, loginGroup: login.group,
+        lastSessionTitle: lastSession?.title || game.i18n.localize("DOWNTIME_MANAGER.GMTools.Activity.Never"),
+        lastSessionDate: sessionAt ? formatDate(sessionAt) : "", lastLogin: login.label };
+    });
+    activityActors.sort((left, right) => right.sessionAt - left.sessionAt || left.name.localeCompare(right.name, game.i18n.lang));
     const highestProgress = highestMilestoneProgress();
+    let guildOverview = null;
+    if (this.tab === "guild") {
+      const activeActors = actors.filter(isActiveCharacter);
+      const levels = activeActors.map(actorLevel).sort((a, b) => a - b);
+      const downtime = activeActors.map(actor => Number(DowntimeService.get(actor)) || 0).sort((a, b) => a - b);
+      const average = values => values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+      const median = values => values.length ? (values[Math.floor((values.length - 1) / 2)] + values[Math.ceil((values.length - 1) / 2)]) / 2 : 0;
+      const bars = entries => {
+        const maximum = Math.max(1, ...entries.map(entry => entry.count));
+        return entries.map(entry => ({ ...entry, percent: Math.round(entry.count / maximum * 100) }));
+      };
+      const tierCounts = [1, 2, 3, 4].map(tier => ({ label: `Tier ${tier}`, count: levels.filter(level => tierOfPlay(level) === tier).length }));
+      const classCounts = new Map();
+      for (const actor of activeActors) {
+        const progression = Object.values(actor.system?.progression?.classes ?? {});
+        const names = progression.length ? progression.map(entry => entry.document?.name ?? entry.name).filter(Boolean)
+          : actor.items.filter(item => item.type === "class").map(item => item.name);
+        for (const name of new Set(names)) classCounts.set(name, (classCounts.get(name) ?? 0) + 1);
+      }
+      const activeUuids = new Set(activeActors.map(actor => actor.uuid));
+      const weeks = Array.from({ length: 8 }, (_entry, index) => {
+        const date = new Date(); date.setDate(date.getDate() - (7 - index) * 7);
+        const key = isoWeekKey(date);
+        const records = sessionHistory.filter(record => record.week === key);
+        return { label: key.replace("-W", " · KW "), count: records.reduce((sum, record) => sum + (record.participants ?? []).filter(participant => activeUuids.has(participant.actorUuid)).length, 0), sessions: records.length };
+      });
+      guildOverview = {
+        activeCount: activeActors.length, inactiveCount: actors.length - activeActors.length,
+        averageLevel: average(levels).toFixed(1), medianLevel: median(levels).toFixed(1),
+        averageDowntime: average(downtime).toFixed(1), medianDowntime: median(downtime).toFixed(1),
+        highestLevel: highestProgress.level, highestTier: highestProgress.tier,
+        highestCharacterName: highestProgress.leaders[0]?.actor.name ?? "",
+        highestCharacterImg: highestProgress.leaders[0]?.actor.img ?? "icons/svg/mystery-man.svg",
+        tierBars: bars(tierCounts), classBars: bars([...classCounts].map(([label, count]) => ({ label, count })).sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, game.i18n.lang))),
+        sessionBars: bars(weeks)
+      };
+    }
     const milestoneMismatches = actors.map(actor => {
       const milestones = Math.max(0, Math.floor(Number(sessionProgress(actor).milestones) || 0));
       const actualLevel = actorLevel(actor);
@@ -213,12 +384,13 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       ...context,
       tab: this.tab,
       dashboard: ["projects", "downtime"].includes(this.tab) ? await DowntimeDashboardApp.prototype._prepareContext.call(this) : null,
-      tabs: ["characters", "projects", "downtime", "session", "voidTaint", "database", "diagnostics"].map(id => ({
+      tabs: ["characters", "activity", "projects", "downtime", "guild", "session", "voidTaint", "database", "diagnostics"].map(id => ({
         id,
         active: this.tab === id,
         label: id === "characters" ? uiText("TOVF.Interface.Milestones_a38757", "Meilensteine") : id === "projects" ? uiText("TOVF.Interface.ProjectOverview_b340e1", "Projektübersicht") : id === "downtime" ? "Downtime" : game.i18n.localize(`DOWNTIME_MANAGER.GMTools.Tabs.${id}`)
       })),
       actors: actors.map(actor => ({ uuid: actor.uuid, name: actor.name, img: actor.img, selected: actor.uuid === this.actorUuid })),
+      guildOverview,
       selected: selected ? {
         uuid: selected.actor.uuid,
         name: selected.actor.name,
@@ -230,6 +402,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
         sessionsPlayed: selected.progress.sessionsPlayed,
         lastMilestoneWeek: selected.progress.lastMilestoneWeek ?? "",
         passiveDowntime: JSON.stringify(selected.progress.passiveDowntime ?? {}, null, 2),
+        active: isActiveCharacter(selected.actor),
         projects: selected.projects.map(state => ({
           ...state,
           projectUuid: state.projectUuid ?? state.recipeUuid ?? "",
@@ -247,12 +420,33 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
         empty: !Object.keys(activeSession).length,
         json: JSON.stringify(activeSession, null, 2)
       },
+      sessionHistory: sessionHistory.slice().reverse().map(record => ({
+        id: String(record.id ?? ""), title: record.title || game.i18n.localize("DOWNTIME_MANAGER.Session.Untitled"),
+        date: formatDate(record.awardedAt ?? record.correctedAt), gmName: game.users.get(record.gmUserId)?.name ?? game.i18n.localize("DOWNTIME_MANAGER.Common.None"),
+        participantCount: record.participants?.length ?? 0, passiveCount: (record.passiveRecipients ?? []).filter(entry => Number(entry.awarded) > 0).length,
+        corrected: Boolean(record.correctedAt),
+        search: `${record.title ?? ""} ${game.users.get(record.gmUserId)?.name ?? ""} ${(record.participants ?? []).map(entry => entry.actorName).join(" ")}`.toLocaleLowerCase()
+      })),
+      activityActiveActors: activityActors.filter(actor => actor.active),
+      activityInactiveActors: activityActors.filter(actor => !actor.active),
+      settlement: {
+        period: passiveDowntimeConfig().period,
+        periodKey: passiveDowntimeConfig().period === "week" ? isoWeekKey() : monthKey()
+      },
+      canSettlePassiveDowntime: game.settings.get(MODULE_ID, "worldRole") === "primary"
+        && isProjectAdministrator(),
       highestProgress: {
         ...highestProgress,
         names: highestProgress.leaders.map(entry => entry.actor.name).join(", ") || game.i18n.localize("DOWNTIME_MANAGER.Common.None")
       },
       milestoneMismatches,
       diagnostics,
+      legacyEffectFormulas,
+      expiredTemporaryEffects,
+      effectCleanup,
+      effectPackMigration,
+      legacyActiveEffects,
+      technicalDiagnostics,
       voidTaintEnabled: voidTaintEnabled(),
       voidTaint: this.tab === "voidTaint" ? game.actors.filter(actor => actor.type === "pc").map(actor => ({
         uuid: actor.uuid,
@@ -381,6 +575,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       })),
       sessionsPlayed: root.querySelector('[name="sessionsPlayed"]')?.value,
       lastMilestoneWeek: root.querySelector('[name="lastMilestoneWeek"]')?.value,
+      active: root.querySelector('[name="characterActive"]')?.checked !== false,
       passiveDowntime: undefined
     };
     const confirmed = await foundry.applications.api.DialogV2.confirm({
@@ -395,6 +590,67 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       () => GMToolsService.updateCharacter(this.actorUuid, values),
       "DOWNTIME_MANAGER.GMTools.Notifications.CharacterSaved"
     );
+  }
+
+  static async #saveActivity(event) {
+    event.preventDefault();
+    const entries = Array.from(this.element.querySelectorAll('[name="characterActivity"]'), input => ({
+      actorUuid: input.value,
+      active: input.checked
+    }));
+    await this.#execute(
+      () => GMToolsService.updateActivity(entries),
+      "DOWNTIME_MANAGER.GMTools.Activity.Saved"
+    );
+  }
+
+  static async #settlePassiveDowntime(event) {
+    event.preventDefault();
+    if (game.settings.get(MODULE_ID, "worldRole") !== "primary" || !isProjectAdministrator()) {
+      return ui.notifications.error(game.i18n.localize("DOWNTIME_MANAGER.GMTools.Errors.SettlementAdminOnly"));
+    }
+    const config = passiveDowntimeConfig();
+    const period = this.element.querySelector('[name="settlementPeriod"]')?.value
+      || (config.period === "week" ? isoWeekKey() : monthKey());
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: game.i18n.localize("DOWNTIME_MANAGER.Session.Settle") },
+      content: `<p>${game.i18n.format("DOWNTIME_MANAGER.Session.SettleConfirm", { month: period })}</p>`
+    });
+    if (!confirmed) return;
+    await this.#execute(async () => {
+      const record = await SessionService.settle(period);
+      ui.notifications.info(game.i18n.format("DOWNTIME_MANAGER.Session.Settled", { count: record.recipients.length }));
+    });
+  }
+
+  static async #correctHistoricalSession(event, target) {
+    event.preventDefault();
+    const recordId = target.dataset.recordId;
+    if (!recordId) return;
+    try {
+      const correction = await SessionService.correctionDefaults(recordId);
+      const rows = correction.actors.map(actor => `<label class="sc-session-correction-row"><input type="checkbox" name="actors" value="${foundry.utils.escapeHTML(actor.actorUuid)}" ${actor.selected ? "checked" : ""}><strong>${foundry.utils.escapeHTML(actor.actorName)}</strong><span>${game.i18n.localize("DOWNTIME_MANAGER.Currency.GP")}</span><input type="number" name="gold.${foundry.utils.escapeHTML(actor.actorUuid)}" value="${actor.gold}" min="0" step="any"></label>`).join("");
+      const result = await foundry.applications.api.DialogV2.prompt({
+        classes: ["downtime-manager", "sc-session-correction-dialog"],
+        window: { title: game.i18n.format("DOWNTIME_MANAGER.Session.Correction.EditTitle", { title: correction.record.title }) },
+        position: { width: 620, height: 700 },
+        content: `<div class="standard-form"><p class="notes">${game.i18n.localize("DOWNTIME_MANAGER.Session.Correction.Hint")}</p><div class="sc-session-correction-list">${rows}</div></div>`,
+        ok: { label: game.i18n.localize("DOWNTIME_MANAGER.Session.Correction.Apply"), callback: (_dialogEvent, button) => {
+          const data = new FormData(button.form);
+          return { actorUuids: data.getAll("actors"), goldByActor: Object.fromEntries(correction.actors.map(actor => [actor.actorUuid, data.get(`gold.${actor.actorUuid}`)])) };
+        } }, rejectClose: false
+      });
+      if (!result || !await foundry.applications.api.DialogV2.confirm({
+        window: { title: game.i18n.localize("DOWNTIME_MANAGER.Session.Correction.Title") },
+        content: `<p>${game.i18n.localize("DOWNTIME_MANAGER.Session.Correction.Confirm")}</p>`
+      })) return;
+      await SessionService.correctSession({ recordId, ...result });
+      ui.notifications.info(game.i18n.localize("DOWNTIME_MANAGER.Session.Correction.Complete"));
+      await this.render({ force: true });
+    } catch (error) {
+      console.error(`${MODULE_ID} | Historical session correction failed`, error);
+      ui.notifications.error(error.message);
+    }
   }
 
   static async #saveProject(event, target) {
@@ -462,6 +718,68 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     });
   }
 
+  static async #deleteExpiredEffects(event) {
+    event.preventDefault();
+    const summary = GMToolsService.expiredTemporaryEffectSummary();
+    if (!summary.count) return;
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: uiText("TOVF.EffectCleanup.Title", "Abgelaufene temporäre Effects") },
+      content: `<p>${uiText("TOVF.EffectCleanup.Confirm", "{count} abgelaufene temporäre Active Effects auf {actors} Actors löschen?", summary)}</p><p class="notes">${uiText("TOVF.EffectCleanup.Scope", "Gelöscht werden nur Effects, die direkt auf einem Actor liegen, eine temporäre Dauer besitzen und von Foundry bereits als abgelaufen markiert wurden. Aktive, lediglich deaktivierte, dauerhafte und in Items eingebettete Effects bleiben erhalten.")}</p>`
+    });
+    if (!confirmed) return;
+    await this.#execute(async () => {
+      const count = await GMToolsService.deleteExpiredTemporaryEffects();
+      if (count) {
+        this.effectCleanupResult = uiText("TOVF.EffectCleanup.Result", "{count} abgelaufene temporäre Active Effects wurden gelöscht. Die Änderung kann oben über Rückgängig wiederhergestellt werden.", { count });
+        ui.notifications.info(uiText("TOVF.EffectCleanup.Deleted", "{count} abgelaufene temporäre Active Effects wurden gelöscht.", { count }));
+      } else {
+        this.effectCleanupResult = uiText("TOVF.EffectCleanup.NothingDeleted", "Es wurde nichts gelöscht. Seit der Vorschau waren keine passenden Effects mehr vorhanden.");
+        ui.notifications.warn(this.effectCleanupResult);
+      }
+    });
+  }
+
+  static async #migrateWorkingEffects(event) {
+    event.preventDefault();
+    await this.#execute(async () => {
+      ui.notifications.info("Verwendungen der sieben Ersatz-Effekte werden gesucht …");
+      const preview = await previewWorkingEffectMigration();
+      if (!preview.available) {
+        ui.notifications.warn("Das Kompendium Funktioniere Effekte ist nicht mehr vorhanden.");
+        return;
+      }
+      const confirmed = await foundry.applications.api.DialogV2.confirm({
+        window: { title: "Funktionierende Effekte ersetzen" },
+        content: `<p><strong>${preview.effects} Effekte</strong>: ${preview.references} Referenzen in ${preview.documents} Dokumenten werden durch die Black-Flag-Originale ersetzt.</p><p class="notes">Danach wird erneut geprüft. Das Weltkompendium wird nur gelöscht, wenn keine alte Referenz mehr vorhanden ist.</p>`
+      });
+      if (!confirmed) return;
+      const result = await applyWorkingEffectMigration();
+      this.effectPackMigrationResult = `${result.references} Referenzen in ${result.documents} Dokumenten ersetzt; das Kompendium wurde gelöscht.`;
+      ui.notifications.info(this.effectPackMigrationResult, { permanent: true });
+    });
+  }
+
+  static async #migrateLegacyActiveEffects(event) {
+    event.preventDefault();
+    if (!isProjectAdministrator()) throw new Error("Diese Weltmigration erfordert einen vollständigen Spielleiterzugang.");
+    const entries = await previewLegacyActiveEffects();
+    const repairable = entries.filter(entry => entry.repairable);
+    if (!repairable.length) return;
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: "Veraltete Active Effects migrieren" },
+      content: `<p><strong>${repairable.length}</strong> Active Effects mit dem ungültigen Rohdatentyp <code>standard</code> auf <strong>${new Set(repairable.map(entry => entry.parentUuid)).size}</strong> Dokumenten zu <code>base</code> migrieren?</p><p class="notes">Geändert werden Weltdokumente und nicht gesperrte Weltkompendien. System-, Black-Flag- und Modulkompendien bleiben unverändert.</p>`
+    });
+    if (!confirmed) return;
+    await this.#execute(async () => {
+      const result = await migrateLegacyWorldActiveEffects();
+      const remainingRepairable = result.remaining.filter(entry => entry.repairable).length;
+      const readOnly = result.remaining.length - remainingRepairable;
+      this.legacyActiveEffectResult = `${result.migrated} Effects migriert; ${remainingRepairable} reparierbare und ${readOnly} schreibgeschützte Quellen verbleiben.`;
+      if (remainingRepairable) ui.notifications.warn(this.legacyActiveEffectResult);
+      else ui.notifications.info(this.legacyActiveEffectResult);
+    });
+  }
+
   static async #migrateActorSpells(event) {
     event.preventDefault();
     await this.#execute(async () => {
@@ -519,6 +837,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     event.preventDefault();
     await this.#execute(async () => {
       const changed = await GMToolsService.undo();
+      if (changed) this.effectCleanupResult = null;
       ui.notifications[changed ? "info" : "warn"](game.i18n.localize(changed
         ? "DOWNTIME_MANAGER.GMTools.Notifications.Undone"
         : "DOWNTIME_MANAGER.GMTools.Notifications.NothingToUndo"));

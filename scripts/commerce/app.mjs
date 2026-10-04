@@ -1,15 +1,18 @@
 import { uiText } from "../core/localization.mjs";
 import { MODULE_ID } from "../core/constants.mjs";
+import { subscribeModuleEvent } from "../core/events.mjs?v=3.7.8-module-events-1";
+import { deleteExistingEmbeddedDocuments } from "../core/document-operations.mjs?v=3.7.8-safe-documents-1";
 import { selectCharacters } from "../character-picker.mjs";
 import { getSystemAdapter } from "../downtime/system-adapter.mjs";
 import { formatCopper, itemQuantity, priceInCopper, purse, quantityForPrice, quantityUpdate } from "./currency.mjs?v=3.5.0-item-quantity-1";
-import { broadcastPeerTrade, commerceRequest } from "./socket.mjs?v=3.7.1-offer-access-1";
-import { AUCTION_HOUSE_FLAG, commerceState, isAuctionHouse, merchantAccess, merchantAllowsActor, merchantAvailableToUser, merchantConfig, merchantItemPurchaseAccess, merchantStockQuantity, ownedCharacters, rarityMinimumLevel } from "./service.mjs?v=3.7.1-offer-access-1";
-import { addItem, cleanTransferredItem } from "./transactions.mjs?v=3.7.6-shop-table-stacking-1";
+import { broadcastPeerTrade, commerceRequest } from "./socket.mjs?v=3.7.8-runtime-audit-1";
+import { AUCTION_HOUSE_FLAG, commerceState, enableMerchantViewerAccess, isAuctionHouse, merchantAccess, merchantAllowsActor, merchantAvailableToUser, merchantConfig, merchantItemPurchaseAccess, merchantStockQuantity, ownedCharacters, rarityMinimumLevel } from "./service.mjs?v=3.7.8-runtime-audit-1";
+import { addItem, cleanTransferredItem } from "./transactions.mjs?v=3.7.8-runtime-audit-1";
+import { RestockConfigApp } from "./restock-app.mjs?v=3.7.8-runtime-audit-1";
 import {
   addMerchantSpellScrollOffer, createSpellScrollData, merchantSpellScrollOffers,
   resolveSpellScrollOffer, saveMerchantSpellScrollOffers
-} from "../spell-scrolls.mjs?v=3.7.1-offer-access-1";
+} from "../spell-scrolls.mjs?v=3.7.8-clearance-label-1";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const TRADEABLE_TYPES = new Set(["ammunition", "armor", "consumable", "container", "gear", "sundry", "tool", "weapon"]);
@@ -154,8 +157,15 @@ function inventoryEntries(actor, multiplier, config, { management = false, disco
   return actor.items.filter(item => item.type !== "currency" && TRADEABLE_TYPES.has(item.type)).map(item => {
     const category = categoryData(item);
     const itemConfig = item.getFlag(MODULE_ID, "merchantItem") ?? {};
+    const newArrival = itemConfig.newArrival === true;
     const hidden = itemConfig.hidden === true;
     const discountPercent = discounts ? Math.clamp(Number(itemConfig.discountPercent) || 0, 0, 100) : 0;
+    const automaticClearance = itemConfig.discountSource === "clearance" || (!itemConfig.discountSource && itemConfig.arrivedAt > 0
+      && itemConfig.discountAt === 0 && Number(itemConfig.automaticDiscountPercent) > 0
+      && discountPercent === Number(itemConfig.automaticDiscountPercent));
+    const discountLabel = automaticClearance
+      ? uiText("TOVF.Interface.ClearanceSale_1d7f2a", "Abverkauf")
+      : String(itemConfig.discountLabel || uiText("TOVF.Interface.OfferLabel_4bbf5e", "Angebot"));
     const quantity = merchantStockQuantity(item);
     const originalPriceCopper = priceInCopper(item, multiplier);
     const effectiveMultiplier = multiplier * (1 - discountPercent / 100);
@@ -163,9 +173,9 @@ function inventoryEntries(actor, multiplier, config, { management = false, disco
     const priceQuantity = quantityForPrice(item);
     const detailLabel = [config.displayQuantity ? uiText("TOVF.Interface.P0Available_a4e8b5", "{p0} verfügbar", { p0: (quantity) }) : "", priceQuantity > 1 ? uiText("TOVF.Interface.PriceForP0_223c19", "Preis für {p0}", { p0: (priceQuantity) }) : ""].filter(Boolean).join(" · ");
     return { id: item.id, actorId: actor.id, name: item.name, img: item.img, quantity, quantityForPrice: priceQuantity, detailLabel, categoryId: category.id,
-      categoryLabel: category.label, hidden, visible: management || (!hidden && (config.showZeroQuantity || quantity > 0)),
+      categoryLabel: category.label, hidden, newArrival, visible: management || (!hidden && (config.showZeroQuantity || quantity > 0)),
       ...merchantItemPurchaseAccess(item, buyer),
-      discounted: discountPercent > 0, discountPercent, originalPrice: formatCopper(originalPriceCopper),
+      discounted: discountPercent > 0, discountPercent, discountLabel, originalPrice: formatCopper(originalPriceCopper),
       originalPriceCoins: priceCoins(item, multiplier), priceCopper: effectivePriceCopper,
       price: formatCopper(effectivePriceCopper), priceCoins: priceCoins(item, effectiveMultiplier) };
   });
@@ -174,18 +184,27 @@ function inventoryEntries(actor, multiplier, config, { management = false, disco
 function spellScrollOfferEntries(actor, multiplier, config, { management = false, discounts = false, buyer = null } = {}) {
   if (!actor) return [];
   return merchantSpellScrollOffers(actor).map(offer => {
+    const circle = Math.max(0, Math.floor(Number(offer.circle) || 0));
+    const circleLabel = circle === 0 ? uiText("TOVF.Library.SpellCircle.Cantrip", "Cantrip")
+      : uiText("TOVF.Library.SpellCircle.Circle", "Circle {circle}", { circle });
+    const category = { id: `spell-scroll:circle-${String(circle).padStart(2, "0")}`, label: `Spell Scroll: ${circleLabel}` };
     const itemLike = { type: "consumable", system: { type: { category: "scroll" }, rarity: offer.rarity }, merchantItem: offer };
-    const category = categoryData(itemLike);
     const hidden = offer.hidden === true;
+    const newArrival = offer.newArrival === true;
     const discountPercent = discounts ? Math.clamp(Number(offer.discountPercent) || 0, 0, 100) : 0;
+    const automaticClearance = offer.discountSource === "clearance" || (!offer.discountSource && offer.arrivedAt > 0
+      && offer.discountAt === 0 && offer.automaticDiscountPercent > 0 && discountPercent === offer.automaticDiscountPercent);
+    const discountLabel = automaticClearance
+      ? uiText("TOVF.Interface.ClearanceSale_1d7f2a", "Abverkauf")
+      : String(offer.discountLabel || uiText("TOVF.Interface.OfferLabel_4bbf5e", "Angebot"));
     const originalPriceCopper = Math.round(Math.max(0, Number(offer.price) || 0) * 100 * multiplier);
     const effectivePriceCopper = Math.round(originalPriceCopper * (1 - discountPercent / 100));
     const detailLabel = config.displayQuantity ? uiText("TOVF.Interface.P0Available_a4e8b5", "{p0} verfügbar", { p0: (offer.quantity) }) : "";
     return { id: offer.id, offerId: offer.id, virtual: true, actorId: actor.id, name: offer.name, img: offer.img,
       quantity: offer.quantity, quantityForPrice: 1, detailLabel, categoryId: category.id, categoryLabel: category.label,
-      hidden, visible: management || (!hidden && (config.showZeroQuantity || offer.quantity > 0)),
+      hidden, newArrival, visible: management || (!hidden && (config.showZeroQuantity || offer.quantity > 0)),
       ...merchantItemPurchaseAccess(itemLike, buyer),
-      discounted: discountPercent > 0, discountPercent,
+      discounted: discountPercent > 0, discountPercent, discountLabel,
       originalPrice: formatCopper(originalPriceCopper), originalPriceCoins: copperPriceCoins(originalPriceCopper),
       priceCopper: effectivePriceCopper, price: formatCopper(effectivePriceCopper), priceCoins: copperPriceCoins(effectivePriceCopper) };
   });
@@ -219,6 +238,16 @@ async function numberPrompt({ title, label, value = 1, min = 1, step = 1 }) {
   return foundry.applications.api.DialogV2.prompt({ classes: ["tovf-commerce-dialog"], window: { title },
     content: `<div class="form-group"><label for="tovf-commerce-number">${label}</label><input id="tovf-commerce-number" name="value" type="number" value="${value}" min="${min}" step="${step}"></div>`,
     ok: { label: uiText("TOVF.Interface.Confirm_2019ff", "Bestätigen"), callback: (_event, button) => Number(button.form.elements.value.value) }, rejectClose: false });
+}
+
+async function discountPrompt({ title, discountPercent = 0, discountLabel = "" }) {
+  const esc = value => foundry.utils.escapeHTML(String(value ?? ""));
+  return foundry.applications.api.DialogV2.prompt({ classes: ["tovf-commerce-dialog"], window: { title },
+    content: `<div class="form-group"><label>${uiText("TOVF.Interface.DiscountPercentage_69320b", "Rabatt in Prozent")}</label><input name="discountPercent" type="number" value="${esc(discountPercent)}" min="0" step="1"></div><div class="form-group"><label>${uiText("TOVF.Interface.DiscountLabel_7c2a91", "Bezeichnung")}</label><input name="discountLabel" type="text" value="${esc(discountLabel || uiText("TOVF.Interface.OfferLabel_4bbf5e", "Angebot"))}"></div>`,
+    ok: { label: uiText("TOVF.Interface.Confirm_2019ff", "Bestätigen"), callback: (_event, button) => ({
+      discountPercent: Number(button.form.elements.discountPercent.value),
+      discountLabel: button.form.elements.discountLabel.value.trim()
+    }) }, rejectClose: false });
 }
 
 async function itemsFromTable(table, count, { quantityMin = 1, quantityMax = 1 } = {}) {
@@ -255,6 +284,17 @@ async function openItemPreview(source, viewingActor = null) {
   const data = foundry.utils.deepClone(source?.toObject ? source.toObject() : source);
   if (!data) return false;
   try {
+    const sourceActivities = source?.system?.activities;
+    if (sourceActivities) {
+      const activities = sourceActivities.contents
+        ?? (typeof sourceActivities.values === "function" ? [...sourceActivities.values()] : Object.values(sourceActivities));
+      data.system ??= {};
+      data.system.activities = Object.fromEntries(activities.map(activity => {
+        const activityData = activity?.toObject ? activity.toObject() : foundry.utils.deepClone(activity);
+        const activityId = activityData?._id ?? activity?.id;
+        return activityId ? [activityId, activityData] : null;
+      }).filter(Boolean));
+    }
     delete data.folder;
     delete data.ownership;
     data._id = foundry.utils.randomID();
@@ -437,6 +477,7 @@ export async function configureMerchantActor(actor, app = null) {
   if (!game.user.isGM || !actor) return;
   const current = merchantConfig(actor);
   await actor.setFlag(MODULE_ID, "merchant", { ...current, enabled: true });
+  await enableMerchantViewerAccess(actor);
   app?.render?.();
   return openCommerce({ mode: "merchant", merchantId: actor.id, shopPage: "management" });
 }
@@ -458,7 +499,7 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
       selectMerchantCharacters: this.#selectMerchantCharacters,
       configureMerchantRequirements: this.#configureMerchantRequirements,
       deleteMerchantItem: this.#deleteMerchantItem, clearMerchantItems: this.#clearMerchantItems,
-      toggleMerchantItem: this.#toggleMerchantItem, populateFromTable: this.#populateFromTable,
+      toggleMerchantItem: this.#toggleMerchantItem, populateFromTable: this.#populateFromTable, configureRestock: this.#configureRestock,
       chooseMerchantImage: this.#chooseMerchantImage, openMerchantItem: this.#openMerchantItem,
       configureOfferAccess: this.#configureOfferAccess, setItemDiscount: this.#setItemDiscount, setItemPriceQuantity: this.#setItemPriceQuantity,
       setStockQuantity: this.#setStockQuantity, openAuctionItem: this.#openAuctionItem
@@ -473,10 +514,30 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
   constructor(options = {}) { super(options); this.mode = options.mode ?? "merchant"; this.shopPage = options.shopPage ?? "buy";
     this.actorId = options.actorId ?? null; this.merchantId = options.merchantId ?? null; this.auctionHouseId = options.auctionHouseId ?? null;
     this.category = ""; this.search = ""; this.sort = "type"; this.auctionPage = options.auctionPage ?? "auctions"; this.tradeId = options.tradeId ?? null;
-    this.merchantSessionId = foundry.utils.randomID(); }
+    this.merchantSessionId = foundry.utils.randomID(); this._scrollPositions = new Map(); this._renderedScrollKey = null; }
   _operationPending = false;
+  _scrollKey() { return [this.mode, this.shopPage, this.auctionPage, this.merchantId ?? "", this.actorId ?? "", this.auctionHouseId ?? ""].join(":"); }
+  _captureScrollPositions() {
+    if (!this.element || !this._renderedScrollKey) return;
+    const positions = {};
+    for (const selector of [".tovf-shop-list", ".tovf-merchant-content.management", ".tovf-merchant-sidebar", ".tovf-auction-list", ".tovf-commerce-panel", ".tovf-request-list", ".tovf-live-trade-items"]) {
+      const element = this.element.querySelector(selector);
+      if (element) positions[selector] = { top: element.scrollTop, left: element.scrollLeft };
+    }
+    this._scrollPositions.set(this._renderedScrollKey, positions);
+  }
+  render(options = {}, _options = {}) {
+    this._captureScrollPositions();
+    return super.render(options, _options);
+  }
   _onRender(context, options) {
     super._onRender(context, options);
+    this._renderedScrollKey = this._scrollKey();
+    const positions = this._scrollPositions.get(this._renderedScrollKey) ?? {};
+    for (const [selector, position] of Object.entries(positions)) {
+      const element = this.element.querySelector(selector);
+      if (element) { element.scrollTop = position.top; element.scrollLeft = position.left; }
+    }
     for (const [selector, property] of [["[name=actorId]", "actorId"], ["[name=merchantId]", "merchantId"], ["[name=category]", "category"], ["[name=sort]", "sort"]]) {
       this.element.querySelector(selector)?.addEventListener("change", event => {
         this[property] = event.currentTarget.value;
@@ -702,7 +763,8 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
       auctions, auctionCategories, requests, requestCategories, auctionPageAuctions: this.auctionPage === "auctions",
       auctionPageRequests: this.auctionPage === "requests", auctionHouse: auctionHouse && { id: auctionHouse.id, name: auctionHouse.name,
         img: auctionHouse.img, description: auctionDescription }, trades, activeTrade, isGM: game.user.isGM,
-      canSell: !config.purchaseOnly, rollTables: game.tables.map(t => ({ id: t.id, name: t.name })) };
+      canSell: !config.purchaseOnly, rollTables: game.tables.map(t => ({ id: t.id, name: t.name })),
+      intervalUnits: [{ id: "minutes", label: "Minuten" }, { id: "hours", label: "Stunden" }, { id: "days", label: "Tage" }, { id: "weeks", label: "Wochen" }, { id: "months", label: "Monate" }] };
   }
   async _run(operation) {
     if (this._operationPending) return null;
@@ -777,11 +839,7 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     const item = actor?.items.get(target.dataset.itemId);
     if (!item) return ui.notifications.warn(uiText("TOVF.Interface.TheItemWasNotFound_56f5aa", "Der Gegenstand wurde nicht gefunden."));
-    if (this.shopPage === "management" && game.user.isGM) {
-      item.sheet.render(true);
-      return;
-    }
-    if (!await openItemPreview(item, this._actor())) ui.notifications.warn(uiText("TOVF.Interface.TheItemCouldNotBeOpened_7ce3ef", "Der Gegenstand konnte nicht geöffnet werden."));
+    item.sheet.render(true);
   }
   static async #openAuctionItem(_event, target) {
     const auction = commerceState().auctions.find(entry => entry.id === target.dataset.auctionId);
@@ -833,15 +891,24 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (target.dataset.offerId) {
       const actor = this._merchant(); const offers = merchantSpellScrollOffers(actor);
       const offer = offers.find(entry => entry.id === target.dataset.offerId); if (!offer) return;
-      const discountPercent = await numberPrompt({ title: uiText("TOVF.Interface.DiscountForP0_624a10", "Rabatt für {p0}", { p0: (offer.name) }), label: uiText("TOVF.Interface.DiscountPercentage_69320b", "Rabatt in Prozent"), value: offer.discountPercent, min: 0, step: 1 });
-      if (discountPercent == null) return; offer.discountPercent = Math.clamp(Math.round(discountPercent), 0, 100);
+      const result = await discountPrompt({ title: uiText("TOVF.Interface.DiscountForP0_624a10", "Rabatt für {p0}", { p0: (offer.name) }), discountPercent: offer.discountPercent, discountLabel: offer.discountLabel });
+      if (!result) return;
+      offer.discountPercent = Math.clamp(Math.round(result.discountPercent) || 0, 0, 100);
+      offer.discountLabel = result.discountLabel || uiText("TOVF.Interface.OfferLabel_4bbf5e", "Angebot");
+      offer.discountSource = "manual";
       await saveMerchantSpellScrollOffers(actor, offers); await this.render({ force: true }); return;
     }
     const item = this._merchant()?.items.get(target.dataset.itemId); if (!item) return;
-    const discountPercent = await numberPrompt({ title: uiText("TOVF.Interface.DiscountForP0_624a10", "Rabatt für {p0}", { p0: (item.name) }), label: uiText("TOVF.Interface.DiscountPercentage_69320b", "Rabatt in Prozent"), value: Number(target.dataset.discount) || 0, min: 0, step: 1 });
-    if (discountPercent == null) return;
     const current = item.getFlag(MODULE_ID, "merchantItem") ?? {};
-    await item.setFlag(MODULE_ID, "merchantItem", { ...current, discountPercent: Math.clamp(Math.round(discountPercent), 0, 100) });
+    const result = await discountPrompt({ title: uiText("TOVF.Interface.DiscountForP0_624a10", "Rabatt für {p0}", { p0: (item.name) }), discountPercent: current.discountPercent ?? (Number(target.dataset.discount) || 0), discountLabel: current.discountLabel });
+    if (!result) return;
+    const nextState = {
+      ...current,
+      discountPercent: Math.clamp(Math.round(result.discountPercent) || 0, 0, 100),
+      discountLabel: result.discountLabel || uiText("TOVF.Interface.OfferLabel_4bbf5e", "Angebot")
+    };
+    nextState.discountSource = "manual";
+    await item.setFlag(MODULE_ID, "merchantItem", nextState);
     await this.render({ force: true });
   }
   static async #setItemPriceQuantity(_event, target) {
@@ -882,11 +949,11 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
   static async #deleteMerchantItem(_event, target) { const actor = this._merchant(); if (!actor) return;
     if (target.dataset.offerId) { await saveMerchantSpellScrollOffers(actor, merchantSpellScrollOffers(actor).filter(entry => entry.id !== target.dataset.offerId)); await this.render({ force: true }); return; }
-    await actor.deleteEmbeddedDocuments("Item", [target.dataset.itemId]); await this.render({ force: true }); }
+    await deleteExistingEmbeddedDocuments(actor, "Item", [target.dataset.itemId]); await this.render({ force: true }); }
   static async #clearMerchantItems() { const actor = this._merchant(); if (!actor) return;
     const confirmed = await foundry.applications.api.DialogV2.confirm({ classes: ["tovf-commerce-dialog"], window: { title: uiText("TOVF.Interface.ClearMerchantInventory_bcc7a2", "Händlerinventar leeren") }, content: `<p>${uiText("TOVF.Interface.RemoveAllTradeableItemsFromThisMerchant_300ce7", "Alle handelbaren Gegenstände dieses Händlers entfernen?")}</p>` });
     if (!confirmed) return; const ids = actor.items.filter(i => i.type !== "currency" && TRADEABLE_TYPES.has(i.type)).map(i => i.id);
-    if (ids.length) await actor.deleteEmbeddedDocuments("Item", ids); await saveMerchantSpellScrollOffers(actor, []); await this.render({ force: true }); }
+    if (ids.length) await deleteExistingEmbeddedDocuments(actor, "Item", ids); await saveMerchantSpellScrollOffers(actor, []); await this.render({ force: true }); }
   static async #populateFromTable() { const actor = this._merchant(); const tableId = this.element.querySelector("[name=rollTableId]")?.value;
     const count = Math.max(1, Math.floor(Number(this.element.querySelector("[name=rollCount]")?.value) || 1));
     const quantityMin = Math.max(1, Math.floor(Number(this.element.querySelector("[name=rollQuantityMin]")?.value) || 1));
@@ -900,6 +967,7 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
       total += quantity;
     }
     ui.notifications.info(uiText("TOVF.Interface.AddedP0ItemsFromP1RollsP2_40bd0b", "{p0} Gegenstände aus {p1} Würfen hinzugefügt ({p2} verschiedene Items).", { p0: (total), p1: (count), p2: (items.length) })); await this.render({ force: true }); }
+  static #configureRestock() { const actor = this._merchant(); if (actor) new RestockConfigApp(actor).render(true); }
   static async #configureMerchant() { if (!game.user.isGM) return; const actors = game.actors.map(a => `<option value="${a.id}">${a.name}</option>`).join("");
     const id = await foundry.applications.api.DialogV2.prompt({ classes: ["tovf-commerce-dialog"], window: { title: uiText("TOVF.Interface.ConfigureMerchant_f3b57a", "Händler einrichten") }, content: `<select name="actorId">${actors}</select>`,
       ok: { label: "Einrichten", callback: (_e, b) => b.form.elements.actorId.value }, rejectClose: false }); if (id) await configureMerchantActor(game.actors.get(id)); }
@@ -1019,6 +1087,13 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
 function actorOwned(id) { return game.actors.get(id)?.testUserPermission(game.user, "OWNER") === true; }
 let app;
+let merchantRefreshTimer;
+
+function refreshOpenMerchant(actorId) {
+  if (!app?.element || app.mode !== "merchant" || app.merchantId !== actorId) return;
+  clearTimeout(merchantRefreshTimer);
+  merchantRefreshTimer = setTimeout(() => void app?.render({ force: true }), 100);
+}
 const promptedTrades = new Set();
 export function openCommerce(options = {}) {
   if (options.merchantId) {
@@ -1170,6 +1245,7 @@ async function deleteOwnedActor(actor) {
 }
 
 export function registerCommerceControls() {
+  subscribeModuleEvent("merchantStockChanged", ({ actorId }) => refreshOpenMerchant(actorId));
   Hooks.on(`${MODULE_ID}.commerceSync`, handleTradeSync);
   Hooks.on(`${MODULE_ID}.peerTrade`, handlePeerTrade);
   Hooks.on("getUserContextOptions", (_html, options) => options.push({ label: uiText("TOVF.Interface.StartTrade_dc3cad", "Handel starten"), icon: '<i class="fa-solid fa-handshake"></i>',
@@ -1185,4 +1261,5 @@ export function registerCommerceControls() {
     visible: element => { const actor = game.actors.get(element.dataset.entryId ?? element.dataset.documentId); return !game.user.isGM && actor?.testUserPermission(game.user, "OWNER"); },
     onClick: (_event, element) => void deleteOwnedActor(game.actors.get(element.dataset.entryId ?? element.dataset.documentId)) }));
 }
+
 export { CommerceApp };

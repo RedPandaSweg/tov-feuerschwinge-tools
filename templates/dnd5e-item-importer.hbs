@@ -1,0 +1,38 @@
+<div class="tovf-dnd5e-item-importer">
+  <button type="button" data-action="createTarget"><i class="fa-solid fa-folder-plus" inert></i> {{labels.createTarget}}</button>
+  {{#if bundleTargetPacks.length}}
+  <fieldset>
+    <legend>{{labels.bundleTitle}}</legend>
+    <p class="hint">{{labels.bundleHint}}</p>
+    <div class="form-group"><label>{{labels.bundleFile}}</label><div class="form-fields"><input type="file" name="bundleFile" accept=".json,application/json"></div></div>
+    <div class="form-group"><label>{{labels.target}}</label><div class="form-fields"><select name="bundleTargetPack">{{selectOptions bundleTargetPacks valueAttr="id" labelAttr="name"}}</select></div></div>
+    <div class="form-group"><label>{{labels.duplicates}}</label><div class="form-fields"><input name="bundleSkipDuplicates" type="checkbox" checked></div></div>
+    <div class="form-group"><label>{{labels.replace}}</label><div class="form-fields"><input name="bundleReplaceExisting" type="checkbox"></div></div>
+    <button type="button" data-action="importBundle"><i class="fa-solid fa-file-import" inert></i> {{labels.bundleImport}}</button>
+  </fieldset>
+  {{/if}}
+  {{#if targetPacks.length}}
+  <fieldset>
+    <legend>{{labels.jsonTitle}}</legend>
+    <p class="hint">{{labels.jsonHint}}</p>
+    <div class="form-group"><label>{{labels.jsonFile}}</label><div class="form-fields"><input type="file" name="jsonFile" accept=".json,application/json"></div></div>
+    <div class="form-group"><label>{{labels.target}}</label><div class="form-fields"><select name="jsonTargetPack">{{selectOptions targetPacks valueAttr="id" labelAttr="name"}}</select></div></div>
+    <div class="form-group"><label>{{labels.duplicates}}</label><div class="form-fields"><input name="jsonSkipDuplicates" type="checkbox" checked></div></div>
+    <div class="form-group"><label>{{labels.replace}}</label><div class="form-fields"><input name="jsonReplaceExisting" type="checkbox"></div></div>
+    <button type="button" data-action="importJson"><i class="fa-solid fa-file-import" inert></i> {{labels.jsonImport}}</button>
+  </fieldset>
+  {{/if}}
+  <p class="hint">{{labels.hint}}</p>
+  {{#if ddbImporterActive}}<p class="hint">{{labels.ddbHint}}</p>{{/if}}
+  {{#if sourcePacks.length}}
+    {{#if targetPacks.length}}
+      <div class="form-group"><label>{{labels.source}}</label><div class="form-fields"><select name="sourcePack">{{selectOptions sourcePacks valueAttr="id" labelAttr="name"}}</select></div></div>
+      <div class="form-group"><label>{{labels.target}}</label><div class="form-fields"><select name="targetPack">{{selectOptions targetPacks valueAttr="id" labelAttr="name"}}</select></div></div>
+      <div class="form-group"><label>{{labels.filter}}</label><div class="form-fields"><input name="query" type="search" placeholder="{{labels.filterHint}}"></div></div>
+      <div class="form-group"><label>{{labels.duplicates}}</label><div class="form-fields"><input name="skipDuplicates" type="checkbox" checked></div></div>
+      <div class="form-group"><label>{{labels.replace}}</label><div class="form-fields"><input name="replaceExisting" type="checkbox"></div></div>
+      <p class="hint">{{labels.targetHint}}</p>
+      <button type="button" data-action="import"><i class="fa-solid fa-file-import" inert></i> {{labels.import}}</button>
+    {{else}}<p class="warning">{{labels.noTarget}}</p>{{/if}}
+  {{else}}<p class="warning">{{labels.noSource}}</p>{{/if}}
+</div>

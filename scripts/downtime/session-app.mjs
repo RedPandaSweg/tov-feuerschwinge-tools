@@ -1,8 +1,9 @@
 import { MODULE_ID, SETTINGS } from "./constants.mjs";
 import { WORLD_ROLES } from "../core/constants.mjs";
-import { cleanupSessionImport, exportSession, exportSessionResult, importSession, importSessionResult } from "../transfer/session-transfer.mjs";
+import { isOperationalGM } from "../core/permissions.mjs?v=3.7.8-permissions-1";
+import { cleanupSessionImport, exportSession, exportSessionResult, importSession, importSessionResult, sessionImportHistory } from "../transfer/session-transfer.mjs?v=3.7.8-standard-effects-2";
 import { DowntimeService } from "./downtime-service.mjs";
-import { isoWeekKey, levelFromMilestones, monthKey, passiveDowntimeConfig, playerCharacters, rewardForLevel, sessionRewardDetails, sessionRewards, SessionService, sessionProgress } from "./session-service.mjs";
+import { isActiveCharacter, isoWeekKey, levelFromMilestones, monthKey, passiveDowntimeConfig, playerCharacters, rewardForLevel, sessionRewardDetails, sessionRewards, SessionService, sessionProgress } from "./session-service.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -18,6 +19,7 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
       selectTokens: this.#selectTokens,
       selectAll: this.#selectAll,
       selectNone: this.#selectNone,
+      toggleInactive: this.#toggleInactive,
       save: this.#save,
       award: this.#award,
       settle: this.#settle,
@@ -29,6 +31,8 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
       workflowExportResult: this.#workflowExportResult,
       workflowImportResult: this.#workflowImportResult,
       workflowCleanup: this.#workflowCleanup,
+      workflowCleanupHistory: this.#workflowCleanup,
+      clearCleanedImportHistory: this.#clearCleanedImportHistory,
       workflowReset: this.#workflowReset,
       newSession: this.#newSession
     }
@@ -111,7 +115,13 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     const actors = [];
     const guildActors = playerCharacters();
-    for (const actor of guildActors) {
+    const visibleGuildActors = guildActors.filter(actor => {
+      const transferId = actor.getFlag(MODULE_ID, "transfer")?.id
+        ?? `world:${game.world.id}:Actor:${actor.id}`;
+      return this._showInactive || isActiveCharacter(actor)
+        || selected.has(actor.uuid) || selectedTransferIds.has(transferId);
+    });
+    for (const actor of visibleGuildActors) {
       const progress = sessionProgress(actor);
       const level = levelFromMilestones(progress.milestones);
       const reward = rewardForLevel(level);
@@ -124,7 +134,8 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
         selected: selected.has(actor.uuid) || selectedTransferIds.has(transferId), downtime: DowntimeService.get(actor),
         rewardItems: details.items.map(item => ({ ...item, selected: selectedColumns.has(item.columnIndex) })),
         milestones: progress.milestones,
-        passive: Number(progress.passiveDowntime?.[periodKey] ?? 0)
+        passive: Number(progress.passiveDowntime?.[periodKey] ?? 0),
+        characterActive: isActiveCharacter(actor)
       });
     }
     const actorUuids = new Set(actors.map(actor => actor.uuid));
@@ -144,11 +155,42 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
         searchText: `${user.name} ${owned.map(actor => actor.name).join(" ")}`
       };
     }).filter(player => player.actorUuids);
+    const sessionParticipants = (active.actorUuids ?? []).map(uuid => game.actors.get(String(uuid).split(".").at(-1)))
+      .filter(Boolean)
+      .map(actor => {
+        const owners = game.users.filter(user => !user.isGM && (
+          String(user.character?.id ?? user.character ?? "") === actor.id
+          || actor.testUserPermission(user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER)
+        ));
+        return {
+          uuid: actor.uuid,
+          name: actor.name,
+          img: actor.img,
+          players: owners.map(user => user.name).join(", ") || game.i18n.localize("DOWNTIME_MANAGER.Common.None"),
+          online: owners.some(user => user.active)
+        };
+      });
+    const importHistory = worldRole === WORLD_ROLES.SESSION ? sessionImportHistory().slice().reverse().map(entry => ({
+      ...entry,
+      date: new Intl.DateTimeFormat(game.i18n.lang, { dateStyle: "medium", timeStyle: "short" }).format(new Date(entry.importedAt)),
+      cleanedDate: entry.cleanedAt ? new Intl.DateTimeFormat(game.i18n.lang, { dateStyle: "medium", timeStyle: "short" }).format(new Date(entry.cleanedAt)) : "",
+      actorCount: entry.importedContent?.actorUuids?.length ?? 0,
+      userCount: entry.importedContent?.userIds?.length ?? 0,
+      cleaned: Boolean(entry.cleanedAt)
+    })) : [];
+    const cleanedImports = importHistory.filter(entry => entry.cleaned);
     return {
       active,
-      gmUsers: game.users.filter(u => u.role >= CONST.USER_ROLES.ASSISTANT).map(u => ({ id: u.id, name: u.name, selected: u.id === selectedGm })),
+      sessionOverview: {
+        description: String(active.summary ?? active.description ?? "").trim(),
+        participants: sessionParticipants
+      },
+      gmUsers: game.users.filter(isOperationalGM).map(u => ({ id: u.id, name: u.name, selected: u.id === selectedGm })),
       isPrimaryWorld: worldRole === WORLD_ROLES.PRIMARY,
       isSessionWorld: worldRole === WORLD_ROLES.SESSION,
+      activeImports: importHistory.filter(entry => !entry.cleaned),
+      cleanedImports: cleanedImports.slice(0, 10),
+      cleanedImportCount: cleanedImports.length,
       workflowStatus: game.i18n.localize(`DOWNTIME_MANAGER.Session.Workflow.Statuses.${workflowStatusKey}`),
       workflowReturned: active.status === "returned",
       workflowHasSession: Boolean(active.id),
@@ -159,17 +201,19 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
       workflowCanCleanup: worldRole === WORLD_ROLES.SESSION && Boolean(active.id),
       canSaveSession: worldRole === WORLD_ROLES.PRIMARY && !["exported", "returned", "awarded"].includes(active.status),
       canAwardSession: worldRole === WORLD_ROLES.PRIMARY && !["exported", "awarded"].includes(active.status),
-      canStartConcurrentSession: worldRole === WORLD_ROLES.PRIMARY && active.status === "exported",
       periodKey,
       passiveWeekly: passiveConfig.period === "week",
       historyEnabled: game.settings.get(MODULE_ID, SETTINGS.SESSION_HISTORY_ENABLED),
       awarded: active.status === "awarded",
       actors,
+      showInactive: Boolean(this._showInactive),
+      hasInactive: guildActors.some(actor => !isActiveCharacter(actor)),
       connectedPlayers: players.filter(player => player.active),
       otherPlayers: players.filter(player => !player.active),
       rewardColumns,
       awardMilestones: active.awardMilestones !== false,
-      multipliers: [1, 1.5, 2].map(value => ({ value, selected: Number(active.multiplier ?? 1) === value }))
+      multipliers: [1, 1.5, 2].map(value => ({ value, selected: Number(active.multiplier ?? 1) === value })),
+      includeTransferScenes: active.includeTransferScenes === true
     };
   }
 
@@ -210,7 +254,8 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
       multiplier: Number(this.element.querySelector('[name="multiplier"]')?.value ?? 1),
       actorUuids: Array.from(this.element.querySelectorAll('[name="actors"]:checked')).map(input => input.value),
       rewardColumns: Array.from(this.element.querySelectorAll('[name="rewardColumns"]:checked')).map(input => Number(input.value)),
-      awardMilestones: Boolean(this.element.querySelector('[name="awardMilestones"]')?.checked)
+      awardMilestones: Boolean(this.element.querySelector('[name="awardMilestones"]')?.checked),
+      includeTransferScenes: Boolean(this.element.querySelector('[name="includeTransferScenes"]')?.checked)
     };
   }
 
@@ -234,6 +279,11 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static #selectAll(event) { event.preventDefault(); this.#setVisibleSelection(true); }
   static #selectNone(event) { event.preventDefault(); this.#setVisibleSelection(false); }
+  static #toggleInactive(event) {
+    event.preventDefault();
+    this._showInactive = !this._showInactive;
+    this.render();
+  }
 
   static async #save(event) {
     event.preventDefault();
@@ -261,7 +311,7 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
     };
     await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, active);
     const actorIds = state.actorUuids.map(uuid => fromUuidSync(uuid)?.id).filter(Boolean);
-    const bundle = await exportSession(actorIds, { session: active });
+    const bundle = await exportSession(actorIds, { session: active, includeTransferScenes: state.includeTransferScenes });
     if (!bundle) return;
     const participantTransferIds = new Set(bundle.session?.participantTransferIds ?? []);
     const participantUuids = game.actors
@@ -293,7 +343,8 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #workflowExportResult(event) {
     event.preventDefault();
     try {
-      await exportSessionResult();
+      const result = await exportSessionResult();
+      if (result) await cleanupSessionImport();
       await this.render({ force: true });
     } catch (error) {
       console.error(`${MODULE_ID} | Guided session result export failed`, error);
@@ -313,14 +364,28 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
-  static async #workflowCleanup(event) {
+  static async #workflowCleanup(event, target) {
     event.preventDefault();
     try {
-      if (await cleanupSessionImport()) await this.render({ force: true });
+      if (await cleanupSessionImport(target?.dataset?.importId ?? "")) await this.render({ force: true });
     } catch (error) {
       console.error(`${MODULE_ID} | Session cleanup failed`, error);
       ui.notifications.error(error.message);
     }
+  }
+
+  static async #clearCleanedImportHistory(event) {
+    event.preventDefault();
+    const confirmed = await foundry.applications.api.DialogV2.confirm({
+      window: { title: "Bereinigungsverlauf leeren" },
+      content: "<p>Alle bereits bereinigten Importeinträge aus dem Verlauf entfernen? Aktive Importe und Weltdokumente bleiben unverändert.</p>"
+    });
+    if (!confirmed) return;
+    const history = foundry.utils.deepClone(game.settings.get(MODULE_ID, SETTINGS.SESSION_IMPORT_HISTORY) ?? { schemaVersion: 1, entries: [] });
+    history.entries = (history.entries ?? []).filter(entry => !entry.cleanedAt);
+    await game.settings.set(MODULE_ID, SETTINGS.SESSION_IMPORT_HISTORY, history);
+    ui.notifications.info("Der Bereinigungsverlauf wurde geleert.");
+    await this.render({ force: true });
   }
 
   static async #workflowReset(event) {
@@ -413,5 +478,36 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
   static async #configureRewards(event) { event.preventDefault(); const { SessionRewardConfigApp } = await import("./session-reward-config-app.mjs"); new SessionRewardConfigApp().render(true); }
-  static async #newSession(event) { event.preventDefault(); await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, { gmUserId: game.user.id }); await this.render({ force: true }); }
+  static async #newSession(event) {
+    event.preventDefault();
+    const active = game.settings.get(MODULE_ID, SETTINGS.ACTIVE_SESSION) ?? {};
+    if (active.id && active.status !== "awarded") {
+      let timer = null;
+      const confirmed = await foundry.applications.api.DialogV2.wait({
+        classes: ["downtime-manager", "sc-new-session-warning"],
+        window: { title: game.i18n.localize("DOWNTIME_MANAGER.Session.NewWarning.Title") },
+        content: `<div class="notification warning"><p><strong>${game.i18n.localize("DOWNTIME_MANAGER.Session.NewWarning.Heading")}</strong></p><p>${game.i18n.localize("DOWNTIME_MANAGER.Session.NewWarning.Text")}</p></div>`,
+        buttons: [
+          { action: "cancel", label: game.i18n.localize("Cancel"), callback: () => false },
+          { action: "confirm", icon: "fa-solid fa-triangle-exclamation", label: game.i18n.format("DOWNTIME_MANAGER.Session.NewWarning.Wait", { seconds: 5 }), callback: () => true }
+        ],
+        render: (_renderEvent, dialog) => {
+          const button = dialog.element.querySelector('button[data-action="confirm"]');
+          if (!button) return;
+          button.disabled = true;
+          let remaining = 5;
+          timer = setInterval(() => {
+            remaining -= 1;
+            if (remaining > 0) button.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${game.i18n.format("DOWNTIME_MANAGER.Session.NewWarning.Wait", { seconds: remaining })}`;
+            else { clearInterval(timer); timer = null; button.disabled = false; button.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${game.i18n.localize("DOWNTIME_MANAGER.Session.NewWarning.Confirm")}`; }
+          }, 1000);
+        },
+        rejectClose: false
+      });
+      if (timer) clearInterval(timer);
+      if (!confirmed) return;
+    }
+    await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, { gmUserId: game.user.id });
+    await this.render({ force: true });
+  }
 }

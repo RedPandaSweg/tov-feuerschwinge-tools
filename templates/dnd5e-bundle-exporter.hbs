@@ -1,0 +1,7 @@
+<div>
+  <p class="hint">Exportiert ein D&D5e-Item-Kompendium einschließlich seiner Ordner und Bilder für den Feuerschwinge-Importer. Identische Bilder werden nur einmal in die Transferdatei aufgenommen.</p>
+  {{#if packs.length}}
+    <div class="form-group"><label>Quellkompendium</label><div class="form-fields"><select name="sourcePack">{{selectOptions packs valueAttr="id" labelAttr="name"}}</select></div></div>
+    <button type="button" data-action="export"><i class="fa-solid fa-download" inert></i> Transferdatei erstellen</button>
+  {{else}}<p class="warning">Kein D&D5e-Item-Kompendium gefunden.</p>{{/if}}
+</div>

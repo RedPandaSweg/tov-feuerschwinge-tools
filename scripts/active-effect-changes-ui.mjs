@@ -64,6 +64,47 @@ function enhanceRows(app, root) {
   }
 }
 
+function addActorEffectDeleteButtons(app, root) {
+  const actor = app.document;
+  if (actor?.documentName !== "Actor") return;
+  for (const row of root.querySelectorAll('blackflag-effects tr[data-effect-id]:not([data-parent-id])')) {
+    if (row.querySelector('[data-action="delete"], [data-tovf-delete-effect]')) continue;
+    const toggle = row.querySelector('button[data-action="toggle"]');
+    const effect = actor.effects.get(row.dataset.effectId);
+    if (!toggle || !effect?.canUserModify?.(game.user, "delete")) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "link-button always-interactive";
+    button.dataset.tovfDeleteEffect = "";
+    button.dataset.tooltip = "BF.EFFECT.Action.Delete";
+    button.setAttribute("aria-label", game.i18n.localize("BF.EFFECT.Action.Delete"));
+    const icon = document.createElement("i");
+    icon.className = "fa-solid fa-trash";
+    icon.inert = true;
+    button.append(icon);
+    button.addEventListener("click", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      effect.deleteDialog({ sheet: app });
+    });
+    toggle.after(button);
+  }
+}
+
+function scheduleActorEffectDeleteButtons(app, element) {
+  if (app.document?.documentName !== "Actor") return;
+  const root = element instanceof HTMLElement ? element : element?.[0];
+  if (!root) return;
+  requestAnimationFrame(() => addActorEffectDeleteButtons(app, root));
+  if (root.__tovfEffectDeleteObserver) return;
+  const observer = new MutationObserver(() => addActorEffectDeleteButtons(app, root));
+  observer.observe(root, { childList: true, subtree: true });
+  Object.defineProperty(root, "__tovfEffectDeleteObserver", {
+    value: observer,
+    configurable: true
+  });
+}
+
 export function installActiveEffectChangesUi() {
   Hooks.on("renderActiveEffectConfig", (app, element) => {
     const root = element instanceof HTMLElement ? element : element?.[0];
@@ -72,4 +113,11 @@ export function installActiveEffectChangesUi() {
       ?.classList.add("tovf-effect-change-add-header");
     enhanceRows(app, root);
   });
+  Hooks.on("renderActorSheet", (app, element) => {
+    scheduleActorEffectDeleteButtons(app, element);
+  });
+  Hooks.on("renderApplicationV2", (app, element) => {
+    scheduleActorEffectDeleteButtons(app, element);
+  });
+  return { status: "completed" };
 }

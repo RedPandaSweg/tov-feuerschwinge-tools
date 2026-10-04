@@ -26,6 +26,8 @@ export const FLAGS = Object.freeze({
   STATION_FOLDER: "stationFolder",
   PROJECT_FOLDER: "projectFolder",
   SESSION_PROGRESS: "sessionProgress",
+  ACTIVE: "active",
+  LAST_LOGIN_AT: "lastLoginAt",
   DOWNTIME_ITEM: "downtimeItem",
   SHARED_PROJECTS: "sharedProjects"
 });
@@ -35,7 +37,9 @@ export const SETTINGS = Object.freeze({
   DEFAULT_COST_ITEM_UUID: "defaultCostItemUuid",
   STATION_CATEGORIES: "stationCategories",
   PLAYER_ACTOR_FOLDERS: "playerActorFolders",
+  SESSION_TRANSFER_SCENES: "sessionTransferScenes",
   ACTIVE_SESSION: "activeSession",
+  SESSION_IMPORT_HISTORY: "sessionImportHistory",
   LAST_SESSION_RESULT: "lastSessionResult",
   SESSION_REWARDS: "sessionRewards",
   SESSION_HISTORY_JOURNAL: "sessionHistoryJournal",

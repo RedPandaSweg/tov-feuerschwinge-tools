@@ -1,6 +1,6 @@
 import { uiText } from "../core/localization.mjs";
 import { MODULE_ID } from "../core/constants.mjs";
-import { MERCHANT_FLAG } from "./service.mjs";
+import { MERCHANT_FLAG } from "./service.mjs?v=3.7.8-runtime-audit-1";
 
 function descriptionValue(value) {
   if (typeof value === "string") return value === "[object Object]" ? "" : value;

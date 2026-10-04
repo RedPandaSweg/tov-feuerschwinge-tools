@@ -1,7 +1,7 @@
 import { DEFAULT_MILESTONE_LEVEL_BANDS, MODULE_ID, SETTINGS } from "./constants.mjs";
 import { configuredCategories } from "./utils.mjs";
 import { normalizeMilestoneLevelBands } from "./session-service.mjs";
-import { COMMERCE_RARITY_LEVELS_SETTING } from "../commerce/service.mjs?v=3.7.1-offer-access-1";
+import { COMMERCE_RARITY_LEVELS_SETTING } from "../commerce/service.mjs?v=3.7.8-runtime-audit-1";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -42,7 +42,8 @@ export class ModuleItemSettingsApp extends HandlebarsApplicationMixin(Applicatio
         categories: configuredCategories(),
         milestoneCatchUp: game.settings.get(MODULE_ID, SETTINGS.MILESTONE_CATCH_UP)?.enabled !== false,
         milestoneBands: normalizeMilestoneLevelBands(game.settings.get(MODULE_ID, SETTINGS.MILESTONE_LEVEL_BANDS)),
-        rarityLevels: foundry.utils.deepClone(game.settings.get(MODULE_ID, COMMERCE_RARITY_LEVELS_SETTING) ?? {})
+        rarityLevels: foundry.utils.deepClone(game.settings.get(MODULE_ID, COMMERCE_RARITY_LEVELS_SETTING) ?? {}),
+        transferScenes: foundry.utils.deepClone(game.settings.get(MODULE_ID, SETTINGS.SESSION_TRANSFER_SCENES)?.scenes ?? [])
       };
     }
     const baseItem = await resolveItem(this._draft.recipeBaseItemUuid);
@@ -53,6 +54,7 @@ export class ModuleItemSettingsApp extends HandlebarsApplicationMixin(Applicatio
       milestoneBands: this._draft.milestoneBands,
       milestoneCatchUp: this._draft.milestoneCatchUp,
       rarityLevels: this.#rarityLevels(),
+      transferScenes: this.#transferScenes(),
       fields: [
         {
           setting: "recipeBaseItemUuid",
@@ -145,6 +147,10 @@ export class ModuleItemSettingsApp extends HandlebarsApplicationMixin(Applicatio
       sessions: Number(this.element?.querySelector(`[name="milestoneBands.${index}.sessions"]`)?.value ?? band.sessions)
     }));
     this._draft.milestoneCatchUp = Boolean(this.element?.querySelector('[name="milestoneCatchUp"]')?.checked);
+    this._draft.transferScenes = Array.from(this.element?.querySelectorAll('[data-transfer-scene]:checked') ?? [], input => ({
+      sceneId: input.dataset.transferScene,
+      tokenIds: Array.from(this.element.querySelectorAll(`[data-transfer-token][data-scene-id="${CSS.escape(input.dataset.transferScene)}"]:checked`), token => token.dataset.transferToken)
+    }));
     for (const rarity of Object.keys(this._draft.rarityLevels)) {
       const value = this.element?.querySelector(`[name="rarityLevels.${rarity}"]`)?.value;
       if (value != null) this._draft.rarityLevels[rarity] = Math.max(1, Math.min(20, Math.floor(Number(value) || 1)));
@@ -159,6 +165,16 @@ export class ModuleItemSettingsApp extends HandlebarsApplicationMixin(Applicatio
       const localization = configured[id]?.label ?? configured[id]?.localization ?? configured[id];
       const translated = typeof localization === "string" ? game.i18n.localize(localization) : id;
       return { id, label: translated === localization && localization?.includes?.(".") ? id : translated, level: this._draft.rarityLevels[id] };
+    });
+  }
+
+  #transferScenes() {
+    const configured = new Map(this._draft.transferScenes.map(entry => [String(entry.sceneId), new Set(entry.tokenIds ?? [])]));
+    return game.scenes.filter(() => true).sort((left, right) => left.name.localeCompare(right.name, game.i18n.lang)).map(scene => {
+      const tokenIds = configured.get(scene.id);
+      return { id: scene.id, name: scene.name, selected: Boolean(tokenIds), tokens: scene.tokens.map(token => ({
+        id: token.id, name: token.name || token.actor?.name || token.id, selected: tokenIds?.has(token.id) ?? false
+      })) };
     });
   }
 
@@ -181,6 +197,7 @@ export class ModuleItemSettingsApp extends HandlebarsApplicationMixin(Applicatio
     await game.settings.set(MODULE_ID, SETTINGS.STATION_CATEGORIES, { entries: unique });
     await game.settings.set(MODULE_ID, SETTINGS.MILESTONE_LEVEL_BANDS, { entries: milestoneBands });
     await game.settings.set(MODULE_ID, SETTINGS.MILESTONE_CATCH_UP, { enabled: this._draft.milestoneCatchUp });
+    await game.settings.set(MODULE_ID, SETTINGS.SESSION_TRANSFER_SCENES, { scenes: this._draft.transferScenes });
     await game.settings.set(MODULE_ID, COMMERCE_RARITY_LEVELS_SETTING, this._draft.rarityLevels);
     ui.notifications.info(game.i18n.localize("DOWNTIME_MANAGER.Notifications.ItemSettingsSaved"));
     await this.close();

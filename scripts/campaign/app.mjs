@@ -1,6 +1,7 @@
 import { uiText } from "../core/localization.mjs";
+import { isAssistantGM, isOperationalGM } from "../core/permissions.mjs?v=3.7.8-permissions-1";
 import { MODULE_ID } from "../downtime/constants.mjs";
-import { campaignState, campaignAction, fullGM, redemptionPreview, isCampaignWorld } from "./service.mjs";
+import { campaignState, campaignAction, fullGM, redemptionPreview, isCampaignWorld } from "./service.mjs?v=3.7.8-permissions-1";
 import { compareSnapshots, validateSnapshot, sessionMonth } from "./data.mjs";
 import { defaultRules, settlementPreview, ruleForDate } from "./rules.mjs";
 import { playerCharacters, sessionProgress, milestoneEntries, levelFromMilestones, SessionService } from "../downtime/session-service.mjs";
@@ -49,18 +50,17 @@ export class CampaignApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     this._revision = state.revision;
     const admin = fullGM();
-    const assistant = game.user.role === CONST.USER_ROLES.ASSISTANT;
+    const assistant = isAssistantGM();
     const tabs = [["rewards", uiText("TOVF.Interface.Rewards_98ebf6", "Belohnungen")], ...(!assistant ? [["characters", uiText("TOVF.Interface.Characters_346a51", "Charaktere")]] : []), ...(admin ? [["sessions", uiText("TOVF.Interface.SessionsSettlement_a957b1", "Sessions & Abrechnung")], ["people", uiText("TOVF.Interface.PlayerAssignments_d286e7", "Spielerzuordnung")], ["rules", "Regeln"], ["import", uiText("TOVF.Interface.DataValidationImport_9fcece", "Datenprüfung & Import")]] : [])];
     if (!tabs.some(([id]) => id === this._tab)) this._tab = "rewards";
     const snapshot = state.snapshot;
     const personName = id => nameOfPerson(state, id);
-    const unlinkedGms = game.users.filter(u => [CONST.USER_ROLES.GAMEMASTER, CONST.USER_ROLES.ASSISTANT].includes(u.role) && !linkedPerson(state, u))
+    const unlinkedGms = game.users.filter(u => isOperationalGM(u) && !linkedPerson(state, u))
       .map(u => ({ id: `unlinked-user:${u.id}`, userId: u.id, name: uiText("TOVF.Interface.P0NotAssignedYet_579fdc", "{p0} (noch nicht zugeordnet)", { p0: (u.name) }) }));
     const ownPerson = linkedPerson(state, game.user) ?? unlinkedGms.find(p => p.userId === game.user.id)?.id;
     const teamPeople = new Set([...activeServerteam(state), ...Object.values(state.recipients).flat(), ...Object.values(state.weeklySettlements ?? {}).flatMap(w => w.recipients)]);
     const eligiblePeople = (snapshot?.people ?? []).filter(p => teamPeople.has(p.id) || personAccountIds(state, p.id).some(id => {
-      const role = game.users.get(id)?.role;
-      return role === CONST.USER_ROLES.GAMEMASTER || role === CONST.USER_ROLES.ASSISTANT;
+      return isOperationalGM(game.users.get(id));
     })).concat(unlinkedGms);
     const rewardPerson = admin ? [this._rewardPerson, ownPerson, ...eligiblePeople.map(p => p.id)].find(id => eligiblePeople.some(p => p.id === id)) : ownPerson;
     const characters = (snapshot?.characters ?? []).filter(c => admin || c.userId === ownPerson)

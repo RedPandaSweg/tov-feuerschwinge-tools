@@ -3,6 +3,67 @@ import { MODULE_ID } from "../core/constants.mjs";
 let cubeTemplateFixInstalled = false;
 let currencyStackingInstalled = false;
 let damageFormulaToggleInstalled = false;
+let permanentStatusIconFixInstalled = false;
+let forwardActivityConsumptionFixInstalled = false;
+
+/**
+ * Black Flag 3.0.077 resolves a Forward Activity involved in linked resource
+ * consumption through `linkedActivity.activity.id`, although ForwardActivity
+ * only stores that reference in `system.linked.id`. Supply the missing lookup
+ * while the affected implementation is present so forwarded Heal Activities
+ * and other linked activities can finish their consumption step.
+ */
+function installForwardActivityConsumptionFix() {
+  if (forwardActivityConsumptionFixInstalled) return;
+
+  const Activity = BlackFlag?.documents?.activity?.Activity;
+  const ForwardActivity = CONFIG.Activity?.types?.forward?.documentClass;
+  const prepareUpdates = Activity?.prototype?._prepareActivationUpdates;
+  if (typeof prepareUpdates !== "function" || !ForwardActivity?.prototype) return;
+
+  const affected = Function.prototype.toString.call(prepareUpdates)
+    .includes("linkedActivity.activity.id");
+  if (!affected || "activity" in ForwardActivity.prototype) return;
+
+  Object.defineProperty(ForwardActivity.prototype, "activity", {
+    configurable: true,
+    get() {
+      const id = this.system?.linked?.id;
+      return id ? this.item?.system?.activities?.get(id) ?? null : null;
+    }
+  });
+
+  forwardActivityConsumptionFixInstalled = true;
+  console.debug(`${MODULE_ID} | Applied Black Flag Forward Activity consumption compatibility fix.`);
+}
+
+/**
+ * Foundry only renders an Active Effect icon in CONDITIONAL mode while the
+ * effect is temporary. Black Flag's permanent condition effects inherit that
+ * default when copied from an Item or compendium entry to an Actor, although
+ * their normal `statuses` entry remains active. Promote only those Actor
+ * copies to ALWAYS so the status is visible on the Token without creating a
+ * duplicate rider condition through `system.rider.statuses`.
+ */
+function installPermanentStatusIconFix() {
+  if (permanentStatusIconFixInstalled) return;
+
+  Hooks.on("preCreateActiveEffect", effect => {
+    if (effect.parent?.documentName !== "Actor") return;
+
+    const statuses = effect.statuses;
+    const hasStatus = statuses instanceof Set
+      ? statuses.size > 0
+      : Array.isArray(statuses) && statuses.length > 0;
+    if (!hasStatus) return;
+
+    const showIcon = CONST.ACTIVE_EFFECT_SHOW_ICON;
+    if (effect.showIcon !== showIcon.CONDITIONAL || effect.isTemporary) return;
+    effect.updateSource({ showIcon: showIcon.ALWAYS });
+  });
+
+  permanentStatusIconFixInstalled = true;
+}
 
 /** Black Flag's formula button can look for a hidden input absent from the rendered damage row. */
 function installDamageFormulaToggleFix() {
@@ -54,7 +115,7 @@ function installOtherInventorySection() {
  * bundled reference.
  */
 function installExhaustionFormatNumberFix() {
-  if (game.system.version !== "3.0.077" || typeof globalThis.formatNumber === "function") return;
+  if (typeof globalThis.formatNumber === "function") return;
   const formatter = BlackFlag?.utils?.formatNumber;
   if (typeof formatter !== "function") return;
   Object.defineProperty(globalThis, "formatNumber", {
@@ -200,6 +261,8 @@ function installSpellManagerTooltipCoverage() {
  */
 export function installBlackFlagCompatibility() {
   installDamageFormulaToggleFix();
+  installPermanentStatusIconFix();
+  installForwardActivityConsumptionFix();
   installOtherInventorySection();
   installExhaustionFormatNumberFix();
   installCubeTemplateFix();

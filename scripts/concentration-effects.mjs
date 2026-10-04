@@ -1,4 +1,5 @@
 import { MODULE_ID } from "./core/constants.mjs";
+import { deleteExistingEmbeddedDocuments } from "./core/document-operations.mjs?v=3.7.8-safe-documents-1";
 
 const LINK = "concentrationSource";
 const CAST = "concentrationCast";
@@ -22,7 +23,7 @@ export async function removeConcentrationEffects(markerUuid) {
   for (const actor of actors()) {
     if (!actor.isOwner || !responsible(actor)) continue;
     const ids = [...actor.effects].filter(effect => effect.getFlag(MODULE_ID, LINK) === markerUuid).map(effect => effect.id);
-    if (ids.length) await actor.deleteEmbeddedDocuments("ActiveEffect", ids);
+    if (ids.length) await deleteExistingEmbeddedDocuments(actor, "ActiveEffect", ids);
   }
 }
 

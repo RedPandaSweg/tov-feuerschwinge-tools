@@ -1,4 +1,5 @@
 import { LEGACY_MODULE_ID, LEGACY_MODULE_SCOPE, MODULE_ID } from "./core/constants.mjs";
+import { deleteExistingEmbeddedDocuments } from "./core/document-operations.mjs?v=3.7.8-safe-documents-1";
 
 const FLAG = "effectGroup";
 const GROUPS = new Set(["magical-drink", "magical-food"]);
@@ -232,7 +233,7 @@ async function enforceExclusiveGroup(effect, userId) {
 
   const obsolete = actor.effects.filter(other => other.id !== effect.id && effectGroup(other) === group);
   if (obsolete.length) {
-    await actor.deleteEmbeddedDocuments("ActiveEffect", obsolete.map(other => other.id));
+    await deleteExistingEmbeddedDocuments(actor, "ActiveEffect", obsolete.map(other => other.id));
   }
 }
 

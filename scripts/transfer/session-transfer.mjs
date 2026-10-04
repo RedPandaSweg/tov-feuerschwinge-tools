@@ -5,6 +5,8 @@ import {
   WORLD_ROLES
 } from "../core/constants.mjs";
 import { SETTINGS } from "../downtime/constants.mjs";
+import { deleteExistingDocument, deleteExistingEmbeddedDocuments } from "../core/document-operations.mjs?v=3.7.8-safe-documents-1";
+import { migrateActiveEffectSource, migrateNestedActiveEffectSources } from "../core/active-effect-migration.mjs?v=3.7.8-standard-effects-2";
 import { createSessionUserBundle, importUserBundle, applyUserAssignments, remapUserOwnership, knownUserMapping } from "./user-transfer.mjs";
 import { reviewSessionUsers } from "./user-transfer-app.mjs";
 import {
@@ -63,26 +65,7 @@ function cleanForHash(value) {
 }
 
 function normalizeLegacyActiveEffects(actorData) {
-  const visit = value => {
-    if (Array.isArray(value)) {
-      for (const entry of value) visit(entry);
-      return;
-    }
-    if (!value || typeof value !== "object") return;
-    const effects = Array.isArray(value.effects)
-      ? value.effects
-      : value.effects && typeof value.effects === "object"
-        ? Object.values(value.effects)
-        : [];
-    if (effects.length) {
-      for (const effect of effects) {
-        if (effect?.type === "standard") effect.type = "base";
-      }
-    }
-    for (const child of Object.values(value)) visit(child);
-  };
-  visit(actorData);
-  return actorData;
+  return migrateNestedActiveEffectSources(actorData);
 }
 
 async function persistMigratedActiveEffectTypes(actor) {
@@ -101,7 +84,7 @@ async function persistMigratedActiveEffectTypes(actor) {
         error
       });
       const ids = parent.effects.map(effect => effect.id);
-      if (ids.length) await parent.deleteEmbeddedDocuments("ActiveEffect", ids);
+      if (ids.length) await deleteExistingEmbeddedDocuments(parent, "ActiveEffect", ids);
       if (effects.length) {
         await parent.createEmbeddedDocuments("ActiveEffect", effects, {
           keepId: true
@@ -117,6 +100,10 @@ async function persistMigratedActiveEffectTypes(actor) {
 async function replaceActorFromSessionResult(actor, source) {
   const skipped = [];
   const data = normalizeLegacyActiveEffects(foundry.utils.deepClone(source));
+  // Existing world items can still contain legacy "standard" effects. Cleaning
+  // only the incoming data or a comparison clone leaves their stored sources
+  // invalid when Foundry validates the subsequent Item update.
+  await persistMigratedActiveEffectTypes(actor);
   const items = Array.isArray(data.items) ? data.items : [];
   const effects = Array.isArray(data.effects) ? data.effects : [];
   delete data.items;
@@ -128,13 +115,25 @@ async function replaceActorFromSessionResult(actor, source) {
   removeProperty(data, `flags.${MODULE_ID}.${TRANSFER_FLAG}.baselineHash`);
   await actor.update(data, { noHook: true });
 
+  const reconcileItemEffects = async (item, incomingEffects) => {
+    const incoming = incomingEffects.map(effect => migrateActiveEffectSource(foundry.utils.deepClone(effect)));
+    const incomingById = new Map(incoming.map(effect => [String(effect._id ?? ""), effect]));
+    const removed = item.effects.filter(effect => !incomingById.has(effect.id)).map(effect => effect.id);
+    if (removed.length) await deleteExistingEmbeddedDocuments(item, "ActiveEffect", removed);
+    for (const effectData of incoming) {
+      const existing = item.effects.get(String(effectData._id ?? ""));
+      if (existing) await existing.update(effectData, { diff: false, recursive: false });
+      else await item.createEmbeddedDocuments("ActiveEffect", [effectData], { keepId: true });
+    }
+  };
+
   const reconcile = async (documentName, currentDocuments, incomingDocuments) => {
     const currentById = new Map(currentDocuments.map(document => [document.id, document]));
     const incomingById = new Map(incomingDocuments.map(document => [String(document._id ?? ""), document]));
     const removedIds = [...currentById.keys()].filter(id => !incomingById.has(id));
     for (const id of removedIds) {
       try {
-        await actor.deleteEmbeddedDocuments(documentName, [id]);
+        await deleteExistingEmbeddedDocuments(actor, documentName, [id]);
       } catch (error) {
         skipped.push({ documentName, id, action: "delete", error });
         console.warn(`${MODULE_ID} | Skipping failed session-result deletion`, { actor: actor.uuid, documentName, id, error });
@@ -147,7 +146,15 @@ async function replaceActorFromSessionResult(actor, source) {
       const current = normalizeLegacyActiveEffects(foundry.utils.deepClone(existing._source ?? existing.toObject()));
       if (await hashDocument(current) === await hashDocument(incoming)) continue;
       try {
-        await existing.update(incoming, { diff: false, recursive: false });
+        if (documentName === "Item") {
+          const itemData = foundry.utils.deepClone(incoming);
+          const itemEffects = Array.isArray(itemData.effects) ? itemData.effects : Object.values(itemData.effects ?? {});
+          delete itemData.effects;
+          await existing.update(itemData, { diff: false, recursive: false });
+          await reconcileItemEffects(existing, itemEffects);
+        } else {
+          await existing.update(incoming, { diff: false, recursive: false });
+        }
       } catch (error) {
         skipped.push({ documentName, id: existing.id, name: existing.name, action: "update", error });
         console.warn(`${MODULE_ID} | Skipping failed session-result update`, { actor: actor.uuid, document: existing.uuid, error });
@@ -479,10 +486,44 @@ function validatePackage(bundle, expectedFormat) {
   if (!Array.isArray(bundle.actors)) throw new Error(game.i18n.localize("TOVF.Session.Error.Content"));
 }
 
+function configuredSessionScenes() {
+  const configured = game.settings.get(MODULE_ID, SETTINGS.SESSION_TRANSFER_SCENES)?.scenes ?? [];
+  return configured.map(entry => ({
+    scene: game.scenes.get(String(entry.sceneId ?? "")),
+    tokenIds: new Set(entry.tokenIds ?? [])
+  })).filter(entry => entry.scene && entry.tokenIds.size);
+}
+
+function exportConfiguredScenes() {
+  return configuredSessionScenes().map(({ scene, tokenIds }) => {
+    const data = foundry.utils.deepClone(scene.toObject());
+    delete data._id;
+    delete data._stats;
+    data.tokens = (data.tokens ?? []).filter(token => tokenIds.has(String(token._id ?? token.id ?? "")));
+    return { sourceId: scene.id, data };
+  });
+}
+
+async function importSessionScenes(entries = [], importId = "") {
+  const imported = [];
+  for (const entry of entries) {
+    const data = foundry.utils.deepClone(entry.data ?? {});
+    if (!data.name || !Array.isArray(data.tokens)) continue;
+    delete data._id;
+    delete data._stats;
+    data.folder = null;
+    foundry.utils.setProperty(data, `flags.${MODULE_ID}.sessionImportId`, importId);
+    const scene = await Scene.create(data);
+    imported.push(scene.uuid);
+  }
+  return imported;
+}
+
 export async function exportSession(actorIds, {
   actorRootId = configuredActorRootId(),
   compendiumFolderId = null,
   includeFolders = true,
+  includeTransferScenes = true,
   session = null
 } = {}) {
   assertGm();
@@ -506,7 +547,7 @@ export async function exportSession(actorIds, {
   const actorEntries = [];
   for (const actor of actors) {
     const participant = participantForExportedActor(actor, chosenActors, actorRootId);
-    const data = actor.toObject();
+    const data = normalizeLegacyActiveEffects(actor.toObject());
     const baselineHash = await hashDocument(data);
     foundry.utils.setProperty(data, `flags.${MODULE_ID}.${TRANSFER_FLAG}`, {
       id: actorTransferId(actor),
@@ -525,6 +566,7 @@ export async function exportSession(actorIds, {
   }
   const macros = await exportReferencedMacros(actors, definitions);
   const actorFolders = exportActorFolders(folderIds);
+  const scenes = includeTransferScenes ? exportConfiguredScenes() : [];
   const compendiums = compendiumFolderId ? await createCompendiumBundle(compendiumFolderId) : null;
   const bundle = {
     format: SESSION_FORMAT,
@@ -533,6 +575,7 @@ export async function exportSession(actorIds, {
     configuration: { weaponDefinitions: definitions },
     macros,
     actorFolders,
+    scenes,
     actors: actorEntries,
     users: createSessionUserBundle(actors, chosenActors),
     compendiums,
@@ -546,7 +589,7 @@ export async function exportSession(actorIds, {
   foundry.utils.saveDataToFile(
     JSON.stringify(bundle, null, 2),
     "application/json",
-    `tov-feuerschwinge-session-${filenamePart(session?.title || game.world.title)}-${bundle.metadata.exportedAt.slice(0, 10)}.json`
+    `SESSION_tov-feuerschwinge-${filenamePart(session?.title || game.world.title)}-${bundle.metadata.exportedAt.slice(0, 10)}.json`
   );
   ui.notifications.info(game.i18n.format("TOVF.Session.ExportComplete", { count: actors.length }));
   return bundle;
@@ -631,24 +674,45 @@ async function createSessionParticipantFolders(bundle, sessionRootId) {
   return { extrasFolders, extrasFolderMappings, createdIds };
 }
 
-async function updateOrCreateActor(entry, replacements, folderMapping = new Map(), sessionRootId = null, targetFolderId = undefined, userMapping = new Map()) {
+async function updateOrCreateActor(entry, replacements, folderMapping = new Map(), sessionRootId = null, targetFolderId = undefined, userMapping = new Map(), importId = "") {
   const data = normalizeLegacyActiveEffects(
     replaceReferences(foundry.utils.deepClone(entry.data), replacements)
   );
   data.folder = targetFolderId ?? folderMapping.get(entry.sourceFolderId) ?? sessionRootId;
   data.ownership = remapUserOwnership(data.ownership, userMapping);
   foundry.utils.setProperty(data, `flags.${MODULE_ID}.${TRANSFER_FLAG}.baselineHash`, entry.baselineHash);
+  foundry.utils.setProperty(data, `flags.${MODULE_ID}.sessionImportId`, importId);
   const target = game.actors.find(actor =>
     actor.getFlag(MODULE_ID, TRANSFER_FLAG)?.id === entry.transferId
   );
   if (target) {
     await persistMigratedActiveEffectTypes(target);
     await target.importFromJSON(JSON.stringify(data));
-    return "update";
+    return { operation: "update", actor: target, transferId: entry.transferId };
   }
   delete data._id;
-  await Actor.create(data);
-  return "create";
+  const actor = await Actor.create(data);
+  return { operation: "create", actor, transferId: entry.transferId };
+}
+
+async function remapImportedTokenPresetActors(entries, importedRows) {
+  const sourceToTarget = new Map();
+  const targetsByTransferId = new Map(importedRows.map(row => [row.transferId, row.actor]));
+  for (const entry of entries) {
+    const target = targetsByTransferId.get(entry.transferId);
+    if (target && entry.data?._id) sourceToTarget.set(String(entry.data._id), target.id);
+  }
+  for (const row of importedRows) {
+    const presets = row.actor.getFlag(MODULE_ID, "tokenPresets");
+    if (!Array.isArray(presets)) continue;
+    const remapped = presets.map(preset => ({
+      ...preset,
+      actorId: sourceToTarget.get(String(preset?.actorId ?? "")) ?? String(preset?.actorId ?? "")
+    }));
+    if (JSON.stringify(remapped) !== JSON.stringify(presets)) {
+      await row.actor.setFlag(MODULE_ID, "tokenPresets", remapped);
+    }
+  }
 }
 
 export async function importSession(file) {
@@ -657,6 +721,7 @@ export async function importSession(file) {
   if (!file) throw new Error(game.i18n.localize("TOVF.Session.Error.FileMissing"));
   const bundle = JSON.parse(await foundry.utils.readTextFromFile(file));
   validatePackage(bundle, SESSION_FORMAT);
+  const importId = foundry.utils.randomID();
 
   const accepted = await foundry.applications.api.DialogV2.confirm({
     window: { title: game.i18n.localize("TOVF.Session.ImportConfirmTitle") },
@@ -699,6 +764,7 @@ export async function importSession(file) {
   }
   actorFolderIds.push(sessionRoot.id);
   const counts = { create: 0, update: 0 };
+  const importedRows = [];
   for (const entry of bundle.actors) {
     const targetFolderId = hasParticipantAssignments
       ? (entry.sessionParticipant
@@ -707,16 +773,47 @@ export async function importSession(file) {
             ?? extrasFolders.get(entry.participantTransferId)
             ?? sessionRoot.id)
       : undefined;
-    counts[await updateOrCreateActor(entry, replacements, folderMapping, sessionRoot.id, targetFolderId, userMapping)]++;
+    const row = await updateOrCreateActor(entry, replacements, folderMapping, sessionRoot.id, targetFolderId, userMapping, importId);
+    counts[row.operation]++;
+    importedRows.push(row);
   }
   if (userImport) {
     const actorMap = new Map(game.actors.map(a => [a.getFlag(MODULE_ID, TRANSFER_FLAG)?.id, a]));
-    await applyUserAssignments(bundle.users, userImport.identityMap, actorMap);
+    await applyUserAssignments(bundle.users, userImport.identityMap, actorMap, { sessionPlayers: true });
   }
+  await remapImportedTokenPresetActors(bundle.actors, importedRows);
+  const importedSceneUuids = await importSessionScenes(bundle.scenes, importId);
   if (bundle.compendiums) await importCompendiumBundle(bundle.compendiums, null, { confirm: false });
   const importedActorUuids = game.actors
     .filter(actor => bundle.actors.some(entry => entry.transferId === actor.getFlag(MODULE_ID, TRANSFER_FLAG)?.id))
     .map(actor => actor.uuid);
+  const importedActorIds = new Set(importedActorUuids.map(uuid => uuid.split(".").at(-1)));
+  const importedActors = [...importedActorIds].map(id => game.actors.get(id)).filter(Boolean);
+  const mappedUserIds = new Set(userImport?.identityMap.values() ?? []);
+  const importedUserIds = game.users.filter(user => user.getFlag(MODULE_ID, "sessionImportedUser") && (
+    mappedUserIds.has(user.id)
+    || importedActorIds.has(String(user.character?.id ?? user.character ?? ""))
+    || importedActors.some(actor => actor.testUserPermission(user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER))
+  )).map(user => user.id);
+  for (const id of importedUserIds) {
+    const user = game.users.get(id);
+    const importIds = new Set(user.getFlag(MODULE_ID, "sessionImportIds") ?? []);
+    importIds.add(importId);
+    await user.setFlag(MODULE_ID, "sessionImportIds", [...importIds]);
+  }
+  const importedContent = { actorUuids: importedActorUuids, actorFolderIds, sessionRootFolderId: sessionRoot.id, userIds: importedUserIds, sceneUuids: importedSceneUuids };
+  const history = foundry.utils.deepClone(game.settings.get(MODULE_ID, SETTINGS.SESSION_IMPORT_HISTORY) ?? { schemaVersion: 1, entries: [] });
+  history.schemaVersion = 1;
+  history.entries = Array.isArray(history.entries) ? history.entries : [];
+  history.entries.push({
+    importId,
+    sessionId: bundle.session?.id ?? "",
+    title: String(bundle.session?.title || sessionRoot.name),
+    sourceWorld: bundle.metadata.sourceWorld,
+    importedAt: Date.now(),
+    importedContent
+  });
+  await game.settings.set(MODULE_ID, SETTINGS.SESSION_IMPORT_HISTORY, history);
   if (bundle.session?.id) {
     const participantIds = new Set(bundle.session.participantTransferIds ?? []);
     const actorUuids = game.actors
@@ -724,12 +821,13 @@ export async function importSession(file) {
       .map(actor => actor.uuid);
     await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, {
       id: bundle.session.id,
+      importId,
       title: bundle.session.title,
       summary: bundle.session.summary,
       actorUuids,
       participantTransferIds: [...participantIds],
       sourceWorld: bundle.metadata.sourceWorld,
-      importedContent: { actorUuids: importedActorUuids, actorFolderIds, sessionRootFolderId: sessionRoot.id, userIds: [...(userImport?.identityMap.values() ?? [])].filter(id => game.users.get(id)?.getFlag(MODULE_ID, "sessionImportedUser")) },
+      importedContent,
       startedAt: Date.now(),
       status: "imported"
     });
@@ -738,47 +836,130 @@ export async function importSession(file) {
   SettingsConfig.reloadConfirm({ world: true });
 }
 
-export async function cleanupSessionImport() {
+export function sessionImportHistory() {
+  const history = foundry.utils.deepClone(game.settings.get(MODULE_ID, SETTINGS.SESSION_IMPORT_HISTORY) ?? { schemaVersion: 1, entries: [] });
+  history.entries = Array.isArray(history.entries) ? history.entries : [];
+  const known = new Set(history.entries.map(entry => entry.importId).filter(Boolean));
+  const actorsByImport = new Map();
+  for (const actor of game.actors) {
+    const importId = String(actor.getFlag(MODULE_ID, "sessionImportId") ?? "");
+    if (!importId || known.has(importId)) continue;
+    if (!actorsByImport.has(importId)) actorsByImport.set(importId, []);
+    actorsByImport.get(importId).push(actor);
+  }
+  for (const [importId, actors] of actorsByImport) {
+    const root = game.folders.find(folder => folder.type === "Actor"
+      && actors.some(actor => actor.folder?.ancestors?.some(ancestor => ancestor.id === folder.id)
+        || actor.folder?.id === folder.id)
+      && folder.getFlag(MODULE_ID, "sessionImport")?.id);
+    const folderIds = game.folders.filter(folder => folder.type === "Actor" && (
+      folder.id === root?.id || folder.ancestors?.some(ancestor => ancestor.id === root?.id)
+    )).map(folder => folder.id);
+    const actorIds = new Set(actors.map(actor => actor.id));
+    const users = game.users.filter(user => user.getFlag(MODULE_ID, "sessionImportedUser") && (
+      (user.getFlag(MODULE_ID, "sessionImportIds") ?? []).includes(importId)
+      || actorIds.has(String(user.character?.id ?? user.character ?? ""))
+      || actors.some(actor => actor.testUserPermission(user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER))
+    ));
+    history.entries.push({
+      importId,
+      sessionId: String(root?.getFlag(MODULE_ID, "sessionImport")?.id ?? ""),
+      title: root?.name ?? `Import ${importId}`,
+      sourceWorld: "",
+      importedAt: Math.min(...actors.map(actor => Number(actor._stats?.createdTime) || Date.now())),
+      recovered: true,
+      importedContent: {
+        actorUuids: actors.map(actor => actor.uuid),
+        actorFolderIds: folderIds,
+        sessionRootFolderId: root?.id ?? null,
+        userIds: users.map(user => user.id)
+      }
+    });
+  }
+  return history.entries;
+}
+
+export async function cleanupSessionImport(importId = "") {
   assertGm();
   if (role() !== WORLD_ROLES.SESSION) throw new Error(game.i18n.localize("TOVF.Session.Error.SessionOnly"));
   const active = game.settings.get(MODULE_ID, SETTINGS.ACTIVE_SESSION) ?? {};
-  const manifest = active.importedContent ?? {};
+  const history = foundry.utils.deepClone(game.settings.get(MODULE_ID, SETTINGS.SESSION_IMPORT_HISTORY) ?? { schemaVersion: 1, entries: [] });
+  history.entries = Array.isArray(history.entries) ? history.entries : [];
+  const effectiveEntries = sessionImportHistory();
+  const historyEntry = importId ? effectiveEntries.find(entry => entry.importId === importId) : null;
+  const targetImportId = historyEntry?.importId ?? active.importId ?? "";
+  const manifest = historyEntry?.importedContent ?? active.importedContent ?? {};
   const actorUuids = [...new Set(manifest.actorUuids ?? [])];
-  const confirmed = await foundry.applications.api.DialogV2.confirm({
+  const cleanup = await foundry.applications.api.DialogV2.wait({
     window: { title: game.i18n.localize("DOWNTIME_MANAGER.Session.Workflow.Cleanup") },
+    position: { width: 620 },
     content: `<p>${game.i18n.format("DOWNTIME_MANAGER.Session.Workflow.CleanupConfirm", {
       actors: actorUuids.length
-    })}</p>`,
-    yes: { label: game.i18n.localize("DOWNTIME_MANAGER.Session.Workflow.Cleanup") },
-    no: { label: game.i18n.localize("Cancel") }
+    })}</p><label class="checkbox"><input type="checkbox" name="actors" checked> ${game.i18n.localize("TOVF.Session.Cleanup.Actors")}</label><label class="checkbox"><input type="checkbox" name="users" checked> ${game.i18n.localize("TOVF.Session.Cleanup.Users")}</label><label class="checkbox"><input type="checkbox" name="scenes" checked> ${game.i18n.localize("TOVF.Session.Cleanup.Scenes")}</label>`,
+    buttons: [{ action: "cleanup", label: game.i18n.localize("DOWNTIME_MANAGER.Session.Workflow.Cleanup"), default: true, callback: (_event, button) => ({ actors: button.form.elements.actors.checked, users: button.form.elements.users.checked, scenes: button.form.elements.scenes.checked }) }, { action: "cancel", label: game.i18n.localize("Cancel"), callback: () => null }],
+    rejectClose: false
   });
-  if (!confirmed) return false;
+  if (!cleanup) return false;
 
-  const importedUsers = [...new Set(manifest.userIds ?? [])].map(id => game.users.get(id)).filter(u => u && u.id !== game.user.id && u.role === 1 && u.getFlag(MODULE_ID, "sessionImportedUser"));
-  const deleteUsers = importedUsers.length && await foundry.applications.api.DialogV2.confirm({
+  const otherEntries = effectiveEntries.filter(entry => entry.importId !== targetImportId && !entry.cleanedAt);
+  const referencedActors = new Set(otherEntries.flatMap(entry => entry.importedContent?.actorUuids ?? []));
+  const referencedUsers = new Set(otherEntries.flatMap(entry => entry.importedContent?.userIds ?? []));
+  const referencedScenes = new Set(otherEntries.flatMap(entry => entry.importedContent?.sceneUuids ?? []));
+  const importedUsers = [...new Set(manifest.userIds ?? [])].map(id => game.users.get(id)).filter(u => u && u.id !== game.user.id && u.role === 1 && u.getFlag(MODULE_ID, "sessionImportedUser") && !referencedUsers.has(u.id));
+  const deleteUsers = cleanup.users && importedUsers.length; /*
     window: { title: "Sessionbenutzer entfernen" },
     content: `<p>Auch die ${importedUsers.length} durch den Sessiontransfer angelegten Player-Benutzer löschen?</p><ul>${importedUsers.map(u => `<li>${foundry.utils.escapeHTML(u.name)}</li>`).join("")}</ul><p>Bestehende Benutzer und Spielleiterzugänge bleiben erhalten.</p>`,
     yes: { label: uiText("TOVF.Interface.DeleteUsers_181024", "Benutzer löschen") }, no: { label: "Benutzer behalten" }
-  });
+  }); */
 
-  for (const uuid of actorUuids) await (await fromUuid(uuid).catch(() => null))?.delete();
-  const folderIds = [...new Set(manifest.actorFolderIds ?? [])];
+  if (cleanup.actors) for (const uuid of actorUuids) {
+    if (referencedActors.has(uuid)) continue;
+    const actor = await fromUuid(uuid).catch(() => null);
+    if (actor?.getFlag(MODULE_ID, "sessionImportId") === targetImportId || !targetImportId) await deleteExistingDocument(actor);
+  }
+  const folderIds = cleanup.actors ? [...new Set(manifest.actorFolderIds ?? [])] : [];
   const folders = folderIds.map(id => game.folders.get(id)).filter(Boolean)
     .sort((left, right) => (right.ancestors?.length ?? 0) - (left.ancestors?.length ?? 0));
   for (const folder of folders) {
     const hasDocuments = game.actors.some(actor => actor.folder?.id === folder.id);
     const hasChildren = game.folders.some(candidate => folderParentId(candidate) === folder.id);
-    if (!hasDocuments && !hasChildren) await folder.delete();
+    if (!hasDocuments && !hasChildren) await deleteExistingDocument(folder);
   }
   if (deleteUsers) {
-    for (const user of importedUsers) await user.delete();
+    for (const user of importedUsers) await deleteExistingDocument(user);
     const state = foundry.utils.deepClone(game.settings.get(MODULE_ID, "campaignLedger") ?? {});
     const removed = new Set(importedUsers.map(u => u.id));
     for (const [personId, userId] of Object.entries(state.personLinks ?? {})) if (removed.has(userId)) delete state.personLinks[personId];
     state.revision = Number(state.revision ?? 0) + 1;
     await game.settings.set(MODULE_ID, "campaignLedger", state);
   }
-  await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, {});
+  if (cleanup.scenes) for (const uuid of manifest.sceneUuids ?? []) {
+    if (referencedScenes.has(uuid)) continue;
+    const scene = await fromUuid(uuid).catch(() => null);
+    if (scene?.getFlag(MODULE_ID, "sessionImportId") === targetImportId) await deleteExistingDocument(scene);
+  }
+  const storedEntry = history.entries.find(entry => entry.importId === targetImportId);
+  if (storedEntry) {
+    storedEntry.importedContent = {
+      ...storedEntry.importedContent,
+      ...(cleanup.actors ? { actorUuids: [], actorFolderIds: [] } : {}),
+      ...(cleanup.users ? { userIds: [] } : {}),
+      ...(cleanup.scenes ? { sceneUuids: [] } : {})
+    };
+    if (![...(storedEntry.importedContent.actorUuids ?? []), ...(storedEntry.importedContent.userIds ?? []), ...(storedEntry.importedContent.sceneUuids ?? [])].length) storedEntry.cleanedAt = Date.now();
+    await game.settings.set(MODULE_ID, SETTINGS.SESSION_IMPORT_HISTORY, history);
+  } else if (historyEntry) {
+    history.entries.push({
+      ...foundry.utils.deepClone(historyEntry),
+      cleanedAt: Date.now(),
+      importedContent: { ...historyEntry.importedContent, actorUuids: [], actorFolderIds: [], userIds: [] }
+    });
+    await game.settings.set(MODULE_ID, SETTINGS.SESSION_IMPORT_HISTORY, history);
+  }
+  const hasRemainingContent = (!cleanup.actors && actorUuids.length)
+    || (!cleanup.users && (manifest.userIds ?? []).length)
+    || (!cleanup.scenes && (manifest.sceneUuids ?? []).length);
+  if ((!targetImportId || active.importId === targetImportId) && !hasRemainingContent) await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, {});
   ui.notifications.info(game.i18n.localize("DOWNTIME_MANAGER.Session.Workflow.CleanupComplete"));
   return true;
 }
@@ -804,7 +985,7 @@ export async function exportSessionResult() {
     return {
       transferId: transfer.id,
       baselineHash: transfer.baselineHash,
-      data: actor.toObject()
+      data: normalizeLegacyActiveEffects(actor.toObject())
     };
   });
   const bundle = {
@@ -823,7 +1004,7 @@ export async function exportSessionResult() {
   foundry.utils.saveDataToFile(
     JSON.stringify(bundle, null, 2),
     "application/json",
-    `tov-feuerschwinge-result-${filenamePart(active.title || game.world.title)}-${bundle.metadata.exportedAt.slice(0, 10)}.json`
+    `RESULT_tov-feuerschwinge-${filenamePart(active.title || game.world.title)}-${bundle.metadata.exportedAt.slice(0, 10)}.json`
   );
   ui.notifications.info(game.i18n.format("TOVF.Session.ResultExportComplete", { count: actors.length }));
   if (active.id) await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, { ...active, status: "played" });
@@ -889,7 +1070,7 @@ export async function importSessionResult(file) {
   });
   ui.notifications.info(game.i18n.format("TOVF.Session.ResultImportComplete", { count }));
   if (skippedChanges.length) {
-    ui.notifications.warn(game.i18n.format("TOVF.Session.ResultImportSkipped", { count: skippedChanges.length }), { permanent: true });
+    ui.notifications.warn(game.i18n.format("TOVF.Session.ResultImportSkipped", { count: skippedChanges.length }));
   }
   return { count, skipped: skippedChanges, actorUuids: importedRows.map(row => row.actor.uuid), session: bundle.session ?? null };
 }

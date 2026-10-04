@@ -244,7 +244,18 @@ function installEquipmentDialogGuard() {
  * Character Creation without replacing its selection flow.
  */
 export function installCharacterCreationOverrides() {
-  if (installed) return;
+  if (installed) return { status: "already-installed" };
+  const missing = [];
+  if (!CONFIG.BlackFlag?.registration) missing.push("CONFIG.BlackFlag.registration");
+  if (typeof BlackFlag?.data?.advancement?.EquipmentEntryData?.prototype?.findSelection !== "function") {
+    missing.push("EquipmentEntryData.findSelection");
+  }
+  if (typeof BlackFlag?.applications?.advancement?.EquipmentDialog?.prototype?._prepareEquipmentEntry !== "function") {
+    missing.push("EquipmentDialog._prepareEquipmentEntry");
+  }
+  if (missing.length) {
+    return { status: "incompatible", reason: `Missing Black Flag APIs: ${missing.join(", ")}.` };
+  }
   installed = true;
 
   installEquipmentUuidResolver();
@@ -261,6 +272,7 @@ export function installCharacterCreationOverrides() {
   Hooks.on("deleteItem", item => {
     if (item.pack === ITEM_PACK || item.pack === CLASS_PACK) void synchronizeCharacterCreationOverrides();
   });
+  return { status: "completed" };
 }
 
 export const characterCreationOverridesApi = {

@@ -363,7 +363,7 @@ class WeaponCustomizationConfig extends HandlebarsApplicationMixin(ApplicationV2
   }
 }
 
-Hooks.once("init", () => {
+export function registerWeaponCustomization() {
   if (game.system.id !== "black-flag") return;
   game.settings.register(MODULE_ID, SETTING, {
     scope: "world",
@@ -382,4 +382,4 @@ Hooks.once("init", () => {
   });
   registerDefinitions();
   installWeaponMechanics();
-});
+}

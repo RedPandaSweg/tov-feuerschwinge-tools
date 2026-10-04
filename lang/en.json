@@ -1,4 +1,51 @@
 {
+  "TOVF.Dnd5eImporter.Title": "Import D&D5e Content",
+  "TOVF.Dnd5eImporter.Open": "Import D&D5e Content",
+  "TOVF.Dnd5eImporter.Replace": "Replace earlier D&D imports with the same name",
+  "TOVF.Dnd5eImporter.Hint": "Copies items and spells from an enabled D&D5e compendium into a writable item compendium and adapts the common document data for the active system.",
+  "TOVF.Dnd5eImporter.DdbHint": "DDB Importer is active. First use it to import your D&D Beyond items or spells into one of its compendiums, then select that compendium below.",
+  "TOVF.Dnd5eImporter.Bundle.Title": "Transfer from a D&D5e world",
+  "TOVF.Dnd5eImporter.Bundle.Hint": "Imports a transfer file created by Feuerschwinge Tools. Folders, images, and sources are retained; identical images are reused.",
+  "TOVF.Dnd5eImporter.Bundle.File": "Transfer file",
+  "TOVF.Dnd5eImporter.Bundle.Import": "Import bundle into content module",
+  "TOVF.Dnd5eImporter.Source": "Source compendium",
+  "TOVF.Dnd5eImporter.Target": "Target compendium",
+  "TOVF.Dnd5eImporter.Filter": "Name filter",
+  "TOVF.Dnd5eImporter.FilterHint": "Optional: only import matching item names",
+  "TOVF.Dnd5eImporter.Duplicates": "Skip items with an existing name",
+  "TOVF.Dnd5eImporter.TargetHint": "Writable world compendiums are shown, plus the Feuerschwinge Items and Spells packs for full Game Masters. Content packs are unlocked only for the duration of the import.",
+  "TOVF.Dnd5eImporter.Import": "Import content",
+  "TOVF.Dnd5eImporter.NoSource": "No enabled D&D5e item compendium was found.",
+  "TOVF.Dnd5eImporter.NoTarget": "No writable item compendium was found.",
+  "TOVF.Dnd5eImporter.Result": "Imported {imported} of {found} items; skipped {skipped} existing names. Images: {uploaded} uploaded, {reused} reused.",
+  "TOVF.Dnd5eImporter.Errors.GM": "This import requires a game master.",
+  "TOVF.Dnd5eImporter.Errors.Source": "Choose a D&D5e item compendium as the source.",
+  "TOVF.Dnd5eImporter.Errors.Target": "Choose an unlocked item compendium you are allowed to edit as the target.",
+  "TOVF.Dnd5eImporter.Errors.Admin": "Only a full Game Master may modify the Feuerschwinge content module.",
+  "TOVF.Dnd5eImporter.Errors.Bundle": "The file is not a supported Feuerschwinge D&D5e bundle.",
+  "TOVF.Dnd5eImporter.Errors.BundleFile": "Choose a D&D5e transfer file first.",
+  "TOVF.Dnd5eImporter.Errors.ContentTarget": "Bundle imports require an Item compendium from the Feuerschwinge content module.",
+  "TOVF.EffectCleanup.Title": "Expired temporary Effects",
+  "TOVF.EffectCleanup.Summary": "Found {count} unambiguously expired temporary Active Effects on {actors} Actors.",
+  "TOVF.EffectCleanup.Scope": "Only Effects stored directly on an Actor, with a temporary duration, and already marked as expired by Foundry are deleted. Active, merely disabled, permanent, and Item-embedded Effects remain untouched.",
+  "TOVF.EffectCleanup.Action": "Delete expired Effects",
+  "TOVF.EffectCleanup.Confirm": "Delete {count} expired temporary Active Effects on {actors} Actors?",
+  "TOVF.EffectCleanup.Deleted": "Deleted {count} expired temporary Active Effects.",
+  "TOVF.EffectCleanup.Result": "Deleted {count} expired temporary Active Effects. The change can be restored with Undo above.",
+  "TOVF.EffectCleanup.NothingDeleted": "Nothing was deleted. No matching Effects remained after the preview.",
+  "TOVF.TechnicalDiagnostics.Title": "Technical system status",
+  "TOVF.TechnicalDiagnostics.Hint": "Shows module initialization, compatibility integrations, and background services. Expand each section for details and errors.",
+  "TOVF.TechnicalDiagnostics.Startup": "Module startup",
+  "TOVF.TechnicalDiagnostics.Compatibility": "Compatibility",
+  "TOVF.TechnicalDiagnostics.Scheduler": "Background services",
+  "TOVF.TechnicalDiagnostics.ResponsibleGM": "Responsible GM",
+  "TOVF.TechnicalDiagnostics.Component": "Component",
+  "TOVF.TechnicalDiagnostics.Status": "Status",
+  "TOVF.TechnicalDiagnostics.Duration": "Duration",
+  "TOVF.TechnicalDiagnostics.Task": "Task",
+  "TOVF.TechnicalDiagnostics.LastRun": "Last run",
+  "TOVF.TechnicalDiagnostics.NextRun": "Next check",
+  "TOVF.TechnicalDiagnostics.NoEntries": "No entries available.",
   "enhancedcombathud-black-flag": {
     "hud": { "castspell": { "name": "Cast Spell" }, "usepower": { "name": "Features" }, "useitem": { "name": "Use Item" }, "saves": { "name": "Saving Throws" }, "skills": { "name": "Skills" }, "tools": { "name": "Tools" } },
     "tooltip": { "target": { "name": "Target" }, "range": { "name": "Range" }, "toHit": { "name": "To Hit" }, "damage": { "name": "Damage" }, "properties": { "name": "Properties" } },
@@ -12,6 +59,16 @@
     }
   },
   "TOVF": {
+    "ActorDirectory": {
+      "Inactive": "Inactive",
+      "InactiveHint": "This character is marked as inactive in character activity."
+    },
+    "Compatibility": {
+      "InstallFailed": "Feuerschwinge Tools: Compatibility integrations failed to load: {integrations}. Other module features continued to start. See the console for details."
+    },
+    "Startup": {
+      "InstallFailed": "Feuerschwinge Tools: Module features failed to start: {features}. Other features continued to load. See the console for details."
+    },
 "CraftingLevel": {
   "Override": "Minimum level (optional)",
   "Default": "Rarity rule",
@@ -539,9 +596,40 @@
     "ChallengeManager": {
       "Title": "Challenge Manager",
       "Open": "Challenge Manager",
+      "Settings": {
+        "Menu": {
+          "Name": "Challenge HUD",
+          "Label": "Configure Challenge HUD",
+          "Hint": "Configure the Challenge HUD display, combat behavior, and visible health states.",
+          "Title": "Challenge HUD Configuration",
+          "Description": "Personal display options apply only to this client. World options control the HUD for all players.",
+          "Personal": "Personal display",
+          "World": "Combat and world",
+          "Health": "Player health display",
+          "Save": "Save settings",
+          "Saved": "Challenge HUD settings saved."
+        },
+        "AutoOpen": {
+          "Name": "Open Challenge HUD on combat start",
+          "Hint": "Automatically opens the Challenge HUD for every client when combat starts."
+        },
+        "ShowNpcHealth": {
+          "Name": "Show NPC health state to players",
+          "Hint": "Tints NPC initiative cards for players based on their remaining HP."
+        },
+        "ShowOtherPlayerHealth": {
+          "Name": "Show other player characters' health state",
+          "Hint": "Tints other player characters' initiative cards based on their remaining HP. A player's own character remains visible."
+        },
+        "MaxInitiativeCards": {
+          "Name": "Maximum initiative cards",
+          "Hint": "Sets how many initiative cards are displayed in the Challenge HUD for this user only."
+        }
+      },
       "Encounter": {
         "Adversaries": "Adversaries",
-        "MaxCR": "Max CR"
+        "ActiveAdversaries": "Active adversaries",
+        "MaxCR": "Highest CR"
       },
       "Doom": {
         "Bank": "Doom Bank",
@@ -549,6 +637,8 @@
         "Disadvantage": "Disadvantage (1)",
         "ExtraAction": "Extra Action (2)",
         "Recharge": "Recharge (3)",
+        "Recalculate": "Recalculate Doom Points",
+        "RecalculateFailed": "The Doom Points could not be recalculated. See the console for details.",
         "Increase": "Doom increased",
         "Decrease": "Doom decreased",
         "AnnounceCurrent": "Show current Doom total in the chat message",
@@ -570,6 +660,8 @@
         "DCShort": "DC",
         "Post": "Post Request",
         "ShowAverage": "Show average after all rolls",
+        "ShowAverageShort": "Show average",
+        "Short": "Roll",
         "Private": "Private roll",
         "PrivateHint": "Only the GM and the rolling player can see the result.",
         "RequestedFor": "Requested for:",
@@ -653,6 +745,7 @@
     },
     "Session": {
       "Title": "Feuerschwinge Transfer Management",
+      "ImportHistory": { "Title": "Imported sessions", "Hint": "Multiple sessions may remain imported at the same time. Cleanup removes only the Actors, folders, and created players belonging to that import.", "Content": "{actors} Actors · {users} players", "Cleanup": "Delete content", "Cleaned": "Content deleted", "Empty": "No sessions have been imported yet." },
       "File": "Transfer file",
       "ActorRoot": "Actor scope for player characters",
       "ActorRootHint": "Limits selection to this folder tree. A character's direct subfolder is treated as its transfer folder, including all descendants.",
@@ -661,6 +754,12 @@
       "SelectionMode": { "Label": "Select by", "Character": "Character", "Player": "Player" },
       "Search": "Search players or characters…",
       "TransferFolder": "Transfer folder",
+      "ShowInactive": "Show inactive",
+      "HideInactive": "Hide inactive",
+      "IncludeTransferScenes": "Include Feuerschwinge scenes",
+      "IncludeTransferScenesShort": "Scenes",
+      "IncludeTransferScenesChoice": "include",
+      "Cleanup": { "Actors": "Delete characters and their folders", "Users": "Delete players created by the transfer", "Scenes": "Delete imported Feuerschwinge scenes" },
       "OnlyActor": "Character and detected references only",
       "AdditionalContent": "Additional content",
       "IncludeActorFolders": "Include detected transfer folders completely with all descendants",
@@ -671,6 +770,7 @@
       "ExportFolders": "Companion folders",
       "Compendiums": { "Title": "Standalone compendium folder transfer", "Hint": "Specialized transfer without characters. Existing folder bundles remain compatible." },
       "Settings": {
+        "SessionTransferScenes": { "Name": "Feuerschwinge scenes for session transfer", "Hint": "Choose the scenes and the exact Tokens that should be available in a session transfer.", "NoScenes": "No scenes available.", "NoTokens": "This scene has no Tokens." },
         "Name": "Transfer Management",
         "Label": "Open transfer management",
         "Hint": "Transfer character folders, companions, campaign rules, and compendiums together between worlds."
@@ -689,8 +789,12 @@
         "ConnectedPlayers": "Connected players",
         "OtherPlayers": "Other players",
         "SelectAll": "Select all",
+        "SelectAllShort": "All",
         "SelectNone": "Select none",
+        "SelectNoneShort": "None",
         "SelectConnected": "Select connected",
+        "SelectConnectedShort": "Connected",
+        "SelectTokensShort": "Selected Tokens",
         "ExportAction": "Export session package",
         "ResultTitle": "Review session result",
         "ResultHint": "Imports selected character results only. Full session packages cannot be imported into the primary world.",
@@ -732,6 +836,9 @@
     }
   ,
 "Interface": {
+  "NewArrival": "New",
+  "RestockComplete": "Restock completed.",
+  "Restock": { "Title": "Automatic restocking", "Automatic": "Automation enabled", "Hint": "Each rule uses its own RollTable and schedule. A value of 0 disables discounting or removal.", "Rule": "Restock rule", "Rules": "rules", "Configure": "Configure restocking", "SelectTable": "Select RollTable", "Rolls": "Rolls", "Quantity": "Quantity per result", "Start": "Start date", "Interval": "Delivery interval", "Discount": "Discount after / percent", "Remove": "Remove after", "Next": "Next delivery", "LastDelivery": "Last delivery", "DeliveryHistory": "Delivery history", "Deliveries": "deliveries", "Delivery": "Delivery", "Item": "Item", "Amount": "Amount", "Status": "Status", "InStock": "In stock", "Sold": "Sold", "DeliveredAt": "Delivered at", "DiscountAt": "Discount from", "RemoveAt": "Removal at", "Never": "Never", "NoNewItems": "No new items found.", "NotScheduled": "not scheduled yet", "Empty": "No restock rule configured yet.", "Add": "Add rule", "Run": "Restock now", "Saved": "Restock rules saved.", "Complete": "Restock completed.", "Units": { "minutes": "Minutes", "hours": "Hours", "days": "Days", "weeks": "Weeks", "months": "Months" } },
   "Refresh_87c65f": "Refresh",
   "DataAsOf_ffa317": "· Data as of:",
   "SelectThePersonWhoseBalanceYouWant_6fe82d": "Select the person whose balance you want to manage. As a GM, you can redeem a reward for one of their characters.",
@@ -1153,6 +1260,9 @@
   "TheRequestedItemCouldNotBeOpened_2b6eea": "The requested Item could not be opened.",
   "TheMinimumLevelMustBeBetween1_388916": "The minimum level must be between 1 and 20.",
   "DiscountPercentage_69320b": "Discount percentage",
+  "DiscountLabel_7c2a91": "Label",
+  "OfferLabel_4bbf5e": "Offer",
+  "ClearanceSale_1d7f2a": "Clearance sale",
   "UnitsPerDisplayedPrice_a55eaf": "Units per displayed price",
   "AvailableQuantity_3cba50": "Available quantity",
   "ClearMerchantInventory_bcc7a2": "Clear merchant inventory",
@@ -2157,6 +2267,7 @@
       "Errors": { "EmbeddedRequired": "This downtime Item must belong to a character before it can be redeemed.", "Permission": "You do not have permission to redeem this Item.", "Amount": "Enter a downtime amount of 0 or greater.", "Busy": "This Item is already being redeemed.", "Empty": "No remaining Item quantity is available." }
     },
     "Session": {
+      "NewWarning": { "Title": "Start a new session?", "Heading": "WARNING: This session has not been fully rewarded.", "Text": "Starting a new session now discards the current session state. Are you sure you want to continue without awarding rewards?", "Wait": "Continue anyway ({seconds})", "Confirm": "Start new session anyway" },
       "Title": "Session manager", "Name": "Session title", "Summary": "Summary", "Multiplier": "Gold multiplier", "Untitled": "Session rewards",
       "Workflow": { "Title": "Session transfer", "Status": "Status", "Prepare": "Create session package", "SessionFile": "Session package", "Begin": "Import session package", "End": "End session and export result", "ResultFile": "Session result", "Complete": "Import session result", "NewSession": "New Session", "ResetConfirm": "Reset the current session state? Imported Actors, folders, Macros, and compendiums are retained.", "ResetComplete": "The session state was reset. A new session package can now be imported.", "Cleanup": "Delete imported session content", "CleanupConfirm": "Delete the {actors} imported characters and companions together with their session folder and reset the session? Macros and compendiums are retained. This can only be restored from a backup.", "CleanupComplete": "The imported characters, companions, and their session folder have been deleted. A new session can now be imported.", "ReturnedHint": "Character results have been applied. Review the selection, then award the session rewards.", "Locked": "The exported session is locked until its result is imported.", "Statuses": { "empty": "No active session", "draft": "Draft", "exported": "Session package created", "imported": "Ready to play", "played": "Result exported", "returned": "Characters returned", "awarded": "Rewards awarded" } },
       "Level": "Level", "Available": "Available downtime", "Downtime": "Downtime", "Milestones": "Milestones", "Passive": "Passive in current period",
@@ -2207,14 +2318,19 @@
     },
     "GMTools": {
       "Title": "Feuerschwinge GM Tools", "Open": "Open GM Tools", "Character": "Character", "Player": "Player", "CharacterValues": "Character progress", "OpenSheet": "Open sheet", "Downtime": "Downtime", "Milestones": "Milestones", "SessionsPlayed": "Tracked sessions", "LastMilestoneWeek": "Last milestone week", "PassiveDowntime": "Passive downtime by period (JSON)", "SaveCharacter": "Save character", "Export": "Export backup", "NoCharacters": "No player characters were found.", "Progress": "Progress", "RequiredProgress": "Required progress", "IntervalProgress": "Interval progress", "Active": "Active", "Completed": "Completed", "PendingRoll": "Pending check", "AwaitingCompletion": "Awaiting completion check", "SaveProject": "Save project", "Remove": "Remove", "RemoveProject": "Remove project", "RemoveProjectConfirm": "Remove this saved project state? Spent resources are not refunded.", "NoProjects": "This character has no saved projects.", "HighestGuildProgress": "Highest guild progress", "HighestMilestone": "{milestones} milestones · level {level} · tier {tier} · {characters}", "ActiveSession": "Active session", "NoActiveSession": "There is no active session.", "SessionTitle": "Title", "RawData": "Technical session data", "UnlockSession": "Unlock as draft", "ResetSession": "Delete active session", "ResetSessionConfirm": "Delete the complete active session state?", "Undo": "Undo last change", "LastChange": "Last change", "Refresh": "Refresh", "ConfirmChange": "Confirm correction", "ConfirmChangeHint": "Review the values before applying the correction.", "Before": "Before", "After": "After",
-      "Tabs": { "characters": "Characters", "projects": "Projects", "session": "Session", "voidTaint": "Void Taint", "database": "Database", "diagnostics": "Diagnostics" },
+      "Activity": { "Title": "Character activity", "Hint": "Active characters are shown by default for session transfers. Missing activity flags count as active.", "Save": "Save activity", "Saved": "Character activity saved.", "LastSession": "Last session", "LastLogin": "Player login", "Never": "No session yet", "Unknown": "Unknown", "ActiveList": "Active characters", "InactiveList": "Inactive characters", "NoActive": "No active characters.", "NoInactive": "No inactive characters.", "WithinWeek": "Within the last week", "OverOneWeek": "More than one week ago", "OverWeeks": "More than {weeks} weeks ago", "Older": "Older than one week", "Sort": "Sort", "SortSession": "Last session", "SortLogin": "Player login", "SortName": "Alphabetical", "LoginFilter": "Login filter", "All": "All", "Character": "Character", "ActiveColumn": "Active", "ShowInactive": "Show inactive", "HideInactive": "Hide inactive" },
+      "SessionHistory": { "Title": "Past sessions", "Search": "Search session, GM, or character…", "Session": "Session", "GM": "GM", "Participants": "Participants", "Passive": "Passive recipients", "Corrected": "corrected", "Edit": "Edit", "Empty": "No structured session data exists yet.", "Recovery": "Current session state and troubleshooting" },
+      "Guild": { "Active": "Active characters", "Inactive": "inactive", "Level": "Average level", "Median": "Median", "Highest": "Highest guild progress", "Downtime": "Average available downtime", "Tiers": "Tier of Play distribution", "Classes": "Class distribution", "ClassesHint": "Each existing class is counted once. Multiclass characters therefore appear under multiple classes.", "SessionActivity": "Session participation during the last eight weeks", "SessionHint": "Counts participations by currently active characters in the structured session history." },
+      "CharacterActive": "Active character",
+      "Inactive": "Inactive",
+      "Tabs": { "guild": "Guild overview", "characters": "Milestones", "activity": "Activity", "projects": "Projects", "downtime": "Downtime", "session": "Sessions", "voidTaint": "Void Taint", "database": "Database", "diagnostics": "Diagnostics" },
       "MilestoneAudit": { "Title": "Milestone and level mismatches", "Hint": "Compares each PC's current character level with the level expected from their stored milestones and the configured milestone level bands.", "Values": "{milestones} milestones · current level {actual} · expected level {expected}", "NoMismatches": "Milestones and character level match for every PC." },
       "Database": { "DocumentType": "Document type", "Search": "Search", "SearchPlaceholder": "Name, ID, UUID, or namespace", "Namespace": "Namespace", "AllNamespaces": "All namespaces", "OnlyFlagged": "Only documents with flags", "Selected": "Selected", "SelectVisible": "Select all visible", "ClearSelection": "Clear selection", "ExportFlags": "Export flag backup", "Documents": "Documents", "NoDocuments": "No matching documents found.", "FlagTree": "Flag tree", "NoFlags": "This document has no flags.", "NoDocumentSelected": "Select a document.", "Editor": "Flag editor", "EntireNamespace": "Entire namespace", "Path": "Path", "Summary": "Summary", "ValueType": "Value type", "Value": "Value", "BulkHint": "If documents are selected on the left, the change is applied to every selected document. With no selection, only the open document is changed.", "SelectFlagHint": "Select a namespace or path in the flag tree.", "Save": "Save flag", "Delete": "Delete flag", "DeleteConfirm": "Delete flag path {path} on {count} document(s)?", "Create": "Create flag", "ChangeTargets": "This change affects {count} document(s).", "Types": { "ActorPC": "PCs", "ActorNPC": "NPCs", "Item": "Items (including embedded)", "ActiveEffect": "Active Effects", "Scene": "Scenes", "Token": "Tokens", "JournalEntry": "Journals", "JournalEntryPage": "Journal Pages", "RollTable": "Roll Tables", "Macro": "Macros", "Playlist": "Playlists", "Cards": "Card Stacks" } },
-      "Diagnostics": { "Title": "Diagnostics", "Hint": "Checks Feuerschwinge character flags, project references, and session locks. Automatic repair only changes unambiguously invalid values and never deletes projects.", "RepairSafe": "Repair safe problems", "NoProblems": "No known problems were found.", "InvalidDowntime": "The downtime balance is invalid.", "InvalidProgress": "The session progress data is invalid.", "MissingStation": "The station for {project} can no longer be found.", "MissingProject": "The project source for {project} can no longer be found.", "LockedSession": "The session is stuck in the awarding state." },
+      "Diagnostics": { "Title": "Diagnostics", "Hint": "Checks Feuerschwinge character flags, project references, and session locks. Automatic repair only changes unambiguously invalid values and never deletes projects.", "RepairSafe": "Repair safe problems", "NoProblems": "No known problems were found.", "InvalidDowntime": "The downtime balance is invalid.", "InvalidProgress": "The session progress data is invalid.", "MissingStation": "The station for {project} can no longer be found.", "MissingProject": "The project source for {project} can no longer be found.", "LockedSession": "The session is stuck in the awarding state.", "LegacyFormulasTitle": "Suspicious formula data", "LegacyFormulasHint": "These findings can cause the known warnings about missing attributes. Open the affected Item or Active Effect and adapt the formula to the current Black Flag data. No automatic change is made because the correct replacement depends on the intended rule.", "LegacyFormulasSummary": "{advancementChanges} formulas in {advancementItems} Advancement Items, {changes} Active Effect changes, and {types} legacy Active Effect types on {actors} Actors.", "LegacyReferences": "Detected legacy reference: {references}", "OpenAffectedDocument": "Edit affected document" },
       "SpellMigration": { "Title": "Migrate Actor Spells", "Hint": "Synchronizes spells on world Actors with unambiguous versions from the Feuerschwinge compendiums.", "Action": "Preview migration", "Scanning": "Scanning Actor Spells and Feuerschwinge compendiums…", "Progress": "Actor Spells {current}/{total}: {actor} – {spell}", "NoSources": "No Item compendiums containing Spells were found in the Feuerschwinge content module. Check that tov-feuerschwinge is active.", "Preview": "{items} Spells on {actors} Actors can be migrated. {missing} have no Feuerschwinge match; {ambiguous} are ambiguous.", "Scope": "Only world Actors are included. World Items, other compendiums, and synthetic Token Actors remain unchanged.", "Missing": "No Feuerschwinge match ({count})", "Ambiguous": "Ambiguous matches ({count})", "Failed": "Failed replacements ({count})", "Warning": "Matched Actor Spells are recreated with the same Item ID. Actor-specific spell relationships are retained. A recovery file is downloaded first; individual failures are restored immediately.", "Apply": "Migrate Actor Spells", "Cancel": "Cancel", "Close": "Close", "Complete": "Migration complete: {migrated} Spells on {actors} Actors updated, {failed} failed. {missing} unmatched and {ambiguous} ambiguous Spells remained unchanged." },
       "Help": { "Title": "GM Tools", "Text": "GM Tools display current world state and provide direct, recoverable control over character and world data.", "Point1": "Open the wrench in the Feuerschwinge canvas controls; the window is only available to Game Masters.", "Point2": "Under Milestones, edit individual source entries, assign matching evidence, record weeks, and change their order. The number of rows determines the milestone total.", "Point3": "Project states allow progress, target, interval progress, activity, pending checks, and completion to be repaired or removed.", "Point4": "The Session tab shows the current highest guild progress with milestones, level, tier, and leading characters together with the technical state of the active session.", "Point5": "A stuck session can be unlocked as a draft or deliberately deleted.", "Point6": "Diagnostics report invalid flags, missing project or station references, and a stuck awarding lock. Safe repair never removes projects.", "Point7": "Every modification creates one recoverable undo snapshot; character data can additionally be exported as JSON before larger corrections." },
       "Notifications": { "CharacterSaved": "Character progress saved.", "ProjectSaved": "Project state saved.", "ProjectRemoved": "Project state removed.", "SessionUnlocked": "The session was unlocked as a draft.", "SessionReset": "The active session was deleted.", "FlagsSaved": "Flags saved.", "FlagsDeleted": "Flags deleted.", "Repaired": "{count} safe problems repaired.", "Undone": "The last GM Tools change was undone.", "NothingToUndo": "There is no GM Tools change to undo." },
-      "Errors": { "GMOnly": "Only a Game Master may use these tools.", "InvalidNumber": "{label} must be a valid non-negative number.", "ActorMissing": "The selected character could not be found.", "DocumentMissing": "At least one selected document could not be found or edited.", "ProjectMissing": "The selected project state could not be found.", "InvalidPassive": "Passive downtime must be a JSON object containing only non-negative numeric values.", "InvalidFlagPath": "Namespaces and flag paths may only contain letters, numbers, underscores, hyphens, and dots between path segments.", "InvalidFlagNamespace": "The complete value of a flag namespace must remain a JSON object.", "InvalidFlagValue": "The value does not match the selected data type.", "InvalidFlagJson": "The entered JSON value is invalid." }
+      "Errors": { "GMOnly": "Only a Game Master may use these tools.", "SettlementAdminOnly": "Monthly settlement is only available in the primary world to full Game Masters.", "InvalidNumber": "{label} must be a valid non-negative number.", "ActorMissing": "The selected character could not be found.", "DocumentMissing": "At least one selected document could not be found or edited.", "ProjectMissing": "The selected project state could not be found.", "InvalidPassive": "Passive downtime must be a JSON object containing only non-negative numeric values.", "InvalidFlagPath": "Namespaces and flag paths may only contain letters, numbers, underscores, hyphens, and dots between path segments.", "InvalidFlagNamespace": "The complete value of a flag namespace must remain a JSON object.", "InvalidFlagValue": "The value does not match the selected data type.", "InvalidFlagJson": "The entered JSON value is invalid." }
     },
     "Help": {
       "Title": "Feuerschwinge – Introduction and Help", "Heading": "Introduction and help", "Introduction": "This page explains the complete workflows for Game Masters and players. Each section can also be used independently as a reference.", "Navigation": "Help topics", "SettingName": "Introduction and help", "SettingLabel": "Open help page", "SettingHint": "Explains setup, stations, projects, rewards, sessions, and downtime distribution.",

@@ -5,6 +5,7 @@ import { RewardService } from "./reward-service.mjs";
 import { getSystemAdapter } from "./system-adapter.mjs";
 import { round } from "./utils.mjs";
 import { readableRewardEntry } from "../campaign/reward-label.mjs";
+import { isProjectAdministrator } from "../core/permissions.mjs?v=3.7.8-permissions-1";
 
 export function isoWeekKey(value = new Date()) {
   const date = new Date(value);
@@ -41,6 +42,10 @@ export function playerCharacters() {
   return (strict.length ? strict : game.actors.contents.filter(actor => actor.type !== "npc" && actor.hasPlayerOwner))
     .filter(isInSelectedFolder)
     .sort((a, b) => String(a.name).localeCompare(String(b.name), game.i18n.lang));
+}
+
+export function isActiveCharacter(actor) {
+  return actor?.getFlag?.(MODULE_ID, FLAGS.ACTIVE) !== false;
 }
 
 export function actorLevel(actor) {
@@ -103,7 +108,7 @@ export function milestoneCatchUpEnabled() {
   return game.settings.get(MODULE_ID, SETTINGS.MILESTONE_CATCH_UP)?.enabled !== false;
 }
 
-export function highestMilestoneProgress(actors = playerCharacters()) {
+export function highestMilestoneProgress(actors = playerCharacters().filter(isActiveCharacter)) {
   const entries = actors.map(actor => {
     const milestones = Math.max(0, Math.floor(Number(sessionProgress(actor).milestones) || 0));
     const level = levelFromMilestones(milestones);
@@ -339,7 +344,7 @@ export class SessionService {
             lastMilestoneWeek: milestone ? week : progress.lastMilestoneWeek
           });
           participants.push({ actorUuid: actor.uuid, actorName: actor.name, gold: details.gold, downtime: details.downtime, rewards: details.items, milestone });
-        } else {
+        } else if (isActiveCharacter(actor)) {
           const passiveLevel = levelFromMilestones(progress.milestones);
           const baseDowntime = sessionDowntime(passiveLevel);
           const current = Number(progress.passiveDowntime?.[periodKey] ?? 0);
@@ -358,7 +363,7 @@ export class SessionService {
       await storeHistoryRecord(record, page?.uuid ?? null);
       if (game.settings.get(MODULE_ID, "worldRole") === "primary") {
         try {
-          const { campaignAction, campaignState } = await import("../campaign/service.mjs");
+          const { campaignAction, campaignState } = await import("../campaign/service.mjs?v=3.7.8-permissions-1");
           await campaignAction("completedGM", { revision: campaignState().revision, historyId: String(record.id) });
         } catch (error) { ui.notifications.warn("Session abgeschlossen; SL-Belohnung muss nachgetragen werden: " + error.message); }
       }
@@ -376,6 +381,9 @@ export class SessionService {
   }
 
   static async settle(month) {
+    if (game.settings.get(MODULE_ID, "worldRole") !== "primary" || !isProjectAdministrator()) {
+      throw new Error(game.i18n.localize("DOWNTIME_MANAGER.GMTools.Errors.SettlementAdminOnly"));
+    }
     if (this.busy) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Session.Errors.Busy"));
     this.busy = true;
     try {

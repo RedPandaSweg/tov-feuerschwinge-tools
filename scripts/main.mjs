@@ -1,81 +1,122 @@
 import { MODULE_ID } from "./core/constants.mjs";
-import { installConcentration } from "./concentration.mjs";
-import { registerMigrationSettings, runMigrations } from "./core/migrations.mjs";
+import { activateDowntime, registerDowntime } from "./downtime/main.mjs?v=3.7.8-standard-effects-2";
+import { activateVoidTaint, registerVoidTaint } from "./void-taint/main.mjs?v=3.3.0-void-taint-1";
+import { installBlackFlagCompatibility } from "./integrations/black-flag-compatibility.mjs?v=3.7.8-forward-consumption-1";
 import {
-  installLegacyNamespaceGuard,
-  migrateToolNamespace,
-  registerNamespaceMigration
-} from "./core/namespace-migration.mjs";
-import { exposeTransferApi } from "./transfer/compendium-transfer.mjs?v=3.6.2-transfer-integrity-9";
-import { registerSessionTransfer, sessionTransferApi } from "./transfer/session-transfer.mjs";
-import { installBlackFlagCompatibility } from "./integrations/black-flag-compatibility.mjs?v=3.7.6-damage-formula-4";
-import {
-  characterCreationOverridesApi,
-  installCharacterCreationOverrides
-} from "./integrations/character-creation-overrides.mjs";
-import {
-  installWeaponOptionActivities,
-  weaponOptionActivitiesApi
-} from "./integrations/weapon-option-activities.mjs?v=3.2.4-tooltip-links-2";
-import { installArgonBlackFlagCompatibility } from "./integrations/argon-black-flag-compatibility.mjs?v=3.4.2-argon-settings-popup-1";
-import { activatePlayerUnpause, registerPlayerUnpause } from "./player-unpause.mjs";
-import { registerCompendiumLibrary } from "./compendium-library.mjs?v=3.5.0-feuerschwinge-spell-priority-1";
-import { activateChallengeManager, registerChallengeManager } from "./challenge-manager.mjs";
-import { registerLinkTools } from "./link-tools-config.mjs";
-import {
-  activateFeaturePoolIntegration,
-  registerFeaturePoolIntegration
-} from "./feature-pool-integration.mjs";
-import { registerTokenSizeSync } from "./token-size-sync.mjs";
-import { creatureBuilderApi, registerCreatureBuilder } from "./creature-builder.mjs";
-import { registerSettingsCategories } from "./settings-categories.mjs";
-import { registerHelp } from "./help-config.mjs";
-import { activityChainingApi, installActivityChaining } from "./activity-chaining.mjs?v=3.3.1-follow-up-filter-2";
-import { installToolAbilitySelection } from "./integrations/tool-ability.mjs";
-import { installTheurgeSpellcasting } from "./integrations/theurge-spellcasting.mjs?v=3.3.0-manual-theurge-mode-1";
-import { installCompendiumUsability } from "./compendium-usability.mjs";
-import { installChatImagePopouts } from "./chat-image-popout.mjs";
-import { registerChatMessageDeletion } from "./chat-message-deletion.mjs";
-import { installChatTimestamps } from "./chat-timestamps.mjs";
-import { createMagicalDrinkWorldItems, effectGroupsApi, installEffectGroups } from "./effect-groups.mjs?v=3.2.5-effect-groups-7";
-import { activateTokenPresetSocket, registerTokenPresets } from "./token-presets.mjs?v=3.7.6-actor-presets-1";
-import { activateTokenLightAuraSocket, toggleTokenLightAura } from "./token-light-aura.mjs";
-import { activateSimpleTileTriggers, registerSimpleTileTriggers } from "./simple-tile-triggers.mjs?v=3.2.2";
-import { activateSummonCompatibility } from "./summon-compat.mjs?v=3.6.2-character-summon-folder-1";
-import { activateCommerce, registerCommerce } from "./commerce/main.mjs?v=3.7.1-offer-access-1";
-import "./downtime/main.mjs?v=3.7.1-offer-access-1";
-import "./contested-activity.mjs";
-import "./void-taint/main.mjs?v=3.3.0-void-taint-1";
-import { registerTalentBackgrounds } from "./talent-backgrounds.mjs?v=3.3.1-talent-backgrounds-6";
-import { installCustomBackground } from "./integrations/custom-background.mjs?v=3.3.1-custom-background-16";
-import { installActiveEffectChangesUi } from "./active-effect-changes-ui.mjs";
-import { installSpellScrollTools } from "./spell-scrolls.mjs?v=3.7.1-offer-access-1";
-import { installSpellNameMarkers } from "./spell-name-markers.mjs?v=3.5.0-spell-markers-1";
+  loadStartupModule,
+  notifyStartupFailures,
+  runStartupStep,
+  runStartupStepAsync,
+  runStartupSteps,
+  startupApi
+} from "./core/startup.mjs?v=3.8.0-isolated-feature-loads-1";
 
-// Keep tile triggers independent from the shared initialization chain so an
-// unrelated tool cannot prevent their hooks and diagnostics from registering.
-registerSimpleTileTriggers();
-Hooks.once("ready", activateSimpleTileTriggers);
-registerCommerce();
-Hooks.once("ready", activateCommerce);
-installChatTimestamps();
+const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
+  events: "./core/events.mjs?v=3.7.8-module-events-1",
+  scheduler: "./core/scheduler.mjs?v=3.7.8-central-scheduler-1",
+  concentration: "./concentration.mjs?v=3.7.8-safe-documents-1",
+  migrations: "./core/migrations.mjs",
+  namespaceMigration: "./core/namespace-migration.mjs?v=3.8.0-storage-api-2",
+  compendiumTransfer: "./transfer/compendium-transfer.mjs?v=3.6.2-transfer-integrity-9",
+  sessionTransfer: "./transfer/session-transfer.mjs?v=3.7.8-safe-documents-1",
+  characterCreation: "./integrations/character-creation-overrides.mjs",
+  weaponOptions: "./integrations/weapon-option-activities.mjs?v=3.2.4-tooltip-links-2",
+  playerUnpause: "./player-unpause.mjs",
+  compendiumLibrary: "./compendium-library.mjs?v=3.5.0-feuerschwinge-spell-priority-1",
+  dnd5eItemImporter: "./dnd5e-item-importer.mjs?v=3.8.0-import-spell-school-1",
+  challengeManager: "./challenge-manager.mjs?v=3.8.0-standalone-combat-hud-23",
+  linkTools: "./link-tools-config.mjs",
+  featurePool: "./feature-pool-integration.mjs",
+  tokenSizeSync: "./token-size-sync.mjs",
+  creatureBuilder: "./creature-builder.mjs",
+  actorDirectoryActivity: "./actor-directory-activity.mjs?v=3.8.0-inactive-markers-3",
+  settingsCategories: "./settings-categories.mjs",
+  help: "./help-config.mjs",
+  activityChaining: "./activity-chaining.mjs?v=3.3.1-follow-up-filter-2",
+  compatibility: "./integrations/compatibility-layer.mjs?v=3.8.0-isolated-feature-loads-1",
+  compendiumUsability: "./compendium-usability.mjs",
+  chatImagePopouts: "./chat-image-popout.mjs",
+  chatMessageDeletion: "./chat-message-deletion.mjs",
+  chatTimestamps: "./chat-timestamps.mjs",
+  effectGroups: "./effect-groups.mjs?v=3.7.8-safe-documents-1",
+  tokenPresets: "./token-presets.mjs?v=3.7.6-actor-presets-1",
+  tokenLightAura: "./token-light-aura.mjs",
+  simpleTileTriggers: "./simple-tile-triggers.mjs?v=3.2.2",
+  commerce: "./commerce/main.mjs?v=3.7.8-runtime-audit-1",
+  contestedActivity: "./contested-activity.mjs",
+  talentBackgrounds: "./talent-backgrounds.mjs?v=3.3.1-talent-backgrounds-6",
+  spellScrolls: "./spell-scrolls.mjs?v=3.7.8-clearance-label-1",
+  spellNameMarkers: "./spell-name-markers.mjs?v=3.5.0-spell-markers-1",
+  selectedTokenEffectsHud: "./selected-token-effects-hud.mjs?v=3.7.8-selected-token-effects-2",
+  macroActivity: "./macro-activity.mjs",
+  weaponCustomization: "./weapon-customization.mjs",
+  weaponEnchantment: "./weapon-enchantment.mjs"
+});
+const DND5E_FEATURE_MODULES = Object.freeze({
+  dnd5eBundleExporter: "./import/dnd5e-bundle-exporter.mjs?v=3.8.0-content-bundle-2"
+});
+
+function featureModulesForSystem(systemId) {
+  if (systemId === "black-flag") return BLACK_FLAG_FEATURE_MODULES;
+  if (systemId === "dnd5e") return DND5E_FEATURE_MODULES;
+  return Object.freeze({});
+}
+
+function bootstrapSystemId() {
+  const setupSystem = game.data?.system;
+  return game.system?.id
+    ?? setupSystem?.id
+    ?? (typeof setupSystem === "string" ? setupSystem : null)
+    ?? game.world?.system
+    ?? null;
+}
+
+// Start loading immediately, but never await feature modules before the root
+// lifecycle listeners have been registered. Foundry does not guarantee that
+// a module entry point using top-level await finishes before it emits init.
+// Each feature import remains isolated by loadStartupModule().
+let features = new Map();
+let loadedSystemId = null;
+let featuresReady = Promise.resolve(features);
+
+function loadFeatures(systemId) {
+  if (!systemId || loadedSystemId === systemId) return featuresReady;
+  loadedSystemId = systemId;
+  const definitions = featureModulesForSystem(systemId);
+  featuresReady = Promise.all(Object.entries(definitions).map(async ([id, path]) => (
+    [id, await loadStartupModule(id, new URL(path, import.meta.url).href)]
+  ))).then(loadedEntries => {
+    features = new Map(loadedEntries);
+    return features;
+  });
+  return featuresReady;
+}
+
+// Setup data is available before game.system in Foundry v14. Start imports as
+// early as possible without assuming that the initialized System object exists.
+void loadFeatures(bootstrapSystemId());
+
+function featureExport(feature, name) {
+  const callback = features.get(feature)?.[name];
+  return typeof callback === "function" ? callback : null;
+}
+
+function step(id, feature, exportName) {
+  const callback = featureExport(feature, exportName);
+  return callback ? [id, callback] : null;
+}
+
+function compactSteps(steps) {
+  return steps.filter(Boolean);
+}
 
 const MODULE_MENU_ORDER = new Map([
-  ["help", 0],
-  ["creatureBuilder", 10],
-  ["compendiumTransfer", 20],
-  ["characterLinkTools", 40],
-  ["weaponCustomization", 50],
-  ["argonCombatHud", 55],
-  ["itemDefaults", 60],
-  ["playerActorFolders", 70],
-  ["sessionRewards", 80]
+  ["help", 0], ["creatureBuilder", 10], ["compendiumTransfer", 20],
+  ["characterLinkTools", 40], ["weaponCustomization", 50], ["argonCombatHud", 55], ["challengeHud", 56],
+  ["itemDefaults", 60], ["playerActorFolders", 70], ["sessionRewards", 80]
 ]);
-
 const MODULE_SETTING_ORDER = new Map([
-  ["worldRole", 0],
-  ["automaticTokenSizing", 10],
-  ["unpauseWithoutGM", 20],
+  ["worldRole", 0], ["automaticTokenSizing", 10], ["unpauseWithoutGM", 20],
   ["sessionHistoryEnabled", 30]
 ]);
 
@@ -104,12 +145,11 @@ function reorderModuleEntries(registry, order, { configuredOnly = false } = {}) 
   const ordered = [];
   let inserted = false;
   for (const entry of registry) {
-    if (!ownKeys.has(entry[0])) {
-      ordered.push(entry);
-      continue;
+    if (!ownKeys.has(entry[0])) ordered.push(entry);
+    else if (!inserted) {
+      ordered.push(...own);
+      inserted = true;
     }
-    if (!inserted) ordered.push(...own);
-    inserted = true;
   }
   registry.clear();
   for (const [key, value] of ordered) registry.set(key, value);
@@ -120,82 +160,138 @@ function orderModuleMenus() {
   reorderModuleEntries(game.settings.settings, MODULE_SETTING_ORDER, { configuredOnly: true });
 }
 
-Hooks.once("init", () => {
+function foundationInitSteps() {
+  return compactSteps([
+    step("sessionTransfer", "sessionTransfer", "registerSessionTransfer")
+  ]);
+}
+
+function initSteps() {
+  return compactSteps([
+    ["blackFlagCompatibility", installBlackFlagCompatibility],
+    step("simpleTileTriggers", "simpleTileTriggers", "registerSimpleTileTriggers"),
+    step("commerce", "commerce", "registerCommerce"),
+    step("chatTimestamps", "chatTimestamps", "installChatTimestamps"),
+    step("compendiumUsability", "compendiumUsability", "installCompendiumUsability"),
+    step("chatImagePopouts", "chatImagePopouts", "installChatImagePopouts"),
+    step("chatMessageDeletion", "chatMessageDeletion", "registerChatMessageDeletion"),
+    step("talentBackgrounds", "talentBackgrounds", "registerTalentBackgrounds"),
+    step("spellScrolls", "spellScrolls", "installSpellScrollTools"),
+    step("spellNameMarkers", "spellNameMarkers", "installSpellNameMarkers"),
+    step("concentration", "concentration", "installConcentration"),
+    step("effectGroups", "effectGroups", "installEffectGroups"),
+    step("tokenPresets", "tokenPresets", "registerTokenPresets"),
+    step("playerUnpause", "playerUnpause", "registerPlayerUnpause"),
+    step("compendiumLibrary", "compendiumLibrary", "registerCompendiumLibrary"),
+    step("dnd5eItemImporter", "dnd5eItemImporter", "registerDnd5eItemImporter"),
+    step("weaponCustomization", "weaponCustomization", "registerWeaponCustomization"),
+    step("challengeManager", "challengeManager", "registerChallengeManager"),
+    step("featurePool", "featurePool", "registerFeaturePoolIntegration"),
+    step("tokenSizeSync", "tokenSizeSync", "registerTokenSizeSync"),
+    step("creatureBuilder", "creatureBuilder", "registerCreatureBuilder"),
+    step("actorDirectoryActivity", "actorDirectoryActivity", "registerActorDirectoryActivity"),
+    step("help", "help", "registerHelp"),
+    step("settingsCategories", "settingsCategories", "registerSettingsCategories"),
+    step("namespaceMigration", "namespaceMigration", "registerNamespaceMigration"),
+    step("migrationSettings", "migrations", "registerMigrationSettings"),
+    ["downtime", registerDowntime],
+    ["voidTaint", registerVoidTaint]
+  ]);
+}
+
+function readyEarlySteps() {
+  return compactSteps([
+    step("compatibilityActivation", "compatibility", "activateCompatibilityLayer"),
+    step("moduleEventsActivation", "events", "activateModuleEvents"),
+    step("simpleTileTriggerActivation", "simpleTileTriggers", "activateSimpleTileTriggers"),
+    step("commerceActivation", "commerce", "activateCommerce"),
+    step("schedulerActivation", "scheduler", "activateScheduler"),
+    step("playerUnpauseActivation", "playerUnpause", "activatePlayerUnpause"),
+    step("legacyNamespaceGuard", "namespaceMigration", "installLegacyNamespaceGuard"),
+    ["moduleMenuOrder", orderModuleMenus],
+    step("challengeManagerActivation", "challengeManager", "activateChallengeManager"),
+    step("actorDirectoryActivityActivation", "actorDirectoryActivity", "activateActorDirectoryActivity"),
+    step("tokenPresetSocket", "tokenPresets", "activateTokenPresetSocket"),
+    step("tokenLightAuraSocket", "tokenLightAura", "activateTokenLightAuraSocket"),
+    step("selectedTokenEffectsHud", "selectedTokenEffectsHud", "activateSelectedTokenEffectsHud")
+  ]);
+}
+
+let initialization = Promise.resolve();
+
+async function initializeModule() {
+  await loadFeatures(game.system.id);
+  if (game.system.id === "dnd5e") {
+    const registerExporter = featureExport("dnd5eBundleExporter", "registerDnd5eBundleExporter");
+    if (registerExporter) runStartupStep("dnd5eBundleExporter", registerExporter);
+    return;
+  }
   if (game.system.id !== "black-flag") return;
-  installBlackFlagCompatibility();
-  installCharacterCreationOverrides();
-  installWeaponOptionActivities();
-  installActivityChaining();
-  installToolAbilitySelection();
-  installTheurgeSpellcasting();
-  installCompendiumUsability();
-  installChatImagePopouts();
-  registerChatMessageDeletion();
-  registerTalentBackgrounds();
-  installCustomBackground();
-  installActiveEffectChangesUi();
-  installSpellScrollTools();
-  installSpellNameMarkers();
-  installConcentration();
-  installEffectGroups();
-  registerTokenPresets();
-  installArgonBlackFlagCompatibility();
-  registerPlayerUnpause();
-  registerCompendiumLibrary();
-  registerChallengeManager();
-  registerFeaturePoolIntegration();
-  registerTokenSizeSync();
-  registerCreatureBuilder();
-  registerHelp();
-  registerSettingsCategories();
-  registerNamespaceMigration();
-  registerMigrationSettings();
-  registerSessionTransfer();
-  queueMicrotask(registerLinkTools);
+  runStartupSteps(foundationInitSteps());
+  const installPhase = featureExport("compatibility", "installCompatibilityPhase");
+  if (installPhase) {
+    for (const phase of ["core", "documentUi", "optionalModules"]) {
+      runStartupStep(`compatibility:${phase}`, () => installPhase(phase));
+    }
+  }
+  runStartupSteps(initSteps());
+  const registerLinkTools = featureExport("linkTools", "registerLinkTools");
+  if (registerLinkTools) queueMicrotask(() => runStartupStep("linkTools", registerLinkTools));
+}
+
+async function activateModule() {
+  await initialization;
+  if (game.system.id !== "black-flag") return;
+  runStartupSteps(readyEarlySteps());
+
+  const migrateToolNamespace = featureExport("namespaceMigration", "migrateToolNamespace");
+  const namespaceMigrationSucceeded = migrateToolNamespace
+    ? await runStartupStepAsync("namespaceMigrationRun", migrateToolNamespace)
+    : false;
+  await runStartupStepAsync("downtimeActivation", activateDowntime);
+  await runStartupStepAsync("voidTaintActivation", activateVoidTaint);
+  const activateFeaturePool = featureExport("featurePool", "activateFeaturePoolIntegration");
+  if (activateFeaturePool) await runStartupStepAsync("featurePoolActivation", activateFeaturePool);
+  const createDrinks = featureExport("effectGroups", "createMagicalDrinkWorldItems");
+  if (game.user.isGM && createDrinks) await runStartupStepAsync("magicalDrinkWorldItems", createDrinks);
+
+  const moduleApi = game.modules.get(MODULE_ID)?.api;
+  runStartupStep("diagnosticApi", () => Object.assign(moduleApi, {
+    compatibility: features.get("compatibility")?.compatibilityApi,
+    scheduler: features.get("scheduler")?.schedulerApi,
+    startup: startupApi
+  }));
+  const exposeTransferApi = featureExport("compendiumTransfer", "exposeTransferApi");
+  if (exposeTransferApi) runStartupStep("compendiumTransferApi", exposeTransferApi);
+  const sessionApi = featureExport("sessionTransfer", "sessionTransferApi");
+  if (sessionApi) runStartupStep("sessionTransferApi", () => Object.assign(moduleApi, sessionApi()));
+  const creatureApi = featureExport("creatureBuilder", "creatureBuilderApi");
+  if (creatureApi) runStartupStep("creatureBuilderApi", () => Object.assign(moduleApi, creatureApi()));
+  runStartupStep("moduleApi", () => Object.assign(moduleApi, {
+    toggleTokenLightAura: featureExport("tokenLightAura", "toggleTokenLightAura"),
+    activityChaining: features.get("activityChaining")?.activityChainingApi,
+    effectGroups: features.get("effectGroups")?.effectGroupsApi,
+    characterCreationOverrides: features.get("characterCreation")?.characterCreationOverridesApi,
+    weaponOptionActivities: features.get("weaponOptions")?.weaponOptionActivitiesApi
+  }));
+
+  const runMigrations = featureExport("migrations", "runMigrations");
+  if (namespaceMigrationSucceeded && runMigrations) await runStartupStepAsync("migrations", runMigrations);
+  featureExport("compatibility", "notifyCompatibilityFailures")?.();
+  notifyStartupFailures();
+}
+
+// These listeners must remain synchronous top-level registrations. Moving an
+// await above them can make Foundry emit init/ready before this module listens.
+Hooks.once("init", () => {
+  initialization = initializeModule().catch(error => {
+    console.error(`${MODULE_ID} | Root initialization failed.`, error);
+  });
 });
 
-Hooks.once("ready", async () => {
-  activateSummonCompatibility();
-  if (game.system.id !== "black-flag") return;
-  let namespaceMigrationSucceeded = true;
-  try {
-    await migrateToolNamespace();
-  } catch (error) {
-    namespaceMigrationSucceeded = false;
-    console.error(`${MODULE_ID} | Namespace migration failed`, error);
-    ui.notifications.error(`Feuerschwinge-Tools: Die Übernahme alter Einstellungen und Flags ist fehlgeschlagen: ${error.message}`, { permanent: true });
-  }
-  installLegacyNamespaceGuard();
-  orderModuleMenus();
-  activatePlayerUnpause();
-  activateChallengeManager();
-  activateTokenPresetSocket();
-  activateTokenLightAuraSocket();
-  await activateFeaturePoolIntegration();
-  if (game.user.isGM) {
-    try {
-      await createMagicalDrinkWorldItems();
-    } catch (error) {
-      console.error(`${MODULE_ID} | Creating magical drink World Items failed.`, error);
-      ui.notifications.error(`Magische Getränke konnten nicht angelegt werden: ${error.message}`);
-    }
-  }
-  exposeTransferApi();
-  Object.assign(game.modules.get(MODULE_ID).api, sessionTransferApi());
-  Object.assign(game.modules.get(MODULE_ID).api, creatureBuilderApi());
-  Object.assign(game.modules.get(MODULE_ID).api, {
-    toggleTokenLightAura,
-    activityChaining: activityChainingApi,
-    effectGroups: effectGroupsApi,
-    characterCreationOverrides: characterCreationOverridesApi,
-    weaponOptionActivities: weaponOptionActivitiesApi
+Hooks.once("ready", () => {
+  void activateModule().catch(error => {
+    console.error(`${MODULE_ID} | Root activation failed.`, error);
+    notifyStartupFailures();
   });
-  if (namespaceMigrationSucceeded) {
-    try {
-      await runMigrations();
-    } catch (error) {
-      console.error(`${MODULE_ID} | Migration failed`, error);
-      ui.notifications.error(game.i18n.format("TOVF.Migration.Error", { message: error.message }));
-    }
-  }
 });

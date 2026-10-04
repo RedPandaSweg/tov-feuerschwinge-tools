@@ -8,9 +8,29 @@ const GUARD = Symbol.for(`${MODULE_ID}.legacyNamespaceGuard`);
 const warnedAccesses = new Set();
 
 function storageValue(scope, namespace, key) {
-  const entry = game.settings.storage.get(scope)?.get(`${namespace}.${key}`);
+  const storage = game.settings.storage.get(scope);
+  const fullKey = `${namespace}.${key}`;
+  let entry;
+  if (typeof storage?.get === "function") entry = storage.get(fullKey);
+  else if (typeof storage?.getItem === "function") entry = storage.getItem(fullKey);
+  else if (storage && typeof storage === "object") entry = storage[fullKey];
   if (entry === undefined) return undefined;
-  return entry && typeof entry === "object" && "value" in entry ? entry.value : entry;
+  if (entry === null) return undefined;
+  let value = entry;
+  if (typeof value === "string") {
+    try {
+      value = JSON.parse(value);
+    } catch (_error) {
+      return value;
+    }
+  }
+  value = value && typeof value === "object" && "value" in value ? value.value : value;
+  if (typeof value !== "string") return value;
+  try {
+    return JSON.parse(value);
+  } catch (_error) {
+    return value;
+  }
 }
 
 function clone(value) {

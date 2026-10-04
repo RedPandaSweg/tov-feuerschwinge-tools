@@ -51,9 +51,27 @@ function stackSignature(item, { merchantStock = false } = {}) {
   return JSON.stringify(data);
 }
 
-export async function addItem(actor, itemData, quantity, { stackWeapons = false, merchantStock = false } = {}) {
+export function findStackableItem(actor, itemData, { stackWeapons = false, merchantStock = false } = {}) {
+  if (itemData.type === "weapon" && !stackWeapons) return null;
+  const sourceUuid = String(itemData.flags?.[MODULE_ID]?.merchantItem?.sourceUuid ?? "");
+  if (sourceUuid) {
+    const sourced = actor.items.find(item => item.type === itemData.type
+      && item.getFlag(MODULE_ID, "merchantItem")?.sourceUuid === sourceUuid);
+    if (sourced) return sourced;
+    if (merchantStock) {
+      const identifier = String(itemData.system?.identifier ?? "").trim();
+      const legacy = actor.items.find(item => item.type === itemData.type && (identifier
+        ? String(item.system?.identifier ?? "").trim() === identifier
+        : item.name.trim().localeCompare(itemData.name.trim(), undefined, { sensitivity: "base" }) === 0));
+      if (legacy) return legacy;
+    }
+  }
   const signature = stackSignature(itemData, { merchantStock });
-  const existing = itemData.type === "weapon" && !stackWeapons ? null : actor.items.find(item => stackSignature(item, { merchantStock }) === signature);
+  return actor.items.find(item => stackSignature(item, { merchantStock }) === signature) ?? null;
+}
+
+export async function addItem(actor, itemData, quantity, { stackWeapons = false, merchantStock = false } = {}) {
+  const existing = findStackableItem(actor, itemData, { stackWeapons, merchantStock });
   if (existing) {
     await existing.update(quantityUpdate(existing, itemQuantity(existing) + quantity));
     return existing;

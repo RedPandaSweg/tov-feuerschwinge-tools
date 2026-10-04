@@ -42,11 +42,26 @@
   --tovf-space-md: .75rem;
   --tovf-space-lg: 1rem;
   --tovf-font-ui: "Roboto Condensed", "Signika", Arial, sans-serif;
+  --tovf-font-description: "Signika", Arial, sans-serif;
 }
 
-/* Keep rich-text emphasis visibly distinct in Foundry's ProseMirror editor. */
-:is(prose-mirror, .prosemirror, .editor-content, .enriched-content) :is(strong, b) {
-  font-weight: 700 !important;
+/* Long-form descriptions favor Foundry's more readable default typeface. */
+:is(prose-mirror, .prosemirror, .editor-content, .enriched-content) {
+  font-family: var(--tovf-font-description);
+}
+
+:is(.black-flag.item.sheet, .black-flag.actor.sheet) :is(
+  .description-area .description,
+  prose-mirror.description,
+  prose-mirror.description .editor-content,
+  .editor .editor-content
+) {
+  font-family: var(--tovf-font-description) !important;
+}
+
+.black-flag.item.sheet .document-name,
+.black-flag.actor.sheet :is(.item-name, .list-item-name) {
+  font-family: "Oswald", sans-serif !important;
 }
 
 .tov-contested-result { padding: .35rem .5rem; border-left: 3px solid var(--color-border-light-2); }

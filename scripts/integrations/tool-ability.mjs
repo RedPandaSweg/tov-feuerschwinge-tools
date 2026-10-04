@@ -38,9 +38,12 @@ export function preferredToolAbility(actor, toolKey) {
 }
 
 export function installToolAbilitySelection() {
-  if (installed || game.system.id !== "black-flag") return;
+  if (installed) return { status: "already-installed" };
+  if (game.system.id !== "black-flag") return { status: "inactive", reason: "Requires the black-flag system." };
   const EquipmentSheet = BlackFlag?.applications?.item?.EquipmentSheet;
-  if (!EquipmentSheet) return;
+  if (!EquipmentSheet) {
+    return { status: "incompatible", reason: "BlackFlag.applications.item.EquipmentSheet is unavailable." };
+  }
   installed = true;
 
   class ToolAbilitySheet extends EquipmentSheet {
@@ -68,4 +71,5 @@ export function installToolAbilitySelection() {
     makeDefault: true,
     label: "TOV.ToolAbility.Sheet"
   });
+  return { status: "completed" };
 }

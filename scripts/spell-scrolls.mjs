@@ -145,8 +145,12 @@ export async function saveMerchantSpellScrollOffers(actor, offers) {
     hidden: offer.hidden === true, discountPercent: Math.clamp(Math.round(Number(offer.discountPercent) || 0), 0, 100),
     minimumLevel: offer.minimumLevel == null || offer.minimumLevel === "" ? null : Math.max(1, Math.min(20, Math.floor(Number(offer.minimumLevel) || 1))),
     purchaseLocked: offer.purchaseLocked === true, purchaseNote: String(offer.purchaseNote ?? "").trim(),
-    createdAt: Number(offer.createdAt) || Date.now()
-  }));
+      createdAt: Number(offer.createdAt) || Date.now(), newArrival: offer.newArrival === true,
+      arrivedAt: Math.max(0, Number(offer.arrivedAt) || 0), discountAt: Math.max(0, Number(offer.discountAt) || 0),
+      removeAt: Math.max(0, Number(offer.removeAt) || 0), automaticDiscountPercent: Math.clamp(Math.round(Number(offer.automaticDiscountPercent) || 0), 0, 100),
+      discountSource: ["clearance", "manual"].includes(offer.discountSource) ? offer.discountSource : "",
+      discountLabel: String(offer.discountLabel ?? "").trim()
+    }));
   await actor.setFlag(MODULE_ID, OFFER_FLAG, clean);
   return clean;
 }

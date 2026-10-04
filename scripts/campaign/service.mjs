@@ -1,4 +1,5 @@
 import { uiText } from "../core/localization.mjs";
+import { canModifyWorldSettings, isAssistantGM, isProjectAdministrator } from "../core/permissions.mjs?v=3.7.8-permissions-1";
 import { MODULE_ID, FLAGS } from "../downtime/constants.mjs";
 import { compareSnapshots, validateSnapshot, sessionDate, effectiveSessionStatus } from "./data.mjs";
 import { defaultRules, validateRules, settlementPreview, ruleForDate } from "./rules.mjs";
@@ -15,11 +16,12 @@ import { autoLinkSessions } from "./session-links.mjs";
 export const CAMPAIGN_SETTING = "campaignLedger";
 const REQUEST = "campaignRequest";
 const RESPONSE = "campaignResponse";
-export const fullGM = (user = game.user) => user?.role === CONST.USER_ROLES.GAMEMASTER;
-export const isCampaignWorld = () => game.settings.get(MODULE_ID, "worldRole") === "primary";
+export const fullGM = isProjectAdministrator;
+export const isCampaignWorld = () => game.settings.settings.has(`${MODULE_ID}.worldRole`)
+  && game.settings.get(MODULE_ID, "worldRole") === "primary";
 // Keep one writer for the ledger, including when only normal game masters are online.
 // Request authorization remains in execute/redemptionPreview, independent of the writer.
-const coordinator = () => game.users.filter(u => u.active && u.isGM && u.can("SETTINGS_MODIFY"))
+const coordinator = () => game.users.filter(u => u.active && canModifyWorldSettings(u))
   .sort((a, b) => Number(fullGM(b)) - Number(fullGM(a)) || a.id.localeCompare(b.id))[0];
 const clone = value => foundry.utils.deepClone(value);
 
@@ -132,7 +134,7 @@ async function execute(user, request) {
   // Assistants can finish sessions. This request only books the reward from
   // persisted history; changing recipients or other ledger data remains GM-only.
   const automaticCompletion = action === "completedGM" && !payload.personId;
-  if (!(automaticCompletion && user?.role === CONST.USER_ROLES.ASSISTANT)) requiredGM(user);
+  if (!(automaticCompletion && isAssistantGM(user))) requiredGM(user);
   if (state.audit.some(row => row.requestId === id)) return;
   if (!automaticCompletion && payload.revision !== state.revision) throw new Error(uiText("TOVF.Interface.CampaignDataHasChangedRefreshTheView_833e72", "Die Kampagnendaten wurden inzwischen geändert. Ansicht aktualisieren und erneut prüfen."));
   if (action === "assignHistorical") {

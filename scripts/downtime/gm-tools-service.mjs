@@ -7,9 +7,10 @@ import {
 } from "./constants.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
 import { ProjectService } from "./project-service.mjs";
-import { milestoneEntries, playerCharacters, sessionProgress } from "./session-service.mjs";
+import { isActiveCharacter, milestoneEntries, playerCharacters, sessionProgress } from "./session-service.mjs";
 import { assignMilestoneEvidence, milestoneEvidence } from "../campaign/milestone-evidence.mjs";
 import { round } from "./utils.mjs";
+import { deleteExistingEmbeddedDocuments } from "../core/document-operations.mjs?v=3.7.8-safe-documents-1";
 
 function requireGM() {
   if (!game.user?.isGM) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.GMTools.Errors.GMOnly"));
@@ -68,6 +69,75 @@ function flagDocumentCollections() {
 
 function collectionDocuments(collection) {
   return collection?.contents ?? [...(collection?.values?.() ?? [])];
+}
+
+const LEGACY_EFFECT_FORMULA_REFERENCES = [
+  "@attributes.movement.walk",
+  "@abilities.dexterity.mod",
+  "@attributes.proficiency",
+  "@prof",
+  "@base"
+];
+
+function actorEffects(actor) {
+  return [
+    ...collectionDocuments(actor.effects),
+    ...collectionDocuments(actor.items).flatMap(item => collectionDocuments(item.effects))
+  ];
+}
+
+function formulaSource(document) {
+  return {
+    sourceId: String(document?._stats?.compendiumSource ?? document?.getFlag?.("core", "sourceId") ?? "").trim(),
+    sourceName: document?.name ?? "?"
+  };
+}
+
+function legacyEffectFormulaChanges() {
+  const matches = [];
+  for (const actor of collectionDocuments(game.actors)) {
+    for (const effect of actorEffects(actor)) {
+      const indexes = [];
+      for (const [index, change] of collectionDocuments(effect.changes).entries()) {
+        const value = String(change?.value ?? "");
+        if (LEGACY_EFFECT_FORMULA_REFERENCES.some(reference => value.includes(reference))) indexes.push(index);
+      }
+      const legacyType = effect.type === "standard" || effect._source?.type === "standard";
+      if (indexes.length || legacyType) matches.push({ actor, effect, indexes, legacyType });
+    }
+  }
+  return matches;
+}
+
+function cleanLegacyAdvancementFormulas(value) {
+  let removed = 0;
+  const visit = node => {
+    if (!node || typeof node !== "object") return;
+    if (Array.isArray(node?.configuration?.changes)) {
+      const before = node.configuration.changes.length;
+      node.configuration.changes = node.configuration.changes.filter(change => {
+        const formula = String(change?.value ?? "");
+        return !LEGACY_EFFECT_FORMULA_REFERENCES.some(reference => formula.includes(reference));
+      });
+      removed += before - node.configuration.changes.length;
+    }
+    for (const child of Object.values(node)) visit(child);
+  };
+  visit(value);
+  return removed;
+}
+
+function legacyAdvancementFormulaItems() {
+  const matches = [];
+  for (const actor of collectionDocuments(game.actors)) {
+    for (const item of collectionDocuments(actor.items)) {
+      const advancement = foundry.utils.deepClone(item._source?.system?.advancement);
+      if (!advancement) continue;
+      const removed = cleanLegacyAdvancementFormulas(advancement);
+      if (removed) matches.push({ actor, item, advancement, removed });
+    }
+  }
+  return matches;
 }
 
 function flagValueType(value) {
@@ -152,6 +222,132 @@ async function restoreFlags(document, flags) {
 }
 
 export class GMToolsService {
+
+  static expiredTemporaryEffectSummary() {
+    requireGM();
+    const entries = collectionDocuments(game.actors).flatMap(actor => collectionDocuments(actor.effects)
+      .filter(effect => effect.isTemporary && effect.duration?.expired === true)
+      .map(effect => ({
+        actorUuid: actor.uuid,
+        actorName: actor.name,
+        effectId: effect.id,
+        effectName: effect.name
+      })));
+    return {
+      count: entries.length,
+      actors: new Set(entries.map(entry => entry.actorUuid)).size,
+      entries: entries.sort((left, right) => left.actorName.localeCompare(right.actorName, game.i18n.lang)
+        || left.effectName.localeCompare(right.effectName, game.i18n.lang))
+    };
+  }
+
+  static async deleteExpiredTemporaryEffects() {
+    requireGM();
+    const groups = collectionDocuments(game.actors).map(actor => ({
+      actor,
+      effects: collectionDocuments(actor.effects).filter(effect => effect.isTemporary && effect.duration?.expired === true)
+    })).filter(entry => entry.effects.length);
+    const count = groups.reduce((total, entry) => total + entry.effects.length, 0);
+    if (!count) return 0;
+    await storeUndo({
+      kind: "effects",
+      tab: "diagnostics",
+      actors: groups.map(({ actor, effects }) => ({
+        actorUuid: actor.uuid,
+        effects: effects.map(effect => effect.toObject())
+      }))
+    });
+    for (const { actor, effects } of groups) {
+      await deleteExistingEmbeddedDocuments(actor, "ActiveEffect", effects.map(effect => effect.id));
+    }
+    return count;
+  }
+
+  static legacyEffectFormulaSummary() {
+    requireGM();
+    const matches = legacyEffectFormulaChanges();
+    const advancementMatches = legacyAdvancementFormulaItems();
+    const entries = [
+        ...matches.flatMap(({ actor, effect, indexes, legacyType }) => {
+          const owner = effect.parent?.documentName === "Item" ? effect.parent : effect;
+          const source = formulaSource(owner);
+          const location = effect.parent?.documentName === "Item"
+            ? `${effect.parent.name} · ${effect.name}`
+            : effect.name;
+          const formulaEntries = indexes.map(index => {
+            const change = collectionDocuments(effect.changes)[index] ?? {};
+            return {
+              actorName: actor.name,
+              documentUuid: owner.uuid,
+              location,
+              path: `changes.${index}.value`,
+              formula: String(change.value ?? ""),
+              references: LEGACY_EFFECT_FORMULA_REFERENCES.filter(reference => String(change.value ?? "").includes(reference)).join(", "),
+              ...source
+            };
+          });
+          if (legacyType) formulaEntries.push({
+            actorName: actor.name,
+            documentUuid: owner.uuid,
+            location,
+            path: "type",
+            formula: "standard",
+            references: "Active Effect type",
+            ...source
+          });
+          return formulaEntries;
+        }),
+        ...advancementMatches.flatMap(({ actor, item }) => {
+          const entries = [];
+          const source = formulaSource(item);
+          const visit = (node, path = "system.advancement") => {
+            if (!node || typeof node !== "object") return;
+            if (Array.isArray(node?.configuration?.changes)) {
+              node.configuration.changes.forEach((change, index) => {
+                const formula = String(change?.value ?? "");
+                const references = LEGACY_EFFECT_FORMULA_REFERENCES.filter(reference => formula.includes(reference));
+                if (references.length) entries.push({
+                  actorName: actor.name,
+                  documentUuid: item.uuid,
+                  location: item.name,
+                  path: `${path}.configuration.changes.${index}.value`,
+                  formula,
+                  references: references.join(", "),
+                  ...source
+                });
+              });
+            }
+            for (const [key, child] of Object.entries(node)) visit(child, `${path}.${key}`);
+          };
+          visit(item._source?.system?.advancement);
+          return entries;
+        })
+      ];
+    const grouped = new Map();
+    for (const entry of entries) {
+      const key = entry.sourceId || `document:${entry.documentUuid}`;
+      if (!grouped.has(key)) grouped.set(key, { sourceId: entry.sourceId, sourceName: entry.sourceName, entries: [] });
+      grouped.get(key).entries.push(entry);
+    }
+    const groups = [...grouped.values()].map(group => ({
+      ...group,
+      actors: new Set(group.entries.map(entry => entry.actorName)).size,
+      entries: group.entries.sort((left, right) => left.actorName.localeCompare(right.actorName, game.i18n.lang)
+        || left.location.localeCompare(right.location, game.i18n.lang)
+        || left.path.localeCompare(right.path, game.i18n.lang))
+    })).sort((left, right) => left.sourceName.localeCompare(right.sourceName, game.i18n.lang)
+      || left.sourceId.localeCompare(right.sourceId, game.i18n.lang));
+    return {
+      changes: matches.reduce((count, entry) => count + entry.indexes.length, 0),
+      types: matches.filter(entry => entry.legacyType).length,
+      effects: matches.length,
+      advancementChanges: advancementMatches.reduce((count, entry) => count + entry.removed, 0),
+      advancementItems: advancementMatches.length,
+      actors: new Set([...matches, ...advancementMatches].map(entry => entry.actor.uuid)).size,
+      groups
+    };
+  }
+
   static flagDocumentTypes() {
     requireGM();
     return flagDocumentCollections().map(([id, collection]) => ({ id, count: collection.size ?? collection.length ?? 0 }));
@@ -278,7 +474,8 @@ export class GMToolsService {
     const actor = await actorFromUuid(actorUuid);
     const before = {
       downtime: actor.getFlag(MODULE_ID, FLAGS.DOWNTIME) ?? null,
-      sessionProgress: actor.getFlag(MODULE_ID, FLAGS.SESSION_PROGRESS) ?? null
+      sessionProgress: actor.getFlag(MODULE_ID, FLAGS.SESSION_PROGRESS) ?? null,
+      active: actor.getFlag(MODULE_ID, FLAGS.ACTIVE) ?? null
     };
     const downtime = values.downtime === undefined ? DowntimeService.get(actor) : finiteNumber(values.downtime, game.i18n.localize("DOWNTIME_MANAGER.GMTools.Downtime"));
     const milestoneLabel = game.i18n.localize('DOWNTIME_MANAGER.GMTools.Milestones');
@@ -323,7 +520,30 @@ export class GMToolsService {
     await storeUndo({ kind: "actor", tab: "characters", actorUuid: actor.uuid, before });
     if (values.downtime !== undefined) await actor.setFlag(MODULE_ID, FLAGS.DOWNTIME, downtime);
     await actor.setFlag(MODULE_ID, FLAGS.SESSION_PROGRESS, progress);
+    await actor.setFlag(MODULE_ID, FLAGS.ACTIVE, values.active !== false);
     return { actor, downtime, progress };
+  }
+
+  static async updateActivity(entries) {
+    requireGM();
+    const eligible = new Map(playerCharacters().map(actor => [actor.uuid, actor]));
+    const rows = [];
+    for (const entry of entries ?? []) {
+      const actor = eligible.get(entry.actorUuid);
+      if (!actor) continue;
+      const active = Boolean(entry.active);
+      const before = actor.getFlag(MODULE_ID, FLAGS.ACTIVE);
+      if ((before !== false) === active && before !== undefined) continue;
+      if (before === undefined && active) continue;
+      rows.push({ actor, active, before: before ?? null });
+    }
+    if (!rows.length) return 0;
+    await storeUndo({
+      kind: "batch",
+      actors: rows.map(row => ({ actorUuid: row.actor.uuid, before: { active: row.before } }))
+    });
+    await Actor.updateDocuments(rows.map(row => ({ _id: row.actor.id, [`flags.${MODULE_ID}.${FLAGS.ACTIVE}`]: row.active })));
+    return rows.length;
   }
 
   static async updateDowntime(actorUuid, values) {
@@ -475,6 +695,10 @@ export class GMToolsService {
         if (snapshot.before.sessionProgress == null) await actor.unsetFlag(MODULE_ID, FLAGS.SESSION_PROGRESS);
         else await actor.setFlag(MODULE_ID, FLAGS.SESSION_PROGRESS, snapshot.before.sessionProgress);
       }
+      if ("active" in snapshot.before) {
+        if (snapshot.before.active == null) await actor.unsetFlag(MODULE_ID, FLAGS.ACTIVE);
+        else await actor.setFlag(MODULE_ID, FLAGS.ACTIVE, snapshot.before.active);
+      }
       if ("projects" in snapshot.before) {
         if (snapshot.before.projects == null) await actor.unsetFlag(MODULE_ID, FLAGS.PROJECTS);
         else await actor.setFlag(MODULE_ID, FLAGS.PROJECTS, snapshot.before.projects);
@@ -486,12 +710,22 @@ export class GMToolsService {
         const actor = await actorFromUuid(entry.actorUuid);
         if ("downtime" in entry.before) await actor.setFlag(MODULE_ID, FLAGS.DOWNTIME, entry.before.downtime);
         if ("sessionProgress" in entry.before) await actor.setFlag(MODULE_ID, FLAGS.SESSION_PROGRESS, entry.before.sessionProgress);
+        if ("active" in entry.before) {
+          if (entry.before.active == null) await actor.unsetFlag(MODULE_ID, FLAGS.ACTIVE);
+          else await actor.setFlag(MODULE_ID, FLAGS.ACTIVE, entry.before.active);
+        }
       }
       if (snapshot.settingBefore) await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, snapshot.settingBefore);
     } else if (snapshot.kind === "flags") {
       for (const entry of snapshot.documents ?? []) {
         const document = await flagDocument(entry.uuid);
         await restoreFlags(document, entry.before ?? {});
+      }
+    } else if (snapshot.kind === "effects") {
+      for (const entry of snapshot.actors ?? []) {
+        const actor = await actorFromUuid(entry.actorUuid);
+        const missing = (entry.effects ?? []).filter(effect => !actor.effects.has(effect._id));
+        if (missing.length) await actor.createEmbeddedDocuments("ActiveEffect", missing, { keepId: true });
       }
     }
     await game.settings.set(MODULE_ID, SETTINGS.GM_TOOL_UNDO, {});

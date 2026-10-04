@@ -1,6 +1,7 @@
 import { MODULE_ID } from "./core/constants.mjs";
+import { deleteExistingEmbeddedDocuments } from "./core/document-operations.mjs?v=3.7.8-safe-documents-1";
 import { spellMarkerState } from "./spell-name-markers.mjs";
-import { installConcentrationEffects, linkConcentrationCast } from "./concentration-effects.mjs";
+import { installConcentrationEffects, linkConcentrationCast } from "./concentration-effects.mjs?v=3.7.8-safe-documents-1";
 
 const FLAG = "concentration";
 const queues = new Map();
@@ -60,7 +61,7 @@ function enqueue(actor, task) {
 
 async function end(actor) {
   const ids = effects(actor).map(effect => effect.id);
-  if (ids.length) await actor.deleteEmbeddedDocuments("ActiveEffect", ids);
+  if (ids.length) await deleteExistingEmbeddedDocuments(actor, "ActiveEffect", ids);
 }
 
 async function start(activity, message) {

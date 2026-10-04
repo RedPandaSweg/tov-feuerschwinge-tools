@@ -1,131 +1,18 @@
-<div class="tovf-challenge-manager-root">
-  <section class="encounter">
-    <span>{{localize "TOVF.ChallengeManager.Encounter.Adversaries"}} <strong>{{adversaryCount}}</strong></span>
-    <span>{{localize "TOVF.ChallengeManager.Encounter.MaxCR"}} <strong>{{maxCR}}</strong></span>
-  </section>
-
-  <details class="challenge-section doom-bank" data-challenge-section="doom" {{#if doomExpanded}}open{{/if}}>
-    <summary>{{localize "TOVF.ChallengeManager.Doom.Bank"}}</summary>
-    <div class="challenge-section-content">
-    <h3>{{localize "TOVF.ChallengeManager.Doom.Bank"}}</h3>
-    <div class="doom-counter">
-      <button type="button" class="doom-adjust" data-action="adjustDoom" data-amount="-1" title="{{localize 'TOVF.ChallengeManager.Doom.Decrease'}}">−</button>
-      <input type="number" min="0" value="{{doom}}" data-doom-value>
-      <button type="button" class="doom-adjust" data-action="adjustDoom" data-amount="1" title="{{localize 'TOVF.ChallengeManager.Doom.Increase'}}">+</button>
-    </div>
-    <div class="doom-spends">
-      <button type="button" data-action="adjustDoom" data-amount="-1" data-doom-chat="true" data-doom-icon="fa-thumbs-up"><i class="fa-solid fa-thumbs-up" inert></i><span>{{localize "TOVF.ChallengeManager.Doom.Advantage"}}</span></button>
-      <button type="button" data-action="adjustDoom" data-amount="-1" data-doom-chat="true" data-doom-icon="fa-thumbs-down"><i class="fa-solid fa-thumbs-down" inert></i><span>{{localize "TOVF.ChallengeManager.Doom.Disadvantage"}}</span></button>
-      <button type="button" data-action="adjustDoom" data-amount="-2" data-doom-chat="true" data-doom-icon="fa-person-running"><i class="fa-solid fa-person-running" inert></i><span>{{localize "TOVF.ChallengeManager.Doom.ExtraAction"}}</span></button>
-      <button type="button" data-action="adjustDoom" data-amount="-3" data-doom-chat="true" data-doom-icon="fa-arrows-rotate"><i class="fa-solid fa-arrows-rotate" inert></i><span>{{localize "TOVF.ChallengeManager.Doom.Recharge"}}</span></button>
-    </div>
-    <label class="doom-announce"><input type="checkbox" data-doom-announce {{checked announceDoom}}> {{localize "TOVF.ChallengeManager.Doom.AnnounceCurrent"}}</label>
-    </div>
-  </details>
-
-  <details class="challenge-section participants" data-challenge-section="party" {{#if partyExpanded}}open{{/if}}>
-    <summary>{{localize "TOVF.ChallengeManager.Party.Title"}}</summary>
-    <div class="challenge-section-content">
-    <div class="actor-list selected-actors">
-      {{#each selectedActors}}
-      <div class="actor-entry selected-actor-entry" draggable="true"
-           data-selected-actor data-actor-id="{{id}}" data-actor-uuid="{{uuid}}">
-        <img src="{{img}}" alt="">
-        <span class="actor-details">
-          <strong>{{name}}</strong>
-          <small class="actor-stats">
-            <span title="{{localize "TOVF.ChallengeManager.Party.AC"}}">
-              <i class="fa-solid fa-shield" aria-hidden="true"></i>
-              {{ac}}
-            </span>
-            <span title="{{localize "TOVF.ChallengeManager.Party.PassivePerception"}}">
-              <i class="fa-solid fa-eye" aria-hidden="true"></i>
-              {{passivePerception}}
-            </span>
-          </small>
-        </span>
-        <button type="button" data-action="selectActor" data-operation="remove"
-                data-actor-id="{{id}}" title="{{localize "TOVF.ChallengeManager.Party.Remove" name=name}}"
-                aria-label="{{localize "TOVF.ChallengeManager.Party.Remove" name=name}}">
-          <i class="fa-solid fa-xmark" inert></i>
-        </button>
-      </div>
-      {{else}}
-      <p class="hint">{{localize "TOVF.ChallengeManager.Party.Empty"}}</p>
-      {{/each}}
-    </div>
-    </div>
-  </details>
-
-  <details class="challenge-section roll-request" data-challenge-section="roll" {{#if rollExpanded}}open{{/if}}>
-    <summary>{{localize "TOVF.ChallengeManager.Roll.Title"}}</summary>
-    <div class="challenge-section-content">
-    <div class="request-fields">
-      <select data-request-type>
-        <option value="skill">{{localize "TOVF.ChallengeManager.Roll.Skill"}}</option>
-        <option value="save">{{localize "TOVF.ChallengeManager.Roll.Save"}}</option>
-        <option value="die">{{localize "TOVF.ChallengeManager.Roll.Die"}}</option>
-      </select>
-      <select data-request-key data-kind="skill">
-        {{selectOptions skills valueAttr="value" labelAttr="label"}}
-      </select>
-      <select data-request-key data-kind="save">
-        {{selectOptions abilities valueAttr="value" labelAttr="label"}}
-      </select>
-      <select data-request-key data-kind="die">
-        {{selectOptions dice valueAttr="value" labelAttr="label"}}
-      </select>
-      <div class="request-options">
-        <label class="request-option">
-          <input type="checkbox" data-request-average>
-          <span>{{localize "TOVF.ChallengeManager.Roll.ShowAverage"}}</span>
-        </label>
-        <label class="request-option" title="{{localize "TOVF.ChallengeManager.Roll.PrivateHint"}}">
-          <input type="checkbox" data-request-private>
-          <span>{{localize "TOVF.ChallengeManager.Roll.Private"}}</span>
-        </label>
-        <label class="request-dc" title="{{localize "TOVF.ChallengeManager.Roll.DC"}}" data-request-dc-field>
-          <span>{{localize "TOVF.ChallengeManager.Roll.DCShort"}}</span>
-          <input type="number" min="0" max="99" inputmode="numeric" placeholder="—" data-request-dc
-                 aria-label="{{localize "TOVF.ChallengeManager.Roll.DC"}}">
-        </label>
-      </div>
-      <button type="button" data-action="requestRoll">
-        <i class="fa-solid fa-message-arrow-up-right" inert></i>
-        {{localize "TOVF.ChallengeManager.Roll.Post"}}
-      </button>
-    </div>
-    </div>
-  </details>
-
-  <details class="all-actors" data-all-actors {{#if allActorsExpanded}}open{{/if}}>
-    <summary>{{localize "TOVF.ChallengeManager.Actors.Title"}}</summary>
-    <div class="actor-picker-actions"><button type="button" class="add-connected-actors" data-action="addConnectedActors"
-            title="{{localize "TOVF.ChallengeManager.Actors.AddConnectedTitle"}}">
-      <i class="fa-solid fa-users" inert></i>
-      {{localize "TOVF.ChallengeManager.Actors.AddConnected"}}
-    </button>
-    {{#if sessionActorCount}}<button type="button" class="add-session-actors" data-action="addSessionActors"
-            title="{{localize 'TOVF.ChallengeManager.Actors.AddSessionTitle'}}">
-      <i class="fa-solid fa-scroll" inert></i>
-      {{localize "TOVF.ChallengeManager.Actors.AddSession" count=sessionActorCount}}
-    </button>{{/if}}</div>
-    <div class="actor-picker-scroll">
-      <div class="actor-list">
-        {{#each availableActors}}
-        <div class="actor-entry">
-          <img src="{{img}}" alt="">
-          <span>{{name}}</span>
-          <button type="button" data-action="selectActor" data-operation="add"
-                  data-actor-id="{{id}}" title="{{localize "TOVF.ChallengeManager.Actors.Add" name=name}}"
-                  aria-label="{{localize "TOVF.ChallengeManager.Actors.Add" name=name}}">
-            <i class="fa-solid fa-plus" inert></i>
-          </button>
-        </div>
-        {{else}}
-        <p class="hint">{{localize "TOVF.ChallengeManager.Actors.AllSelected"}}</p>
-        {{/each}}
-      </div>
-    </div>
-  </details>
+<div class="tovf-challenge-manager-root combat-hud">
+  <div class="challenge-drawers">
+    <details class="challenge-drawer party-drawer" data-challenge-section="party" {{#if partyExpanded}}open{{/if}}>
+      <summary title="{{localize 'TOVF.ChallengeManager.Party.Title'}}" aria-label="{{localize 'TOVF.ChallengeManager.Party.Title'}}"><i class="fa-solid fa-users" inert></i></summary>
+      <div class="challenge-drawer-content"><div class="actor-list selected-actors">{{#each selectedActors}}<div class="actor-entry selected-actor-entry" draggable="true" data-selected-actor data-actor-id="{{id}}" data-actor-uuid="{{uuid}}"><img src="{{img}}" alt=""><span class="actor-details"><strong>{{name}}</strong><small class="actor-stats"><span><i class="fa-solid fa-shield" inert></i>{{ac}}</span><span><i class="fa-solid fa-eye" inert></i>{{passivePerception}}</span></small></span><button type="button" data-action="selectActor" data-operation="remove" data-actor-id="{{id}}"><i class="fa-solid fa-xmark" inert></i></button></div>{{else}}<p class="hint">{{localize "TOVF.ChallengeManager.Party.Empty"}}</p>{{/each}}</div><div class="actor-picker-actions"><button type="button" data-action="addConnectedActors"><i class="fa-solid fa-users" inert></i>{{localize "TOVF.ChallengeManager.Actors.AddConnected"}}</button>{{#if sessionActorCount}}<button type="button" data-action="addSessionActors"><i class="fa-solid fa-scroll" inert></i>{{localize "TOVF.ChallengeManager.Actors.AddSession" count=sessionActorCount}}</button>{{/if}}</div><div class="actor-picker-scroll"><div class="actor-list">{{#each availableActors}}<div class="actor-entry"><img src="{{img}}" alt=""><span>{{name}}</span><button type="button" data-action="selectActor" data-operation="add" data-actor-id="{{id}}"><i class="fa-solid fa-plus" inert></i></button></div>{{else}}<p class="hint">{{localize "TOVF.ChallengeManager.Actors.AllSelected"}}</p>{{/each}}</div></div></div>
+    </details>
+    <details class="challenge-drawer roll-drawer" data-challenge-section="roll" {{#if rollExpanded}}open{{/if}}>
+      <summary title="{{localize 'TOVF.ChallengeManager.Roll.Title'}}" aria-label="{{localize 'TOVF.ChallengeManager.Roll.Title'}}"><i class="fa-solid fa-dice-d20" inert></i></summary>
+      <div class="challenge-drawer-content request-fields"><select data-request-type><option value="skill">{{localize "TOVF.ChallengeManager.Roll.Skill"}}</option><option value="save">{{localize "TOVF.ChallengeManager.Roll.Save"}}</option><option value="die">{{localize "TOVF.ChallengeManager.Roll.Die"}}</option></select><select data-request-key data-kind="skill">{{selectOptions skills valueAttr="value" labelAttr="label"}}</select><select data-request-key data-kind="save">{{selectOptions abilities valueAttr="value" labelAttr="label"}}</select><select data-request-key data-kind="die">{{selectOptions dice valueAttr="value" labelAttr="label"}}</select><div class="request-options"><label class="request-option"><input type="checkbox" data-request-average>{{localize "TOVF.ChallengeManager.Roll.ShowAverage"}}</label><label class="request-option"><input type="checkbox" data-request-private>{{localize "TOVF.ChallengeManager.Roll.Private"}}</label><label class="request-dc" data-request-dc-field>{{localize "TOVF.ChallengeManager.Roll.DCShort"}}<input type="number" min="0" max="99" data-request-dc></label></div><button type="button" data-action="requestRoll"><i class="fa-solid fa-message-arrow-up-right" inert></i>{{localize "TOVF.ChallengeManager.Roll.Post"}}</button></div>
+    </details>
+    <details class="challenge-drawer doom-drawer" data-challenge-section="doom" {{#if doomExpanded}}open{{/if}}>
+      <summary><i class="fa-solid fa-skull-crossbones" inert></i><span>{{localize "TOVF.ChallengeManager.Doom.Bank"}}</span><b>{{doom}}</b></summary>
+      <div class="challenge-drawer-content"><div class="doom-counter"><button type="button" class="doom-adjust" data-action="adjustDoom" data-amount="-1">âˆ’</button><input type="number" min="0" value="{{doom}}" data-doom-value><button type="button" class="doom-adjust" data-action="adjustDoom" data-amount="1">+</button></div><div class="doom-spends"><button type="button" data-action="adjustDoom" data-amount="-1" data-doom-chat="true" data-doom-icon="fa-thumbs-up"><i class="fa-solid fa-thumbs-up" inert></i>{{localize "TOVF.ChallengeManager.Doom.Advantage"}}</button><button type="button" data-action="adjustDoom" data-amount="-1" data-doom-chat="true" data-doom-icon="fa-thumbs-down"><i class="fa-solid fa-thumbs-down" inert></i>{{localize "TOVF.ChallengeManager.Doom.Disadvantage"}}</button><button type="button" data-action="adjustDoom" data-amount="-2" data-doom-chat="true" data-doom-icon="fa-person-running"><i class="fa-solid fa-person-running" inert></i>{{localize "TOVF.ChallengeManager.Doom.ExtraAction"}}</button><button type="button" data-action="adjustDoom" data-amount="-3" data-doom-chat="true" data-doom-icon="fa-arrows-rotate"><i class="fa-solid fa-arrows-rotate" inert></i>{{localize "TOVF.ChallengeManager.Doom.Recharge"}}</button></div><label class="doom-announce"><input type="checkbox" data-doom-announce {{checked announceDoom}}> {{localize "TOVF.ChallengeManager.Doom.AnnounceCurrent"}}</label></div>
+    </details>
+  </div>
+  <div class="combat-round"><i class="fa-solid fa-hourglass-half" inert></i><span>Runde</span><strong>{{round}}</strong></div>
+  <section class="initiative-carousel">{{#each combatants}}<article class="initiative-card {{#if active}}is-active{{/if}} {{#if defeated}}is-defeated{{/if}}"><img src="{{img}}" alt=""><span class="initiative-card-name">{{name}}</span><span class="initiative-stat"><i class="fa-solid fa-dice-d20" inert></i>{{initiative}}</span><span class="initiative-stat"><i class="fa-solid fa-shield" inert></i>{{ac}}</span></article>{{else}}<p class="hint">Keine Combatants in der Initiative.</p>{{/each}}</section>
 </div>
