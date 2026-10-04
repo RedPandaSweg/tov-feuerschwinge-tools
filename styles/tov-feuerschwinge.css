@@ -1303,6 +1303,8 @@
 .tovf-gm-diagnostics-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
 .tovf-gm-diagnostics-heading h2 { margin-bottom: .2rem; }
 .tovf-gm-diagnostics-heading button { width: auto; }
+.tovf-gm-diagnostics-actions { display: flex; flex: 0 0 10.5rem; flex-direction: column; gap: .45rem; }
+.tovf-gm-diagnostics-actions button { width: 100%; min-height: 2.2rem; }
 .tovf-gm-problem { display: flex; align-items: center; gap: .55rem; margin-bottom: .4rem; padding: .55rem; border-left: 3px solid var(--color-level-warning); background: color-mix(in srgb, var(--color-level-warning) 8%, transparent); }
 .tovf-gm-problem > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .tovf-gm-problem > button { flex: 0 0 auto; width: auto; }

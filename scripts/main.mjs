@@ -22,7 +22,7 @@ const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   characterCreation: "./integrations/character-creation-overrides.mjs",
   weaponOptions: "./integrations/weapon-option-activities.mjs?v=3.2.4-tooltip-links-2",
   playerUnpause: "./player-unpause.mjs",
-  compendiumLibrary: "./compendium-library.mjs?v=3.8.0-mundane-library-items-1",
+  compendiumLibrary: "./compendium-library.mjs?v=3.8.0-kctg-library-source-1",
   dnd5eItemImporter: "./dnd5e-item-importer.mjs?v=3.8.0-import-spell-school-1",
   challengeManager: "./challenge-manager.mjs?v=3.8.0-standalone-combat-hud-23",
   linkTools: "./link-tools-config.mjs",

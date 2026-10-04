@@ -13,8 +13,10 @@ const SOURCE_MODULES = packageId => (
 );
 const FALLBACK_ITEM_IMAGE = "icons/svg/item-bag.svg";
 const LIBRARY_INDEX_PACK = "tov-feuerschwinge-library-index";
-const LIBRARY_INDEX_VERSION = 7;
+const LIBRARY_INDEX_VERSION = 8;
 const DND5E_SOURCE_ID = "dnd5e";
+const KCTG_5E_SOURCE_ID = "kctg-5e";
+const KCTG_5E_SOURCE_BOOK = "KCTG-5e";
 
 function libraryIndexPack() {
   return game.packs.get(`world.${LIBRARY_INDEX_PACK}`);
@@ -600,6 +602,8 @@ function packageIdFor(pack) {
 }
 
 function entrySourceId(entry, packageId) {
+  const sourceBook = String(foundry.utils.getProperty(entry, "system.description.source.book") ?? "").trim();
+  if (sourceBook === KCTG_5E_SOURCE_BOOK) return KCTG_5E_SOURCE_ID;
   return foundry.utils.getProperty(entry, `flags.${MODULE_ID}.importedItem.sourceSystem`) === DND5E_SOURCE_ID
     ? DND5E_SOURCE_ID
     : packageId;
@@ -607,6 +611,7 @@ function entrySourceId(entry, packageId) {
 
 function sourceLabel(packageId) {
   if (packageId === DND5E_SOURCE_ID) return "D&D 5e";
+  if (packageId === KCTG_5E_SOURCE_ID) return KCTG_5E_SOURCE_BOOK;
   if (packageId === CONTENT_MODULE_ID) return game.modules.get(CONTENT_MODULE_ID)?.title ?? "Feuerschwinge – Kompendium";
   if (packageId === game.system.id) return game.system.title;
   return game.modules.get(packageId)?.title ?? packageId;
@@ -614,6 +619,7 @@ function sourceLabel(packageId) {
 
 function shortSourceLabel(packageId, label) {
   if (packageId === DND5E_SOURCE_ID) return "D&D";
+  if (packageId === KCTG_5E_SOURCE_ID) return KCTG_5E_SOURCE_BOOK;
   if (packageId === CONTENT_MODULE_ID) return "Feuerschwinge";
   if (packageId === game.system.id) return "Black Flag";
   if (packageId === "koboldpressogl-bf") return "KPOGL";
@@ -787,6 +793,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           "system.activities",
           "effects"
           , "system.description.value"
+          , "system.description.source.book"
           , `flags.${MODULE_ID}.library.tags`
           , `flags.${MODULE_ID}.importedItem.sourceSystem`
         ]
