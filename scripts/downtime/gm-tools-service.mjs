@@ -72,9 +72,11 @@ function collectionDocuments(collection) {
 }
 
 const LEGACY_EFFECT_FORMULA_REFERENCES = [
-  "@attributes.movement.walk",
+  "@traits.movement.base",
   "@abilities.dexterity.mod",
+  "@abilities.str.mod",
   "@attributes.proficiency",
+  "@attributes.spell.mod",
   "@prof",
   "@base"
 ];

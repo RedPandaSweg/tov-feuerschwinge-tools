@@ -1,5 +1,5 @@
 import { uiText } from "../core/localization.mjs";
-import { isProjectAdministrator } from "../core/permissions.mjs?v=3.7.8-permissions-1";
+import { isOperationalGM, isProjectAdministrator } from "../core/permissions.mjs?v=3.7.8-permissions-1";
 import { startupReport } from "../core/startup.mjs?v=3.7.8-lifecycle-phases-1";
 import { compatibilityReport } from "../integrations/compatibility-layer.mjs?v=3.7.8-argon-module-check-2";
 import { schedulerReport } from "../core/scheduler.mjs?v=3.7.8-central-scheduler-1";
@@ -7,12 +7,12 @@ import { FLAGS, MODULE_ID } from "./constants.mjs";
 import { DowntimeDashboardApp } from "./dashboard-app.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
 import { evidenceKey, milestoneEvidence } from "../campaign/milestone-evidence.mjs";
-import { GMToolsService } from "./gm-tools-service.mjs?v=3.7.8-activity-batch-1";
+import { GMToolsService } from "./gm-tools-service.mjs?v=3.8.0-unresolved-advancement-formulas-1";
 import { isActiveCharacter, milestoneEntries, actorLevel, highestMilestoneProgress, isoWeekKey, levelFromMilestones, monthKey, passiveDowntimeConfig, SessionService, sessionProgress, tierOfPlay } from "./session-service.mjs";
 import { openVoidTaintConfig } from "../void-taint/config-app.mjs";
 import { applyActorSpellMigration, previewActorSpellMigration } from "../spell-actor-migration.mjs?v=3.5.0-actor-spell-migration-10";
 import { applyWorkingEffectMigration, previewWorkingEffectMigration } from "../effect-pack-migration.mjs?v=3.7.8-working-effects-2";
-import { migrateLegacyWorldActiveEffects, previewLegacyActiveEffects } from "../core/active-effect-migration.mjs?v=3.7.8-standard-effects-2";
+import { migrateLegacyWorldActiveEffects, previewLegacyActiveEffects } from "../core/active-effect-migration.mjs?v=3.8.0-legacy-effect-repair-1";
 import {
   addVoidTaint,
   drawVoidTaintEffect,
@@ -56,6 +56,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       deleteExpiredEffects: GMToolsApp.#deleteExpiredEffects,
       migrateWorkingEffects: GMToolsApp.#migrateWorkingEffects,
       migrateLegacyActiveEffects: GMToolsApp.#migrateLegacyActiveEffects,
+      repairLegacyActiveEffect: GMToolsApp.#repairLegacyActiveEffect,
       migrateActorSpells: GMToolsApp.#migrateActorSpells,
       undo: GMToolsApp.#undo,
       exportCharacter: GMToolsApp.#exportCharacter,
@@ -220,7 +221,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     } : null;
     let legacyActiveEffects = null;
     if (this.tab === "diagnostics") {
-      const available = isProjectAdministrator();
+      const available = isOperationalGM();
       const entries = available ? await previewLegacyActiveEffects() : [];
       const sources = new Map();
       for (const entry of entries) {
@@ -761,7 +762,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #migrateLegacyActiveEffects(event) {
     event.preventDefault();
-    if (!isProjectAdministrator()) throw new Error("Diese Weltmigration erfordert einen vollständigen Spielleiterzugang.");
+    if (!isOperationalGM()) throw new Error("Diese Migration erfordert eine Spielleitung.");
     const entries = await previewLegacyActiveEffects();
     const repairable = entries.filter(entry => entry.repairable);
     if (!repairable.length) return;
@@ -778,6 +779,27 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       if (remainingRepairable) ui.notifications.warn(this.legacyActiveEffectResult);
       else ui.notifications.info(this.legacyActiveEffectResult);
     });
+  }
+
+  static async #repairLegacyActiveEffect(event) {
+    event.preventDefault();
+    if (!isOperationalGM()) throw new Error("Diese Reparatur erfordert eine Spielleitung.");
+    const uuid = await foundry.applications.api.DialogV2.prompt({
+      window: { title: "Active Effect reparieren" },
+      content: '<div class="form-group stacked"><label>Effect-UUID</label><input name="uuid" type="text" required autofocus><p class="notes">Die UUID aus der Foundry-Fehlermeldung einfügen.</p></div>',
+      ok: { label: "Zu base migrieren", callback: (_dialogEvent, button) => button.form.elements.uuid.value.trim() },
+      rejectClose: false
+    });
+    if (!uuid) return;
+    const effect = await fromUuid(uuid).catch(() => null);
+    if (effect?.documentName !== "ActiveEffect") throw new Error("Die UUID verweist nicht auf einen Active Effect.");
+    if (effect.parent?.isOwner !== true && effect.isOwner !== true) {
+      throw new Error("Für den zugehörigen Actor oder das Item fehlt der Schreibzugriff.");
+    }
+    await effect.update({ type: "base" });
+    this.legacyActiveEffectResult = `Active Effect „${effect.name}“ wurde zu base migriert.`;
+    ui.notifications.info(this.legacyActiveEffectResult);
+    await this.render({ force: true });
   }
 
   static async #migrateActorSpells(event) {

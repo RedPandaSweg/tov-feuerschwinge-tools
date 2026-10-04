@@ -71,14 +71,15 @@ const MAGIC_ITEM_RARITY_ORDER = new Map([
 ]);
 
 function isMagicItem(entry) {
-  const rarity = foundry.utils.getProperty(entry, "system.rarity");
+  const rawRarity = foundry.utils.getProperty(entry, "system.rarity");
+  const rarity = String(rawRarity?.value ?? rawRarity ?? "").trim().toLocaleLowerCase("en");
   const properties = foundry.utils.getProperty(entry, "system.properties");
   const magical = properties instanceof Set
     ? properties.has("magical")
     : Array.isArray(properties)
       ? properties.includes("magical")
       : Boolean(properties?.magical);
-  return Boolean(rarity || magical);
+  return magical || Boolean(rarity && rarity !== "mundane");
 }
 
 function categoryFor(pack, entry) {

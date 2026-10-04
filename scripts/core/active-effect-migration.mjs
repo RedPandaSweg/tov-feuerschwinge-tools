@@ -69,17 +69,29 @@ function addDocumentEffects(entries, document, source) {
   }
 }
 
+function canRepairDocument(document) {
+  return document?.isOwner === true;
+}
+
 export async function previewLegacyActiveEffects() {
   const entries = [];
-  const worldSource = { repairable: true, sourceKey: "world", sourceLabel: "Weltdokumente" };
-  for (const actor of game.actors) addActorEffects(entries, actor, worldSource);
-  for (const item of game.items) addDocumentEffects(entries, item, worldSource);
+  for (const actor of game.actors) {
+    addActorEffects(entries, actor, {
+      repairable: canRepairDocument(actor), sourceKey: "world", sourceLabel: "Weltdokumente"
+    });
+  }
+  for (const item of game.items) {
+    addDocumentEffects(entries, item, {
+      repairable: canRepairDocument(item), sourceKey: "world", sourceLabel: "Weltdokumente"
+    });
+  }
 
   for (const pack of game.packs) {
     if (!["Actor", "Item", "ActiveEffect"].includes(pack.documentName)) continue;
     const type = pack.metadata?.packageType ?? (pack.collection.startsWith("world.") ? "world" : "module");
     const source = {
-      repairable: type === "world" && !pack.locked,
+      repairable: type === "world" && !pack.locked
+        && pack.testUserPermission?.(game.user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER) === true,
       sourceKey: `pack:${pack.collection}`,
       sourceLabel: pack.metadata?.label ?? pack.title ?? pack.collection,
       pack,

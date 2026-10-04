@@ -36,7 +36,7 @@ import {
 import { MIGRATION_SETTING, migrateIntegratedDowntime } from "./migration.mjs";
 import { openFeuerschwingeSettings } from "../settings-categories.mjs";
 import { createWorldSpellScroll } from "../spell-scrolls.mjs?v=3.7.8-clearance-label-1";
-import { GMToolsApp } from "./gm-tools-app.mjs?v=3.7.8-standard-effects-2";
+import { GMToolsApp } from "./gm-tools-app.mjs?v=3.8.0-unresolved-advancement-formulas-1";
 import { isCompendiumItem, synchronizeCompendiumItem } from "../item-compendium-sync.mjs?v=3.5.0-cross-source-spell-sync-8";
 
 function documentFromApp(app, documentName) {
