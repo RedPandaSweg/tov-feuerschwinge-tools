@@ -13,7 +13,8 @@ const SOURCE_MODULES = packageId => (
 );
 const FALLBACK_ITEM_IMAGE = "icons/svg/item-bag.svg";
 const LIBRARY_INDEX_PACK = "tov-feuerschwinge-library-index";
-const LIBRARY_INDEX_VERSION = 6;
+const LIBRARY_INDEX_VERSION = 7;
+const DND5E_SOURCE_ID = "dnd5e";
 
 function libraryIndexPack() {
   return game.packs.get(`world.${LIBRARY_INDEX_PACK}`);
@@ -597,13 +598,21 @@ function packageIdFor(pack) {
   return pack.metadata.packageName ?? pack.metadata.package ?? "";
 }
 
+function entrySourceId(entry, packageId) {
+  return foundry.utils.getProperty(entry, `flags.${MODULE_ID}.importedItem.sourceSystem`) === DND5E_SOURCE_ID
+    ? DND5E_SOURCE_ID
+    : packageId;
+}
+
 function sourceLabel(packageId) {
+  if (packageId === DND5E_SOURCE_ID) return "D&D 5e";
   if (packageId === CONTENT_MODULE_ID) return game.modules.get(CONTENT_MODULE_ID)?.title ?? "Feuerschwinge – Kompendium";
   if (packageId === game.system.id) return game.system.title;
   return game.modules.get(packageId)?.title ?? packageId;
 }
 
 function shortSourceLabel(packageId, label) {
+  if (packageId === DND5E_SOURCE_ID) return "D&D";
   if (packageId === CONTENT_MODULE_ID) return "Feuerschwinge";
   if (packageId === game.system.id) return "Black Flag";
   if (packageId === "koboldpressogl-bf") return "KPOGL";
@@ -778,6 +787,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           "effects"
           , "system.description.value"
           , `flags.${MODULE_ID}.library.tags`
+          , `flags.${MODULE_ID}.importedItem.sourceSystem`
         ]
       });
       const requiresDocuments = pack.documentName === "Actor" || index.some(entry => entry.type === "spell");
@@ -797,6 +807,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
         const priceDenomination = String(foundry.utils.getProperty(entry, "system.price.denomination") ?? "gp").toLocaleLowerCase("en");
         const priceGold = priceValue * ({ pp: 10, gp: 1, sp: 0.1, cp: 0.01 }[priceDenomination] ?? 1);
         const displayName = entry.type === "spell" ? canonicalSpellName(entry.name) : entry.name;
+        const source = entrySourceId(entry, packageId);
         entries.push({
           id: entry._id,
           uuid: pack.getUuid(entry._id),
@@ -840,9 +851,9 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           ...classification,
           pack: pack.collection,
           packLabel: pack.title,
-          source: packageId,
-          sourceLabel: sourceLabel(packageId),
-          shortSourceLabel: shortSourceLabel(packageId, sourceLabel(packageId))
+          source,
+          sourceLabel: sourceLabel(source),
+          shortSourceLabel: shortSourceLabel(source, sourceLabel(source))
         });
       }
     }));
