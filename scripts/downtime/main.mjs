@@ -34,7 +34,6 @@ import {
   openRecipeEditor
 } from "./recipe-service.mjs?v=3.4.2-project-collaborative-default-1";
 import { MIGRATION_SETTING, migrateIntegratedDowntime } from "./migration.mjs";
-import { openChallengeManager } from "../challenge-manager.mjs";
 import { openFeuerschwingeSettings } from "../settings-categories.mjs";
 import { createWorldSpellScroll } from "../spell-scrolls.mjs?v=3.7.8-clearance-label-1";
 import { GMToolsApp } from "./gm-tools-app.mjs?v=3.7.8-standard-effects-2";
@@ -523,7 +522,7 @@ Hooks.on("getSceneControlButtons", controls => {
         title: "TOVF.ChallengeManager.Open",
         icon: "fa-solid fa-skull-crossbones",
         button: true,
-        onChange: openChallengeManager
+        onChange: () => game.modules.get(MODULE_ID)?.api?.toggleChallengeManager?.()
       },
       gmTools: {
         name: "gmTools",

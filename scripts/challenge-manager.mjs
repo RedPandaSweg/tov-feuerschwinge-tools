@@ -718,6 +718,10 @@ function toggleChallengeHud() {
 }
 
 export function openChallengeManager() {
+  return openPanel();
+}
+
+export function toggleChallengeManager() {
   return toggleChallengeHud();
 }
 
@@ -1158,6 +1162,7 @@ export function activateChallengeManager() {
   game.modules.get(MODULE_ID).api ??= {};
   Object.assign(game.modules.get(MODULE_ID).api, {
     openChallengeManager: openPanel,
+    toggleChallengeManager: toggleChallengeHud,
     openDoomPanel: openPanel,
     requestRoll: createRollRequest
   });
