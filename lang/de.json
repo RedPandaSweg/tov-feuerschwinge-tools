@@ -595,6 +595,15 @@
     "ChallengeManager": {
       "Title": "Challenge Manager",
       "Open": "Challenge Manager",
+      "Rules": {
+        "Title": "Cheat Sheets",
+        "Short": "Regeln",
+        "Conditions": "Zustände",
+        "Actions": "Aktionen im Combat",
+        "Movement": "Bewegung im Combat",
+        "Playing": "Das Spiel spielen",
+        "Missing": "Die Regelreferenz konnte nicht geöffnet werden."
+      },
       "Settings": {
         "Menu": {
           "Name": "Challenge HUD",
@@ -610,7 +619,11 @@
         },
         "AutoOpen": {
           "Name": "Challenge HUD bei Combatstart öffnen",
-          "Hint": "Öffnet das Challenge HUD automatisch für alle Clients, wenn ein Combat startet."
+          "Hint": "Öffnet das Challenge HUD beim Combatstart automatisch für Spielleitungen."
+        },
+        "AutoOpenOnReady": {
+          "Name": "Challenge HUD beim Anmelden öffnen",
+          "Hint": "Öffnet das Challenge HUD nach dem Anmelden automatisch für Spielleitungen, auch ohne laufenden Combat."
         },
         "ShowNpcHealth": {
           "Name": "HP-Zustand von NPCs für Spieler anzeigen",

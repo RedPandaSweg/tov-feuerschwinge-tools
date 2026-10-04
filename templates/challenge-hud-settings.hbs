@@ -23,6 +23,10 @@
   <fieldset>
     <legend><i class="fa-solid fa-globe" inert></i> {{localize "TOVF.ChallengeManager.Settings.Menu.World"}}</legend>
     <label class="tovf-challenge-setting-toggle">
+      <input type="checkbox" name="autoOpenOnReady" {{checked autoOpenOnReady}}>
+      <span><strong>{{localize "TOVF.ChallengeManager.Settings.AutoOpenOnReady.Name"}}</strong><small>{{localize "TOVF.ChallengeManager.Settings.AutoOpenOnReady.Hint"}}</small></span>
+    </label>
+    <label class="tovf-challenge-setting-toggle">
       <input type="checkbox" name="autoOpen" {{checked autoOpen}}>
       <span><strong>{{localize "TOVF.ChallengeManager.Settings.AutoOpen.Name"}}</strong><small>{{localize "TOVF.ChallengeManager.Settings.AutoOpen.Hint"}}</small></span>
     </label>

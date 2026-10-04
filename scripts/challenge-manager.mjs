@@ -7,10 +7,17 @@ const SETTINGS = {
   actors: "doomSelectedActors"
 };
 const ACTIVE_SESSION_SETTING = "activeSession";
+const AUTO_OPEN_ON_READY_SETTING = "challengeHudAutoOpenOnReady";
 const AUTO_OPEN_SETTING = "challengeHudAutoOpen";
 const SHOW_NPC_HEALTH_SETTING = "challengeHudShowNpcHealthToPlayers";
 const SHOW_OTHER_PLAYER_HEALTH_SETTING = "challengeHudShowOtherPlayerHealthToPlayers";
 const MAX_INITIATIVE_CARDS_SETTING = "challengeHudMaxInitiativeCards";
+const RULES_LINKS = Object.freeze([
+  { label: "TOVF.ChallengeManager.Rules.Conditions", icon: "fa-circle-exclamation", uuid: "Compendium.tov-feuerschwinge.players-guide.JournalEntry.PpKSlgQI6Xz4StJz" },
+  { label: "TOVF.ChallengeManager.Rules.Actions", icon: "fa-hand-fist", uuid: "Compendium.tov-feuerschwinge.players-guide.JournalEntry.Hx63pkAqiTv1bpTg.JournalEntryPage.jTJ7GX4t88qkaijp" },
+  { label: "TOVF.ChallengeManager.Rules.Movement", icon: "fa-person-running", uuid: "Compendium.tov-feuerschwinge.players-guide.JournalEntry.Hx63pkAqiTv1bpTg.JournalEntryPage.UFhtpXYvDelOu0s0" },
+  { label: "TOVF.ChallengeManager.Rules.Playing", icon: "fa-book-open", uuid: "Compendium.tov-feuerschwinge.players-guide.JournalEntry.Hx63pkAqiTv1bpTg" }
+]);
 let panel;
 let rollResultQueue = Promise.resolve();
 let initializedDoomCombatId = null;
@@ -38,6 +45,7 @@ class ChallengeHudSettings extends HandlebarsApplicationMixin(ApplicationV2) {
     return {
       ...context,
       canConfigureWorld: game.user.isGM,
+      autoOpenOnReady: game.settings.get(MODULE_ID, AUTO_OPEN_ON_READY_SETTING),
       autoOpen: game.settings.get(MODULE_ID, AUTO_OPEN_SETTING),
       showNpcHealth: game.settings.get(MODULE_ID, SHOW_NPC_HEALTH_SETTING),
       showOtherPlayerHealth: game.settings.get(MODULE_ID, SHOW_OTHER_PLAYER_HEALTH_SETTING),
@@ -57,6 +65,7 @@ class ChallengeHudSettings extends HandlebarsApplicationMixin(ApplicationV2) {
     const maxCards = Math.clamp(Math.round(Number(values.maxInitiativeCards) || 10), 1, 10);
     await game.settings.set(MODULE_ID, MAX_INITIATIVE_CARDS_SETTING, maxCards);
     if (game.user.isGM) {
+      await game.settings.set(MODULE_ID, AUTO_OPEN_ON_READY_SETTING, values.autoOpenOnReady === true);
       await game.settings.set(MODULE_ID, AUTO_OPEN_SETTING, values.autoOpen === true);
       await game.settings.set(MODULE_ID, SHOW_NPC_HEALTH_SETTING, values.showNpcHealth === true);
       await game.settings.set(MODULE_ID, SHOW_OTHER_PLAYER_HEALTH_SETTING, values.showOtherPlayerHealth === true);
@@ -540,8 +549,9 @@ class ChallengeHud {
     const drawer = (name, icon, label, content, badge = "", shortLabel = label) => `<section class="tovf-challenge-hud-drawer ${name} ${this.#drawers[name] ? "is-open" : ""}"><button type="button" class="tovf-challenge-hud-toggle" data-hud-action="toggle" data-drawer="${name}" title="${escape(label)}">${icon ? `<i class="fa-solid ${icon}" inert></i>` : ""}<span>${escape(shortLabel)}</span>${badge}</button><div class="tovf-challenge-hud-popover">${content}</div></section>`;
     const party = `<header>${localize("TOVF.ChallengeManager.Party.Title")}</header><ul>${actors.filter(actor => selected.has(actor.id)).map(actorRow).join("") || `<li class="hint">${localize("TOVF.ChallengeManager.Party.Empty")}</li>`}</ul><details><summary>${localize("TOVF.ChallengeManager.Actors.Title")}</summary><ul>${actors.filter(actor => !selected.has(actor.id)).map(actorRow).join("") || `<li class="hint">${localize("TOVF.ChallengeManager.Actors.AllSelected")}</li>`}</ul></details>`;
     const roll = `<header>${localize("TOVF.ChallengeManager.Roll.Title")}</header>${rollActorSelection}<div class="tovf-challenge-hud-roll-selects"><select data-hud-roll-type><option value="skill">${localize("TOVF.ChallengeManager.Roll.Skill")}</option><option value="save">${localize("TOVF.ChallengeManager.Roll.Save")}</option><option value="die">${localize("TOVF.ChallengeManager.Roll.Die")}</option></select><select data-hud-roll-key data-kind="skill">${Object.entries(CONFIG.BlackFlag.skills.localized ?? {}).map(([value, label]) => `<option value="${escape(value)}">${escape(label)}</option>`).join("")}</select><select data-hud-roll-key data-kind="save" hidden>${Object.entries(CONFIG.BlackFlag.abilities.localized ?? {}).map(([value, label]) => `<option value="${escape(value)}">${escape(label)}</option>`).join("")}</select><select data-hud-roll-key data-kind="die" hidden>${[4, 6, 8, 10, 12, 20, 100].map(value => `<option value="${value}">d${value}</option>`).join("")}</select></div><div class="tovf-challenge-hud-roll-options"><label><input type="checkbox" data-hud-average> ${localize("TOVF.ChallengeManager.Roll.ShowAverageShort")}</label><label><input type="checkbox" data-hud-private> ${localize("TOVF.ChallengeManager.Roll.Private")}</label><label data-hud-dc>${localize("TOVF.ChallengeManager.Roll.DCShort")} <input type="number" min="0" max="99" data-hud-roll-dc></label></div><button type="button" data-hud-action="request"><i class="fa-solid fa-message-arrow-up-right" inert></i>${localize("TOVF.ChallengeManager.Roll.Post")}</button>`;
+    const rules = `<header>${localize("TOVF.ChallengeManager.Rules.Title")}</header>${RULES_LINKS.map(link => `<button type="button" data-hud-action="openRulesJournal" data-journal-uuid="${escape(link.uuid)}"><i class="fa-solid ${link.icon}" inert></i>${localize(link.label)}</button>`).join("")}`;
     const doom = `<header class="tovf-challenge-hud-doom-header"><span>${localize("TOVF.ChallengeManager.Doom.Bank")}</span><div class="tovf-challenge-hud-doom-meta"><button type="button" data-hud-action="recalculateDoom" title="${escape(localize("TOVF.ChallengeManager.Doom.Recalculate"))}" aria-label="${escape(localize("TOVF.ChallengeManager.Doom.Recalculate"))}"><i class="fa-solid fa-arrows-rotate" inert></i></button><small>${localize("TOVF.ChallengeManager.Encounter.MaxCR")}: ${escape(formatCR(maxCR))} <i>|</i> ${localize("TOVF.ChallengeManager.Encounter.Adversaries")}: ${activeAdversaryCount}/${adversaryCount}</small></div></header><div class="tovf-challenge-hud-doom-count"><button type="button" data-hud-action="doom" data-amount="-1">&minus;</button><input type="number" min="0" value="${game.settings.get(MODULE_ID, SETTINGS.doom)}" data-hud-doom><button type="button" data-hud-action="doom" data-amount="1">+</button></div><div class="tovf-challenge-hud-doom-actions"><button type="button" data-hud-action="doom" data-amount="-1" data-doom-chat="true" data-doom-icon="fa-thumbs-up">${localize("TOVF.ChallengeManager.Doom.Advantage")}</button><button type="button" data-hud-action="doom" data-amount="-1" data-doom-chat="true" data-doom-icon="fa-thumbs-down">${localize("TOVF.ChallengeManager.Doom.Disadvantage")}</button><button type="button" data-hud-action="doom" data-amount="-2" data-doom-chat="true" data-doom-icon="fa-person-running">${localize("TOVF.ChallengeManager.Doom.ExtraAction")}</button><button type="button" data-hud-action="doom" data-amount="-3" data-doom-chat="true" data-doom-icon="fa-arrows-rotate">${localize("TOVF.ChallengeManager.Doom.Recharge")}</button></div><label><input type="checkbox" data-hud-doom-announce ${game.settings.get(MODULE_ID, SETTINGS.announceDoom) ? "checked" : ""}> ${localize("TOVF.ChallengeManager.Doom.AnnounceCurrent")}</label>`;
-    const controls = isGM ? `${drawer("party", "fa-users", localize("TOVF.ChallengeManager.Party.Title"), party)}${drawer("roll", "fa-dice-d20", localize("TOVF.ChallengeManager.Roll.Title"), roll, "", localize("TOVF.ChallengeManager.Roll.Short"))}${drawer("doom", "", localize("TOVF.ChallengeManager.Doom.Bank"), doom, `<b>${game.settings.get(MODULE_ID, SETTINGS.doom)}</b>`)}` : "";
+    const controls = isGM ? `${drawer("party", "fa-users", localize("TOVF.ChallengeManager.Party.Title"), party)}${drawer("roll", "fa-dice-d20", localize("TOVF.ChallengeManager.Roll.Title"), roll, "", localize("TOVF.ChallengeManager.Roll.Short"))}${drawer("rules", "fa-book-open", localize("TOVF.ChallengeManager.Rules.Title"), rules, "", localize("TOVF.ChallengeManager.Rules.Short"))}${drawer("doom", "", localize("TOVF.ChallengeManager.Doom.Bank"), doom, `<b>${game.settings.get(MODULE_ID, SETTINGS.doom)}</b>`)}` : "";
     this.element ??= document.body.appendChild(document.createElement("section"));
     this.element.id = "tovf-challenge-hud";
     const missingNpcInitiative = turns.filter(combatant => combatant.initiative == null && combatant.actor && !combatant.actor.hasPlayerOwner);
@@ -593,6 +603,13 @@ class ChallengeHud {
     if (!button) return;
     const action = button.dataset.hudAction;
     if (action === "toggle") { this.#drawers[button.dataset.drawer] = !this.#drawers[button.dataset.drawer]; this.render(); return; }
+    if (action === "openRulesJournal") {
+      const document = await fromUuid(button.dataset.journalUuid).catch(() => null);
+      if (!document) return ui.notifications.warn(localize("TOVF.ChallengeManager.Rules.Missing"));
+      if (document.documentName === "JournalEntryPage") document.parent.sheet.render(true, { pageId: document.id });
+      else document.sheet.render(true);
+      return;
+    }
     if (action === "startCombat") { await game.combat?.startCombat(); return; }
     if (action === "previousTurn") { await game.combat?.previousTurn(); return; }
     if (action === "nextTurn") { await game.combat?.nextTurn(); return; }
@@ -1024,6 +1041,14 @@ export function registerChallengeManager() {
     name: "TOVF.ChallengeManager.Settings.AutoOpen.Name",
     hint: "TOVF.ChallengeManager.Settings.AutoOpen.Hint"
   });
+  game.settings.register(MODULE_ID, AUTO_OPEN_ON_READY_SETTING, {
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: true,
+    name: "TOVF.ChallengeManager.Settings.AutoOpenOnReady.Name",
+    hint: "TOVF.ChallengeManager.Settings.AutoOpenOnReady.Hint"
+  });
   game.settings.register(MODULE_ID, SHOW_NPC_HEALTH_SETTING, {
     scope: "world",
     config: false,
@@ -1128,7 +1153,8 @@ export function registerChallengeManager() {
 
 export function activateChallengeManager() {
   panel ??= game.user.isGM ? new ChallengeHud() : null;
-  if ((game.combat?.turns?.length ?? 0) > 0 && game.settings.get(MODULE_ID, AUTO_OPEN_SETTING)) void openPanel();
+  if (game.user.isGM && game.settings.get(MODULE_ID, AUTO_OPEN_ON_READY_SETTING)) void openPanel();
+  else if ((game.combat?.turns?.length ?? 0) > 0 && game.settings.get(MODULE_ID, AUTO_OPEN_SETTING)) void openPanel();
   game.modules.get(MODULE_ID).api ??= {};
   Object.assign(game.modules.get(MODULE_ID).api, {
     openChallengeManager: openPanel,

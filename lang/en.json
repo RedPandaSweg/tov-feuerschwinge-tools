@@ -596,6 +596,15 @@
     "ChallengeManager": {
       "Title": "Challenge Manager",
       "Open": "Challenge Manager",
+      "Rules": {
+        "Title": "Cheat Sheets",
+        "Short": "Rules",
+        "Conditions": "Conditions",
+        "Actions": "Actions in Combat",
+        "Movement": "Movement in Combat",
+        "Playing": "Playing the Game",
+        "Missing": "The rules reference could not be opened."
+      },
       "Settings": {
         "Menu": {
           "Name": "Challenge HUD",
@@ -611,7 +620,11 @@
         },
         "AutoOpen": {
           "Name": "Open Challenge HUD on combat start",
-          "Hint": "Automatically opens the Challenge HUD for every client when combat starts."
+          "Hint": "Automatically opens the Challenge HUD for game masters when combat starts."
+        },
+        "AutoOpenOnReady": {
+          "Name": "Open Challenge HUD on login",
+          "Hint": "Automatically opens the Challenge HUD for game masters after login, even without an active combat."
         },
         "ShowNpcHealth": {
           "Name": "Show NPC health state to players",
