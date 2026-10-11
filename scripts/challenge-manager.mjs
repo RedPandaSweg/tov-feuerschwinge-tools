@@ -32,6 +32,7 @@ let panel;
 let rollResultQueue = Promise.resolve();
 let initializedDoomCombatId = null;
 let pendingDoomCombatId = null;
+const autoSkippingDefeatedCombats = new WeakSet();
 const pendingRollTotals = new Map();
 const pendingClientRolls = new Set();
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -156,13 +157,7 @@ function encounterStats(combat = game.combat) {
 }
 
 function initiativeTurns(combat = game.combat) {
-  return [...(combat?.combatants ?? [])].sort((left, right) => {
-    const leftInitiative = left.initiative == null ? -Infinity : Number(left.initiative);
-    const rightInitiative = right.initiative == null ? -Infinity : Number(right.initiative);
-    const leftValue = Number.isFinite(leftInitiative) ? leftInitiative : -Infinity;
-    const rightValue = Number.isFinite(rightInitiative) ? rightInitiative : -Infinity;
-    return rightValue - leftValue || Number(left.sort ?? 0) - Number(right.sort ?? 0);
-  });
+  return [...(combat?.turns ?? [])];
 }
 
 function formatElapsed(milliseconds) {
@@ -197,6 +192,43 @@ async function updateCombatTiming(combat, { encounterStarted = false, turnChange
   const now = Date.now();
   if (encounterStarted || !timing.encounterStartedAt) await combat.setFlag(MODULE_ID, ENCOUNTER_STARTED_AT_FLAG, now);
   if (turnChanged || !timing.turnStartedAt) await combat.setFlag(MODULE_ID, TURN_STARTED_AT_FLAG, now);
+}
+
+function isDefeatedNpc(combatant) {
+  const actor = combatant?.actor;
+  if (!actor || actor.type === "pc") return false;
+  return Boolean(combatant.isDefeated
+    || actor.appliedEffects?.some(effect => effect.statuses.has(CONFIG.specialStatusEffects.DEFEATED)));
+}
+
+function nextNonDefeatedNpcTurn(combat, startIndex, updateData) {
+  const turns = combat.turns ?? [];
+  if (!turns.length || turns.every(isDefeatedNpc)) return;
+  for (let offset = 0; offset < turns.length; offset++) {
+    const turn = (startIndex + offset) % turns.length;
+    if (isDefeatedNpc(turns[turn])) continue;
+    updateData.turn = turn;
+    return;
+  }
+}
+
+async function skipActiveDefeatedNpc(combat) {
+  if (!game.user.isGM || !combat?.started || autoSkippingDefeatedCombats.has(combat)
+    || !isDefeatedNpc(combat.combatant)
+    || (combat.turns ?? []).every(isDefeatedNpc)) return;
+  autoSkippingDefeatedCombats.add(combat);
+  try {
+    await combat.nextTurn();
+  } finally {
+    autoSkippingDefeatedCombats.delete(combat);
+  }
+}
+
+function requestSkipActiveDefeatedNpc(combat) {
+  void skipActiveDefeatedNpc(combat).catch(error => {
+    console.error(`${MODULE_ID} | Skipping defeated NPC turns failed`, error);
+    ui.notifications.error(error.message);
+  });
 }
 
 function startingDoom(combat = game.combat) {
@@ -582,8 +614,12 @@ class ChallengeHud {
     const isGM = game.user.isGM;
     const selected = selectedActorIds();
     const actors = allPlayerActors();
-    const turns = initiativeTurns();
+    const allTurns = initiativeTurns();
+    const turns = isGM ? allTurns : allTurns.filter(combatant => combatant.visible);
     const hasCombatants = turns.length > 0;
+    const hasDecimalInitiative = turns.some(combatant => Number.isFinite(combatant.initiative)
+      && !Number.isInteger(combatant.initiative));
+    const initiativePrecision = CONFIG.Combat.initiative.decimals;
     const turnIndex = Math.max(0, turns.findIndex(combatant => combatant.id === game.combat?.combatant?.id));
     const roundIndex = Math.max(0, Number(game.combat?.round) - 1 || 0);
     const carouselStep = hasCombatants ? (roundIndex * turns.length) + turnIndex : 0;
@@ -641,10 +677,15 @@ class ChallengeHud {
       const gmStats = isGM ? `<div class="tovf-challenge-hud-card-stats"><span><i class="fa-solid fa-shield" inert></i>${escape(actor?.system.attributes?.ac?.value ?? "-")}</span>${hp ? `<button type="button" data-hud-action="hp" data-combatant-id="${combatant.id}"><i class="fa-solid fa-heart" inert></i>${escape(hp.value ?? 0)}</button>` : ""}</div>` : "";
       const initiativeRoll = canRollInitiative ? `<button type="button" class="tovf-challenge-hud-roll-initiative" data-hud-action="rollInitiative" data-combatant-id="${combatant.id}" title="${escape(localize("TOVF.ChallengeManager.Hud.RollInitiative"))}"><i class="fa-solid fa-dice-d20" inert></i></button>` : "";
       const isActive = combatant.id === game.combat?.combatant?.id;
+      const defeated = Boolean(combatant.isDefeated
+        || actor?.appliedEffects?.some(effect => effect.statuses.has(CONFIG.specialStatusEffects.DEFEATED)));
+      const initiative = Number.isFinite(combatant.initiative)
+        ? combatant.initiative.toFixed(hasDecimalInitiative ? initiativePrecision : 0)
+        : "-";
       const turnElapsed = isActive && turnStartedAt ? formatElapsed(Date.now() - turnStartedAt) : "";
       const timerState = isActive && turnStartedAt ? ` ${turnTimerState(Date.now() - turnStartedAt)}` : "";
       const turnTimer = showTurnTimer ? `<small class="tovf-challenge-hud-turn-timer${timerState}" data-turn-timer ${isActive && turnStartedAt ? `data-start-at="${turnStartedAt}"` : ""}>${turnElapsed}</small>` : "";
-      return `<div class="tovf-challenge-hud-combatant ${isActive ? "is-active" : ""}${combatant.isDefeated ? " is-defeated" : ""}${healthState}"${healthStyle}><article><img class="portrait-backdrop" src="${portraitSrc}" alt=""><img class="portrait-main" src="${portraitSrc}" alt="${escape(combatant.name ?? actor?.name ?? "")}"><span class="tovf-challenge-hud-initiative-value">${escape(combatant.initiative ?? "-")}</span>${gmStats}${initiativeRoll}</article><div class="tovf-challenge-hud-card-footer">${hpControl}${turnTimer}</div></div>`;
+      return `<div class="tovf-challenge-hud-combatant ${isActive ? "is-active" : ""}${defeated ? " is-defeated" : ""}${healthState}"${healthStyle}><article><img class="portrait-backdrop" src="${portraitSrc}" alt=""><img class="portrait-main" src="${portraitSrc}" alt="${escape(combatant.name ?? actor?.name ?? "")}"><span class="tovf-challenge-hud-initiative-value">${escape(initiative)}</span>${gmStats}${initiativeRoll}</article><div class="tovf-challenge-hud-card-footer">${hpControl}${turnTimer}</div></div>`;
     }).join("");
     const drawer = (name, icon, label, content, badge = "", shortLabel = label) => `<section class="tovf-challenge-hud-drawer ${name} ${this.#drawers[name] ? "is-open" : ""}"><button type="button" class="tovf-challenge-hud-toggle" data-hud-action="toggle" data-drawer="${name}" title="${escape(label)}">${icon ? `<i class="fa-solid ${icon}" inert></i>` : ""}<span>${escape(shortLabel)}</span>${badge}</button><div class="tovf-challenge-hud-popover">${content}</div></section>`;
     const party = `<header>${localize("TOVF.ChallengeManager.Party.Title")}</header><ul>${actors.filter(actor => selected.has(actor.id)).map(actorRow).join("") || `<li class="hint">${localize("TOVF.ChallengeManager.Party.Empty")}</li>`}</ul><details><summary>${localize("TOVF.ChallengeManager.Actors.Title")}</summary><ul>${actors.filter(actor => !selected.has(actor.id)).map(actorRow).join("") || `<li class="hint">${localize("TOVF.ChallengeManager.Actors.AllSelected")}</li>`}</ul></details>`;
@@ -1286,6 +1327,10 @@ export function registerChallengeManager() {
     const activityPath = `flags.${MODULE_ID}.active`;
     const activityChanged = Object.hasOwn(changes, activityPath) || foundry.utils.hasProperty(changes, activityPath);
     const isCombatant = game.combat?.combatants.some(combatant => combatant.actor?.id === actor.id);
+    const activeCombatant = game.combat?.combatant;
+    if (activeCombatant?.actor?.id === actor.id && isDefeatedNpc(activeCombatant)) {
+      requestSkipActiveDefeatedNpc(game.combat);
+    }
     if (activityChanged || isCombatant) void refreshPanel();
   });
   Hooks.on("createCombatant", () => {
@@ -1300,15 +1345,30 @@ export function registerChallengeManager() {
     await game.settings.set(MODULE_ID, SETTINGS.active, false);
     await setDoom(0);
   });
+  Hooks.on("combatTurn", (combat, updateData, options) => {
+    if (!game.user.isGM || options.direction !== 1) return;
+    nextNonDefeatedNpcTurn(combat, (combat.turn ?? -1) + 1, updateData);
+  });
+  Hooks.on("combatRound", (combat, updateData, options) => {
+    if (!game.user.isGM || options.direction !== 1 || combat.turn === null) return;
+    nextNonDefeatedNpcTurn(combat, 0, updateData);
+  });
   Hooks.on("updateCombat", (combat, changes) => {
     const startedNow = Number(changes.round) === 1 && Number(changes.turn ?? combat?.turn) === 0;
     if (Object.hasOwn(changes, "turn") || Object.hasOwn(changes, "round")) {
       void updateCombatTiming(combat, { turnChanged: true });
+      requestSkipActiveDefeatedNpc(combat);
     }
     if (pendingDoomCombatId === combat?.id || startedNow) {
       requestCombatDoomInitialization(combat);
     }
     if (changes.active === false || changes.started === false || combat?.started === false) void refreshPanel();
+  });
+  Hooks.on("updateCombatant", combatant => {
+    const combat = combatant.parent;
+    if (combat?.combatant?.id === combatant.id && isDefeatedNpc(combatant)) {
+      requestSkipActiveDefeatedNpc(combat);
+    }
   });
   game.socket.on(`module.${MODULE_ID}`, socketMessage => {
     if (socketMessage.type !== "challengeRollResult") return;

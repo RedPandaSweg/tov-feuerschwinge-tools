@@ -64,7 +64,19 @@ async function activateShoveContest(actor, source, event) {
         ui.notifications.error(game.i18n.localize("TOV.ContestedActivity.Error.ShoveUnavailable"));
         return false;
     }
-    return activity.activate({ event }, { event });
+    return activity.activate({ event }, { event }, {
+        data: {
+            flags: {
+                [MODULE_ID]: {
+                    argonContestedShove: {
+                        actorUuid: actor.uuid,
+                        activityId: activity.id,
+                        itemData: item.toObject()
+                    }
+                }
+            }
+        }
+    });
 }
 
 async function activateSpecialSkillCheck(actor, skill, event) {

@@ -1669,6 +1669,7 @@
       "RollDefender": "Target: {check}",
       "MultipleHint": "Each selected check gets its own roll button on the chat card.",
       "TargetHint": "The Actor that started the contest makes the user check. Select exactly one other token for the target check.",
+      "Sides": { "Attacker": "User", "Defender": "Target" },
       "Ties": { "Label": "Ties", "Defender": "Target wins", "Attacker": "User wins" },
       "Result": {
         "AttackerWins": "<strong>{attacker}</strong> rolls {attackerCheck} ({attackerTotal}) and wins against <strong>{defender}</strong> with {defenderCheck} ({defenderTotal}).",

@@ -1,7 +1,42 @@
 import { MODULE_ID, modulePath } from "./core/constants.mjs";
 
 const ACTIVITY_TYPE = "tovContest";
+const SHOVE_CHAT_FLAG = "argonContestedShove";
 let registered = false;
+
+function activateShoveChatActions(message, html, ActivityClass) {
+  const root = html instanceof HTMLElement ? html : html?.[0];
+  const payload = message.getFlag(MODULE_ID, SHOVE_CHAT_FLAG);
+  if (!(root instanceof HTMLElement) || !payload) return;
+
+  root.addEventListener("click", event => {
+    const target = event.target.closest('[data-action="rollContestAttacker"], [data-action="rollContestDefender"]');
+    if (!target || !root.contains(target)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    target.disabled = true;
+    void (async () => {
+      try {
+        const actor = await fromUuid(payload.actorUuid);
+        if (!actor || !payload.itemData || !payload.activityId) {
+          throw new Error("The temporary Shove activity could not be restored.");
+        }
+        const item = new Item.implementation(payload.itemData, { parent: actor });
+        const activity = item.system.activities.get(payload.activityId);
+        const handler = ActivityClass.metadata.usage.actions[target.dataset.action];
+        if (!activity || typeof handler !== "function") {
+          throw new Error("The temporary Shove activity action is unavailable.");
+        }
+        await handler.call(activity, event, target, message);
+      } catch (error) {
+        console.error(`${MODULE_ID} | Shove chat action failed`, error);
+        ui.notifications.error(error.message);
+      } finally {
+        target.disabled = false;
+      }
+    })();
+  }, { capture: true });
+}
 
 function firstRoll(result) {
   if (Array.isArray(result)) return result[0] ?? null;
@@ -36,36 +71,64 @@ async function rollCheck(actor, selection, event, originatingMessageId) {
   else if (type === "ability") result = await actor.rollAbilityCheck({ ability: key, event }, dialogConfig, messageConfig);
   else throw new Error(game.i18n.localize("TOV.ContestedActivity.Error.CheckMissing"));
   const roll = firstRoll(result);
-  return roll && Number.isFinite(Number(roll.total)) ? { roll, total: Number(roll.total) } : null;
+  if (!roll || !Number.isFinite(Number(roll.total))) return null;
+  const dice3d = game.dice3d;
+  if (roll.message?.id && typeof dice3d?.waitFor3DAnimationByMessageID === "function") {
+    await dice3d.waitFor3DAnimationByMessageID(roll.message.id);
+  }
+  return { roll, total: Number(roll.total) };
 }
 
 function selectedDefender(attacker) {
   const selected = (canvas.tokens?.controlled ?? []).filter(token => token.actor);
   if (selected.length !== 1 || selected[0].actor.uuid === attacker?.uuid) return null;
-  return selected[0].actor;
+  return { actor: selected[0].actor, token: selected[0] };
+}
+
+function actorTokenImage(actor, token = actor.getActiveTokens?.()[0]) {
+  return token?.document?.texture?.src
+    ?? token?.texture?.src
+    ?? actor.prototypeToken?.texture?.src
+    ?? actor.img
+    ?? "icons/svg/mystery-man.svg";
 }
 
 function resultContent(activity, state) {
-  const attackerWins = Boolean(state.attackerWins);
-  const resultKey = attackerWins ? "AttackerWins" : "DefenderWins";
+  const attackerWins = state.attackerWins === true;
+  const attackerClass = attackerWins ? "is-winner" : "";
+  const defenderClass = attackerWins ? "" : "is-winner";
+  const attackerName = foundry.utils.escapeHTML(state.attacker.name);
+  const defenderName = foundry.utils.escapeHTML(state.defender.name);
+  const attackerImg = foundry.utils.escapeHTML(state.attacker.img ?? "icons/svg/mystery-man.svg");
+  const defenderImg = foundry.utils.escapeHTML(state.defender.img ?? "icons/svg/mystery-man.svg");
   return `<section class="tov-contested-result ${attackerWins ? "success" : "failure"}">
-    <h3>${foundry.utils.escapeHTML(activity.name)}</h3>
-    <p>${game.i18n.format(`TOV.ContestedActivity.Result.${resultKey}`, {
-      attacker: foundry.utils.escapeHTML(state.attacker.name),
-      attackerCheck: foundry.utils.escapeHTML(state.attacker.checkLabel),
-      attackerTotal: state.attacker.total,
-      defender: foundry.utils.escapeHTML(state.defender.name),
-      defenderCheck: foundry.utils.escapeHTML(state.defender.checkLabel),
-      defenderTotal: state.defender.total
-    })}</p>
+    <h4>${foundry.utils.escapeHTML(activity.name)} Contest</h4>
+    <div class="tov-contested-matchup">
+      <article class="tov-contested-side ${attackerClass}">
+        <strong>${attackerName}</strong>
+        <img src="${attackerImg}" alt="${attackerName}">
+        <span>${game.i18n.localize("TOV.ContestedActivity.Sides.Attacker")}</span>
+      </article>
+      <div class="tov-contested-score">
+        <div class="tov-contested-roll ${attackerClass}"><strong>${state.attacker.total}</strong><span>${foundry.utils.escapeHTML(state.attacker.checkLabel)}</span></div>
+        <strong class="tov-contested-versus">VS</strong>
+        <div class="tov-contested-roll ${defenderClass}"><strong>${state.defender.total}</strong><span>${foundry.utils.escapeHTML(state.defender.checkLabel)}</span></div>
+      </div>
+      <article class="tov-contested-side defender ${defenderClass}">
+        <strong>${defenderName}</strong>
+        <img src="${defenderImg}" alt="${defenderName}">
+        <span>${game.i18n.localize("TOV.ContestedActivity.Sides.Defender")}</span>
+      </article>
+    </div>
   </section>`;
 }
 
-async function storeRoll(activity, message, role, actor, result, selection) {
+async function storeRoll(activity, message, role, actor, result, selection, token) {
   const state = foundry.utils.deepClone(message.getFlag(MODULE_ID, "contestedCheck") ?? {});
   state[role] = {
     actorUuid: actor.uuid,
     name: actor.name,
+    img: actorTokenImage(actor, token),
     check: selection,
     checkLabel: checkLabel(selection),
     total: result.total,
@@ -208,8 +271,8 @@ export function registerContestedActivity() {
         if (!checkSelections(this.system.contest.defender).includes(selection)) throw new Error(game.i18n.localize("TOV.ContestedActivity.Error.CheckMissing"));
         const defender = selectedDefender(this.actor);
         if (!defender) return ui.notifications.warn(game.i18n.localize("TOV.ContestedActivity.Error.SelectOneToken"));
-        const result = await rollCheck(defender, selection, event, message.id);
-        if (result) await storeRoll(this, message, "defender", defender, result, selection);
+        const result = await rollCheck(defender.actor, selection, event, message.id);
+        if (result) await storeRoll(this, message, "defender", defender.actor, result, selection, defender.token);
       } catch (error) {
         console.error(`${MODULE_ID} | Contested activity failed`, error);
         ui.notifications.error(error.message);
@@ -260,6 +323,7 @@ export function registerContestedActivity() {
   ContestedActivity.localize();
   BlackFlag.modules[MODULE_ID] ??= {};
   Object.assign(BlackFlag.modules[MODULE_ID], { ContestedActivity, ContestedActivityData, ContestedActivitySheet });
+  Hooks.on("renderChatMessageHTML", (message, html) => activateShoveChatActions(message, html, ContestedActivity));
   registered = true;
   return { status: "completed" };
 }

@@ -1668,6 +1668,7 @@
       "RollDefender": "Ziel: {check}",
       "MultipleHint": "Für jede ausgewählte Probe erscheint ein eigener Würfelbutton auf der Chatkarte.",
       "TargetHint": "Die Anwenderprobe würfelt der Actor, der den Contest gestartet hat. Wähle für die Zielprobe genau einen anderen Token aus.",
+      "Sides": { "Attacker": "Anwender", "Defender": "Ziel" },
       "Ties": { "Label": "Gleichstand", "Defender": "Ziel gewinnt", "Attacker": "Anwender gewinnt" },
       "Result": {
         "AttackerWins": "<strong>{attacker}</strong> würfelt {attackerCheck} ({attackerTotal}) und gewinnt gegen <strong>{defender}</strong> mit {defenderCheck} ({defenderTotal}).",

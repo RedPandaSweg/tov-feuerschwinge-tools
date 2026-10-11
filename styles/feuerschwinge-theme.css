@@ -64,9 +64,22 @@
   font-family: "Oswald", sans-serif !important;
 }
 
-.tov-contested-result { padding: .35rem .5rem; border-left: 3px solid var(--color-border-light-2); }
+.tov-contested-result { display: block; box-sizing: border-box; min-height: 0; height: auto; border-left: 2px solid var(--color-border-light-2); }
 .tov-contested-result.success { border-left-color: #3f8f4f; }
 .tov-contested-result.failure { border-left-color: #a33f3f; }
+.tov-contested-result h4 { margin: 0 0 .15rem; text-align: center; }
+.tov-contested-matchup { display: flex; align-items: center; justify-content: space-between; gap: .25rem; width: 100%; min-height: 0; }
+.tov-contested-side { display: flex; flex: 0 1 4.3rem; flex-direction: column; align-items: center; justify-content: center; gap: .05rem; min-width: 0; border-radius: .3rem; text-align: center; }
+.tov-contested-side.is-winner { background: color-mix(in srgb, #3f8f4f 18%, transparent); box-shadow: inset 0 0 0 1px #3f8f4f; }
+.tov-contested-side img { display: block; width: 3.5rem; height: 3.5rem; flex: 0 0 3.5rem; object-fit: cover; border-radius: .25rem; }
+.tov-contested-side strong, .tov-contested-roll { display: flex; flex-direction: column; min-width: 0; }
+.tov-contested-side strong, .tov-contested-side span, .tov-contested-roll span { overflow: hidden; text-overflow: ellipsis; }
+.tov-contested-side span, .tov-contested-roll span { font-size: .8em; opacity: .8; }
+.tov-contested-score { display: flex; flex: 1 1 auto; align-items: center; justify-content: center; gap: .2rem; min-width: 0; text-align: center; }
+.tov-contested-roll { flex: 1 1 0; align-items: center; padding: .1rem; border-radius: .3rem; }
+.tov-contested-roll.is-winner { color: #236b32; background: color-mix(in srgb, #3f8f4f 18%, transparent); }
+.tov-contested-roll strong { font-size: 1.5em; line-height: 1; }
+.tov-contested-versus { font-size: .85em; letter-spacing: .08em; opacity: .75; }
 
 :where(
   .application[class*="tovf-"],
