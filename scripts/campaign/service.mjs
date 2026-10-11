@@ -3,7 +3,7 @@ import { canModifyWorldSettings, isAssistantGM, isProjectAdministrator } from ".
 import { MODULE_ID, FLAGS } from "../downtime/constants.mjs";
 import { compareSnapshots, validateSnapshot, sessionDate, effectiveSessionStatus } from "./data.mjs";
 import { defaultRules, validateRules, settlementPreview, ruleForDate } from "./rules.mjs";
-import { levelFromMilestones, milestoneEntries, sessionProgress, rewardForLevel, sessionRewardDetails, isoWeekKey, SessionService } from "../downtime/session-service.mjs";
+import { milestoneEntries, sessionProgress, rewardForLevel, rewardLevelForActor, sessionRewardDetails, isoWeekKey, SessionService } from "../downtime/session-service.mjs";
 import { GoldService } from "../downtime/gold-service.mjs";
 import { RewardService } from "../downtime/reward-service.mjs";
 import { getSystemAdapter } from "../downtime/system-adapter.mjs";
@@ -58,7 +58,7 @@ export async function redemptionPreview(state, user, claimId, actorUuid) {
   const actor = actorUuid ? await fromUuid(actorUuid) : null;
   if (!actor || actor.documentName !== "Actor" || !charactersForPerson(state, claim.personId).some(a => a.uuid === actor.uuid)) throw new Error(uiText("TOVF.Interface.SelectACharacterBelongingToThePerson_54499e", "Bitte einen Charakter der Person wählen, der dieses Guthaben gehört."));
   const progress = sessionProgress(actor);
-  const level = levelFromMilestones(progress.milestones);
+  const level = rewardLevelForActor(actor, progress);
   let reward = clone(claim.reward);
   if (reward.mode === "session") {
     const configured = rewardForLevel(level);

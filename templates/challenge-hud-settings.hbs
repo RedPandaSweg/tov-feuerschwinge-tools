@@ -17,6 +17,18 @@
       </div>
       <p class="hint">{{localize "TOVF.ChallengeManager.Settings.MaxInitiativeCards.Hint"}}</p>
     </div>
+    <label class="tovf-challenge-setting-toggle">
+      <input type="checkbox" name="showInitiativeCarousel" {{checked showInitiativeCarousel}}>
+      <span><strong>{{localize "TOVF.ChallengeManager.Settings.ShowInitiativeCarousel.Name"}}</strong><small>{{localize "TOVF.ChallengeManager.Settings.ShowInitiativeCarousel.Hint"}}</small></span>
+    </label>
+    <label class="tovf-challenge-setting-toggle">
+      <input type="checkbox" name="showEncounterTimer" {{checked showEncounterTimer}}>
+      <span><strong>{{localize "TOVF.ChallengeManager.Settings.ShowEncounterTimer.Name"}}</strong><small>{{localize "TOVF.ChallengeManager.Settings.ShowEncounterTimer.Hint"}}</small></span>
+    </label>
+    <label class="tovf-challenge-setting-toggle">
+      <input type="checkbox" name="showTurnTimer" {{checked showTurnTimer}}>
+      <span><strong>{{localize "TOVF.ChallengeManager.Settings.ShowTurnTimer.Name"}}</strong><small>{{localize "TOVF.ChallengeManager.Settings.ShowTurnTimer.Hint"}}</small></span>
+    </label>
   </fieldset>
 
   {{#if canConfigureWorld}}

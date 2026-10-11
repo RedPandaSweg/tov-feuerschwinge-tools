@@ -1,4 +1,6 @@
 import { MODULE_ID, modulePath } from "./core/constants.mjs";
+import { emitModuleEvent, subscribeModuleEvent } from "./core/events.mjs?v=3.7.8-module-events-1";
+import { registerScheduledTask } from "./core/scheduler.mjs?v=3.7.8-central-scheduler-1";
 
 const SETTINGS = {
   doom: "doomPoints",
@@ -12,11 +14,19 @@ const AUTO_OPEN_SETTING = "challengeHudAutoOpen";
 const SHOW_NPC_HEALTH_SETTING = "challengeHudShowNpcHealthToPlayers";
 const SHOW_OTHER_PLAYER_HEALTH_SETTING = "challengeHudShowOtherPlayerHealthToPlayers";
 const MAX_INITIATIVE_CARDS_SETTING = "challengeHudMaxInitiativeCards";
+const SHOW_INITIATIVE_CAROUSEL_SETTING = "challengeHudShowInitiativeCarousel";
+const SHOW_ENCOUNTER_TIMER_SETTING = "challengeHudShowEncounterTimer";
+const SHOW_TURN_TIMER_SETTING = "challengeHudShowTurnTimer";
+const DOOM_USAGE_FLAG = "doomActionsUsed";
+const ENCOUNTER_STARTED_AT_FLAG = "encounterStartedAt";
+const TURN_STARTED_AT_FLAG = "turnStartedAt";
 const RULES_LINKS = Object.freeze([
-  { label: "TOVF.ChallengeManager.Rules.Conditions", icon: "fa-circle-exclamation", uuid: "Compendium.tov-feuerschwinge.players-guide.JournalEntry.PpKSlgQI6Xz4StJz" },
-  { label: "TOVF.ChallengeManager.Rules.Actions", icon: "fa-hand-fist", uuid: "Compendium.tov-feuerschwinge.players-guide.JournalEntry.Hx63pkAqiTv1bpTg.JournalEntryPage.jTJ7GX4t88qkaijp" },
-  { label: "TOVF.ChallengeManager.Rules.Movement", icon: "fa-person-running", uuid: "Compendium.tov-feuerschwinge.players-guide.JournalEntry.Hx63pkAqiTv1bpTg.JournalEntryPage.UFhtpXYvDelOu0s0" },
-  { label: "TOVF.ChallengeManager.Rules.Playing", icon: "fa-book-open", uuid: "Compendium.tov-feuerschwinge.players-guide.JournalEntry.Hx63pkAqiTv1bpTg" }
+  { label: "TOVF.ChallengeManager.Rules.Conditions", icon: "fa-circle-exclamation", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.PpKSlgQI6Xz4StJz" },
+  { label: "TOVF.ChallengeManager.Rules.Actions", icon: "fa-hand-fist", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.Hx63pkAqiTv1bpTg.JournalEntryPage.jTJ7GX4t88qkaijp" },
+  { label: "TOVF.ChallengeManager.Rules.Movement", icon: "fa-person-running", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.Hx63pkAqiTv1bpTg.JournalEntryPage.UFhtpXYvDelOu0s0" },
+  { label: "TOVF.ChallengeManager.Rules.Luck", icon: "fa-clover", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.Hx63pkAqiTv1bpTg.JournalEntryPage.1EJygnzku97gjYf2" },
+  { label: "TOVF.ChallengeManager.Rules.Doom", icon: "fa-skull-crossbones", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.mXJKutD4r9X3aSfB" },
+  { label: "TOVF.ChallengeManager.Rules.Playing", icon: "fa-book-open", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.Hx63pkAqiTv1bpTg" }
 ]);
 let panel;
 let rollResultQueue = Promise.resolve();
@@ -49,6 +59,9 @@ class ChallengeHudSettings extends HandlebarsApplicationMixin(ApplicationV2) {
       autoOpen: game.settings.get(MODULE_ID, AUTO_OPEN_SETTING),
       showNpcHealth: game.settings.get(MODULE_ID, SHOW_NPC_HEALTH_SETTING),
       showOtherPlayerHealth: game.settings.get(MODULE_ID, SHOW_OTHER_PLAYER_HEALTH_SETTING),
+      showInitiativeCarousel: game.settings.get(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_SETTING),
+      showEncounterTimer: game.settings.get(MODULE_ID, SHOW_ENCOUNTER_TIMER_SETTING),
+      showTurnTimer: game.settings.get(MODULE_ID, SHOW_TURN_TIMER_SETTING),
       maxInitiativeCards: game.settings.get(MODULE_ID, MAX_INITIATIVE_CARDS_SETTING)
     };
   }
@@ -64,6 +77,9 @@ class ChallengeHudSettings extends HandlebarsApplicationMixin(ApplicationV2) {
     const values = formData.object;
     const maxCards = Math.clamp(Math.round(Number(values.maxInitiativeCards) || 10), 1, 10);
     await game.settings.set(MODULE_ID, MAX_INITIATIVE_CARDS_SETTING, maxCards);
+    await game.settings.set(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_SETTING, values.showInitiativeCarousel === true);
+    await game.settings.set(MODULE_ID, SHOW_ENCOUNTER_TIMER_SETTING, values.showEncounterTimer === true);
+    await game.settings.set(MODULE_ID, SHOW_TURN_TIMER_SETTING, values.showTurnTimer === true);
     if (game.user.isGM) {
       await game.settings.set(MODULE_ID, AUTO_OPEN_ON_READY_SETTING, values.autoOpenOnReady === true);
       await game.settings.set(MODULE_ID, AUTO_OPEN_SETTING, values.autoOpen === true);
@@ -139,11 +155,85 @@ function encounterStats(combat = game.combat) {
   };
 }
 
+function initiativeTurns(combat = game.combat) {
+  return [...(combat?.combatants ?? [])].sort((left, right) => {
+    const leftInitiative = left.initiative == null ? -Infinity : Number(left.initiative);
+    const rightInitiative = right.initiative == null ? -Infinity : Number(right.initiative);
+    const leftValue = Number.isFinite(leftInitiative) ? leftInitiative : -Infinity;
+    const rightValue = Number.isFinite(rightInitiative) ? rightInitiative : -Infinity;
+    return rightValue - leftValue || Number(left.sort ?? 0) - Number(right.sort ?? 0);
+  });
+}
+
+function formatElapsed(milliseconds) {
+  const seconds = Math.max(0, Math.floor(Number(milliseconds) / 1000) || 0);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const remainderSeconds = seconds % 60;
+  const remainderMinutes = minutes % 60;
+  return hours
+    ? `${hours}:${String(remainderMinutes).padStart(2, "0")}:${String(remainderSeconds).padStart(2, "0")}`
+    : `${minutes}:${String(remainderSeconds).padStart(2, "0")}`;
+}
+
+function turnTimerState(milliseconds) {
+  const seconds = Math.max(0, Math.floor(Number(milliseconds) / 1000) || 0);
+  if (seconds >= 120) return "is-overdue";
+  if (seconds >= 90) return "is-warning";
+  if (seconds >= 60) return "is-delayed";
+  return "";
+}
+
+function combatTiming(combat = game.combat) {
+  return {
+    encounterStartedAt: Number(combat?.getFlag(MODULE_ID, ENCOUNTER_STARTED_AT_FLAG)) || null,
+    turnStartedAt: Number(combat?.getFlag(MODULE_ID, TURN_STARTED_AT_FLAG)) || null
+  };
+}
+
+async function updateCombatTiming(combat, { encounterStarted = false, turnChanged = false } = {}) {
+  if (!combat || !game.user.isGM) return;
+  const timing = combatTiming(combat);
+  const now = Date.now();
+  if (encounterStarted || !timing.encounterStartedAt) await combat.setFlag(MODULE_ID, ENCOUNTER_STARTED_AT_FLAG, now);
+  if (turnChanged || !timing.turnStartedAt) await combat.setFlag(MODULE_ID, TURN_STARTED_AT_FLAG, now);
+}
+
 function startingDoom(combat = game.combat) {
-  const { adversaryCount, maxCR } = encounterStats(combat);
+  const adversaries = combat?.combatants.filter(combatant => combatant.actor && combatant.actor.type !== "pc") ?? [];
+  const encounterCR = adversaries.reduce((total, combatant) => total + parseCR(
+    combatant.actor?.system.attributes?.cr ?? combatant.actor?.system.details?.cr
+  ), 0);
+  const { adversaryCount } = encounterStats(combat);
   if (!adversaryCount) return 0;
-  const base = maxCR >= 23 ? 6 : maxCR >= 17 ? 5 : maxCR >= 11 ? 4 : maxCR >= 5 ? 3 : 2;
-  return base + adversaryCount - 1;
+  if (encounterCR >= 21) return 6;
+  if (encounterCR >= 17) return 5;
+  if (encounterCR >= 13) return 4;
+  if (encounterCR >= 9) return 3;
+  if (encounterCR >= 5) return 2;
+  return 1;
+}
+
+function usedDoomActions(combat = game.combat) {
+  return combat?.getFlag(MODULE_ID, DOOM_USAGE_FLAG) ?? {};
+}
+
+async function spendDoomAction({ id, cost = 1, oncePerEncounter = false }) {
+  if (!game.user.isGM) return false;
+  const combat = game.combat;
+  const used = usedDoomActions(combat);
+  if (oncePerEncounter && used[id]) {
+    ui.notifications.warn(game.i18n.localize("TOVF.ChallengeManager.Doom.AlreadyUsed"));
+    return false;
+  }
+  const current = game.settings.get(MODULE_ID, SETTINGS.doom);
+  if (current < cost) {
+    ui.notifications.warn(game.i18n.localize("TOVF.ChallengeManager.Doom.Insufficient"));
+    return false;
+  }
+  await setDoom(current - cost);
+  if (oncePerEncounter && combat) await combat.setFlag(MODULE_ID, DOOM_USAGE_FLAG, { ...used, [id]: true });
+  return true;
 }
 
 function formatCR(value) {
@@ -173,6 +263,7 @@ async function initializeCombatDoom(combat, { force = false } = {}) {
   if (!combat || !game.user.isGM || (!force && initializedDoomCombatId === combat.id)) return;
   initializedDoomCombatId = combat.id;
   try {
+    if (!force) await combat.unsetFlag(MODULE_ID, DOOM_USAGE_FLAG);
     const doom = startingDoom(combat);
     await setDoom(doom);
     const persisted = Number(game.settings.get(MODULE_ID, SETTINGS.doom));
@@ -301,10 +392,11 @@ class ChallengeManager extends HandlebarsApplicationMixin(ApplicationV2) {
         active: index === game.combat?.turn
       })),
       rulesLinks: [
-        { label: "Conditions", icon: "fa-solid fa-circle-exclamation", uuid: "Compendium.tov-feuerschwinge.players-guide.JournalEntry.PpKSlgQI6Xz4StJz" },
-        { label: "Actions in Combat", icon: "fa-solid fa-hand-fist", uuid: "Compendium.tov-feuerschwinge.players-guide.JournalEntry.Hx63pkAqiTv1bpTg.JournalEntryPage.jTJ7GX4t88qkaijp" },
-        { label: "Movement in Combat", icon: "fa-solid fa-person-running", uuid: "Compendium.tov-feuerschwinge.players-guide.JournalEntry.Hx63pkAqiTv1bpTg.JournalEntryPage.UFhtpXYvDelOu0s0" },
-        { label: "Playing the Game", icon: "fa-solid fa-book-open", uuid: "Compendium.tov-feuerschwinge.players-guide.JournalEntry.Hx63pkAqiTv1bpTg" }
+        { label: "Conditions", icon: "fa-solid fa-circle-exclamation", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.PpKSlgQI6Xz4StJz" },
+        { label: "Actions in Combat", icon: "fa-solid fa-hand-fist", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.Hx63pkAqiTv1bpTg.JournalEntryPage.jTJ7GX4t88qkaijp" },
+        { label: "Movement in Combat", icon: "fa-solid fa-person-running", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.Hx63pkAqiTv1bpTg.JournalEntryPage.UFhtpXYvDelOu0s0" },
+        { label: "Playing the Game", icon: "fa-solid fa-book-open", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.Hx63pkAqiTv1bpTg" },
+        { label: "Doom", icon: "fa-solid fa-skull-crossbones", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.mXJKutD4r9X3aSfB" }
       ],
       allActorsExpanded: this.#allActorsExpanded,
       doomExpanded: this.#expandedSections.doom,
@@ -490,9 +582,9 @@ class ChallengeHud {
     const isGM = game.user.isGM;
     const selected = selectedActorIds();
     const actors = allPlayerActors();
-    const turns = game.combat?.turns ?? [];
+    const turns = initiativeTurns();
     const hasCombatants = turns.length > 0;
-    const turnIndex = Number.isInteger(game.combat?.turn) ? game.combat.turn : 0;
+    const turnIndex = Math.max(0, turns.findIndex(combatant => combatant.id === game.combat?.combatant?.id));
     const roundIndex = Math.max(0, Number(game.combat?.round) - 1 || 0);
     const carouselStep = hasCombatants ? (roundIndex * turns.length) + turnIndex : 0;
     const carouselOffset = hasCombatants ? Math.max(0, carouselStep - 1) % turns.length : 0;
@@ -511,6 +603,10 @@ class ChallengeHud {
       : carouselStep > previousCarouselStep ? " is-advancing" : " is-reversing";
     const showNpcHealth = isGM || game.settings.get(MODULE_ID, SHOW_NPC_HEALTH_SETTING);
     const showOtherPlayerHealth = isGM || game.settings.get(MODULE_ID, SHOW_OTHER_PLAYER_HEALTH_SETTING);
+    const showInitiativeCarousel = game.settings.get(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_SETTING);
+    const showEncounterTimer = game.settings.get(MODULE_ID, SHOW_ENCOUNTER_TIMER_SETTING);
+    const showTurnTimer = game.settings.get(MODULE_ID, SHOW_TURN_TIMER_SETTING);
+    const { encounterStartedAt, turnStartedAt } = combatTiming();
     const { adversaryCount, activeAdversaryCount, maxCR } = encounterStats();
     const escape = value => Handlebars.escapeExpression(String(value ?? ""));
     const localize = key => game.i18n.localize(key);
@@ -543,27 +639,56 @@ class ChallengeHud {
         ? `<div class="tovf-challenge-hud-hp-control"><input type="number" min="0" value="1" data-hud-hp-amount><button type="button" data-hud-action="damage" data-actor-id="${actor.id}">&minus;</button><button type="button" data-hud-action="heal" data-actor-id="${actor.id}">+</button></div>`
         : "";
       const gmStats = isGM ? `<div class="tovf-challenge-hud-card-stats"><span><i class="fa-solid fa-shield" inert></i>${escape(actor?.system.attributes?.ac?.value ?? "-")}</span>${hp ? `<button type="button" data-hud-action="hp" data-combatant-id="${combatant.id}"><i class="fa-solid fa-heart" inert></i>${escape(hp.value ?? 0)}</button>` : ""}</div>` : "";
-      const initiativeRoll = canRollInitiative ? `<button type="button" class="tovf-challenge-hud-roll-initiative" data-hud-action="rollInitiative" data-actor-id="${actor.id}" title="Initiative würfeln"><i class="fa-solid fa-dice-d20" inert></i></button>` : "";
-      return `<div class="tovf-challenge-hud-combatant ${combatant.id === game.combat?.combatant?.id ? "is-active" : ""}${combatant.isDefeated ? " is-defeated" : ""}${healthState}"${healthStyle}><article><img class="portrait-backdrop" src="${portraitSrc}" alt=""><img class="portrait-main" src="${portraitSrc}" alt="${escape(combatant.name ?? actor?.name ?? "")}"><span class="tovf-challenge-hud-initiative-value">${escape(combatant.initiative ?? "-")}</span>${gmStats}${initiativeRoll}</article>${hpControl}</div>`;
+      const initiativeRoll = canRollInitiative ? `<button type="button" class="tovf-challenge-hud-roll-initiative" data-hud-action="rollInitiative" data-combatant-id="${combatant.id}" title="${escape(localize("TOVF.ChallengeManager.Hud.RollInitiative"))}"><i class="fa-solid fa-dice-d20" inert></i></button>` : "";
+      const isActive = combatant.id === game.combat?.combatant?.id;
+      const turnElapsed = isActive && turnStartedAt ? formatElapsed(Date.now() - turnStartedAt) : "";
+      const timerState = isActive && turnStartedAt ? ` ${turnTimerState(Date.now() - turnStartedAt)}` : "";
+      const turnTimer = showTurnTimer ? `<small class="tovf-challenge-hud-turn-timer${timerState}" data-turn-timer ${isActive && turnStartedAt ? `data-start-at="${turnStartedAt}"` : ""}>${turnElapsed}</small>` : "";
+      return `<div class="tovf-challenge-hud-combatant ${isActive ? "is-active" : ""}${combatant.isDefeated ? " is-defeated" : ""}${healthState}"${healthStyle}><article><img class="portrait-backdrop" src="${portraitSrc}" alt=""><img class="portrait-main" src="${portraitSrc}" alt="${escape(combatant.name ?? actor?.name ?? "")}"><span class="tovf-challenge-hud-initiative-value">${escape(combatant.initiative ?? "-")}</span>${gmStats}${initiativeRoll}</article><div class="tovf-challenge-hud-card-footer">${hpControl}${turnTimer}</div></div>`;
     }).join("");
     const drawer = (name, icon, label, content, badge = "", shortLabel = label) => `<section class="tovf-challenge-hud-drawer ${name} ${this.#drawers[name] ? "is-open" : ""}"><button type="button" class="tovf-challenge-hud-toggle" data-hud-action="toggle" data-drawer="${name}" title="${escape(label)}">${icon ? `<i class="fa-solid ${icon}" inert></i>` : ""}<span>${escape(shortLabel)}</span>${badge}</button><div class="tovf-challenge-hud-popover">${content}</div></section>`;
     const party = `<header>${localize("TOVF.ChallengeManager.Party.Title")}</header><ul>${actors.filter(actor => selected.has(actor.id)).map(actorRow).join("") || `<li class="hint">${localize("TOVF.ChallengeManager.Party.Empty")}</li>`}</ul><details><summary>${localize("TOVF.ChallengeManager.Actors.Title")}</summary><ul>${actors.filter(actor => !selected.has(actor.id)).map(actorRow).join("") || `<li class="hint">${localize("TOVF.ChallengeManager.Actors.AllSelected")}</li>`}</ul></details>`;
     const roll = `<header>${localize("TOVF.ChallengeManager.Roll.Title")}</header>${rollActorSelection}<div class="tovf-challenge-hud-roll-selects"><select data-hud-roll-type><option value="skill">${localize("TOVF.ChallengeManager.Roll.Skill")}</option><option value="save">${localize("TOVF.ChallengeManager.Roll.Save")}</option><option value="die">${localize("TOVF.ChallengeManager.Roll.Die")}</option></select><select data-hud-roll-key data-kind="skill">${Object.entries(CONFIG.BlackFlag.skills.localized ?? {}).map(([value, label]) => `<option value="${escape(value)}">${escape(label)}</option>`).join("")}</select><select data-hud-roll-key data-kind="save" hidden>${Object.entries(CONFIG.BlackFlag.abilities.localized ?? {}).map(([value, label]) => `<option value="${escape(value)}">${escape(label)}</option>`).join("")}</select><select data-hud-roll-key data-kind="die" hidden>${[4, 6, 8, 10, 12, 20, 100].map(value => `<option value="${value}">d${value}</option>`).join("")}</select></div><div class="tovf-challenge-hud-roll-options"><label><input type="checkbox" data-hud-average> ${localize("TOVF.ChallengeManager.Roll.ShowAverageShort")}</label><label><input type="checkbox" data-hud-private> ${localize("TOVF.ChallengeManager.Roll.Private")}</label><label data-hud-dc>${localize("TOVF.ChallengeManager.Roll.DCShort")} <input type="number" min="0" max="99" data-hud-roll-dc></label></div><button type="button" data-hud-action="request"><i class="fa-solid fa-message-arrow-up-right" inert></i>${localize("TOVF.ChallengeManager.Roll.Post")}</button>`;
     const rules = `<header>${localize("TOVF.ChallengeManager.Rules.Title")}</header>${RULES_LINKS.map(link => `<button type="button" data-hud-action="openRulesJournal" data-journal-uuid="${escape(link.uuid)}"><i class="fa-solid ${link.icon}" inert></i>${localize(link.label)}</button>`).join("")}`;
-    const doom = `<header class="tovf-challenge-hud-doom-header"><span>${localize("TOVF.ChallengeManager.Doom.Bank")}</span><div class="tovf-challenge-hud-doom-meta"><button type="button" data-hud-action="recalculateDoom" title="${escape(localize("TOVF.ChallengeManager.Doom.Recalculate"))}" aria-label="${escape(localize("TOVF.ChallengeManager.Doom.Recalculate"))}"><i class="fa-solid fa-arrows-rotate" inert></i></button><small>${localize("TOVF.ChallengeManager.Encounter.MaxCR")}: ${escape(formatCR(maxCR))} <i>|</i> ${localize("TOVF.ChallengeManager.Encounter.Adversaries")}: ${activeAdversaryCount}/${adversaryCount}</small></div></header><div class="tovf-challenge-hud-doom-count"><button type="button" data-hud-action="doom" data-amount="-1">&minus;</button><input type="number" min="0" value="${game.settings.get(MODULE_ID, SETTINGS.doom)}" data-hud-doom><button type="button" data-hud-action="doom" data-amount="1">+</button></div><div class="tovf-challenge-hud-doom-actions"><button type="button" data-hud-action="doom" data-amount="-1" data-doom-chat="true" data-doom-icon="fa-thumbs-up">${localize("TOVF.ChallengeManager.Doom.Advantage")}</button><button type="button" data-hud-action="doom" data-amount="-1" data-doom-chat="true" data-doom-icon="fa-thumbs-down">${localize("TOVF.ChallengeManager.Doom.Disadvantage")}</button><button type="button" data-hud-action="doom" data-amount="-2" data-doom-chat="true" data-doom-icon="fa-person-running">${localize("TOVF.ChallengeManager.Doom.ExtraAction")}</button><button type="button" data-hud-action="doom" data-amount="-3" data-doom-chat="true" data-doom-icon="fa-arrows-rotate">${localize("TOVF.ChallengeManager.Doom.Recharge")}</button></div><label><input type="checkbox" data-hud-doom-announce ${game.settings.get(MODULE_ID, SETTINGS.announceDoom) ? "checked" : ""}> ${localize("TOVF.ChallengeManager.Doom.AnnounceCurrent")}</label>`;
-    const controls = isGM ? `${drawer("party", "fa-users", localize("TOVF.ChallengeManager.Party.Title"), party)}${drawer("roll", "fa-dice-d20", localize("TOVF.ChallengeManager.Roll.Title"), roll, "", localize("TOVF.ChallengeManager.Roll.Short"))}${drawer("rules", "fa-book-open", localize("TOVF.ChallengeManager.Rules.Title"), rules, "", localize("TOVF.ChallengeManager.Rules.Short"))}${drawer("doom", "", localize("TOVF.ChallengeManager.Doom.Bank"), doom, `<b>${game.settings.get(MODULE_ID, SETTINGS.doom)}</b>`)}` : "";
+    const doomAction = ({ id, icon, oncePerEncounter = false }) => {
+      const used = oncePerEncounter && usedDoomActions()[id];
+      const label = localize(`TOVF.ChallengeManager.Doom.${id}`);
+      const title = localize(`TOVF.ChallengeManager.Doom.${id}Hint`);
+      const useIcon = oncePerEncounter ? "fa-repeat-1" : "fa-repeat";
+      return `<button type="button" data-hud-action="doom" data-doom-id="${id}" data-doom-label="${escape(label)}" data-doom-chat="true" data-doom-icon="${icon}" data-doom-once="${oncePerEncounter}" title="${escape(title)}" ${used ? "disabled" : ""}><i class="fa-solid ${icon}" inert></i><span>${label}</span><i class="tovf-challenge-hud-doom-usage fa-solid ${useIcon}" inert></i></button>`;
+    };
+    const doomActions = [
+      doomAction({ id: "Advantage", icon: "fa-thumbs-up" }),
+      doomAction({ id: "Disadvantage", icon: "fa-thumbs-down" }),
+      doomAction({ id: "Refresh", icon: "fa-arrows-rotate", oncePerEncounter: true }),
+      doomAction({ id: "AutomaticSave", icon: "fa-shield-heart", oncePerEncounter: true }),
+      doomAction({ id: "AutomaticHit", icon: "fa-bullseye", oncePerEncounter: true }),
+      doomAction({ id: "Movement", icon: "fa-person-running" })
+    ].join("");
+    const doom = `<header class="tovf-challenge-hud-doom-header"><span>${localize("TOVF.ChallengeManager.Doom.Bank")}</span><div class="tovf-challenge-hud-doom-meta"><button type="button" data-hud-action="recalculateDoom" title="${escape(localize("TOVF.ChallengeManager.Doom.Recalculate"))}" aria-label="${escape(localize("TOVF.ChallengeManager.Doom.Recalculate"))}"><i class="fa-solid fa-arrows-rotate" inert></i></button><small>${localize("TOVF.ChallengeManager.Encounter.MaxCR")}: ${escape(formatCR(maxCR))} <i>|</i> ${localize("TOVF.ChallengeManager.Encounter.Adversaries")}: ${activeAdversaryCount}/${adversaryCount}</small></div></header><div class="tovf-challenge-hud-doom-count"><button type="button" data-hud-action="doom" data-amount="-1">&minus;</button><input type="number" min="0" value="${game.settings.get(MODULE_ID, SETTINGS.doom)}" data-hud-doom><button type="button" data-hud-action="doom" data-amount="1">+</button></div><div class="tovf-challenge-hud-doom-actions">${doomActions}</div><label><input type="checkbox" data-hud-doom-announce ${game.settings.get(MODULE_ID, SETTINGS.announceDoom) ? "checked" : ""}> ${localize("TOVF.ChallengeManager.Doom.AnnounceCurrent")}</label>`;
+    const rulesDrawer = drawer("rules", "fa-book-open", localize("TOVF.ChallengeManager.Rules.Title"), rules, "", localize("TOVF.ChallengeManager.Rules.Short"));
+    const controls = isGM
+      ? `${drawer("party", "fa-users", localize("TOVF.ChallengeManager.Party.Title"), party)}${drawer("roll", "fa-dice-d20", localize("TOVF.ChallengeManager.Roll.Title"), roll, "", localize("TOVF.ChallengeManager.Roll.Short"))}${rulesDrawer}${drawer("doom", "", localize("TOVF.ChallengeManager.Doom.Bank"), doom, `<b>${game.settings.get(MODULE_ID, SETTINGS.doom)}</b>`)}`
+      : hasCombatants && showInitiativeCarousel ? rulesDrawer : "";
     this.element ??= document.body.appendChild(document.createElement("section"));
     this.element.id = "tovf-challenge-hud";
     const missingNpcInitiative = turns.filter(combatant => combatant.initiative == null && combatant.actor && !combatant.actor.hasPlayerOwner);
-    const npcRoll = missingNpcInitiative.length ? `<button type="button" data-hud-action="rollNpcInitiative" title="Initiative für alle NPCs würfeln"><i class="fa-solid fa-dice-d20" inert></i></button>` : "";
+    const npcRoll = missingNpcInitiative.length ? `<button type="button" data-hud-action="rollNpcInitiative" title="${escape(localize("TOVF.ChallengeManager.Hud.RollNpcInitiative"))}"><i class="fa-solid fa-dice-d20" inert></i></button>` : "";
     const combatStarted = Boolean(game.combat?.started);
-    const turnControls = combatStarted ? `<button type="button" data-hud-action="previousTurn" title="Vorheriger Zug"><i class="fa-solid fa-backward-step" inert></i></button><button type="button" data-hud-action="nextTurn" title="Nächster Zug"><i class="fa-solid fa-forward-step" inert></i></button>` : "";
+    const turnControls = combatStarted ? `<button type="button" data-hud-action="previousTurn" title="${escape(localize("TOVF.ChallengeManager.Hud.PreviousTurn"))}"><i class="fa-solid fa-backward-step" inert></i></button><button type="button" data-hud-action="nextTurn" title="${escape(localize("TOVF.ChallengeManager.Hud.NextTurn"))}"><i class="fa-solid fa-forward-step" inert></i></button>` : "";
     const combatToggle = combatStarted
-      ? `<button type="button" data-hud-action="endCombat" title="Combat beenden"><i class="fa-solid fa-flag-checkered" inert></i></button>`
-      : `<button type="button" data-hud-action="startCombat" title="Combat starten"><i class="fa-solid fa-play" inert></i></button>`;
-    const combatControls = isGM && hasCombatants ? `<div class="tovf-challenge-hud-combat-controls">${turnControls}${npcRoll}${combatToggle}</div>` : "";
-    const roundCounter = hasCombatants ? `<div class="tovf-challenge-hud-round"><span>Runde</span><div><i class="fa-solid fa-hourglass-half" inert></i><strong>${game.combat?.round ?? 0}</strong></div>${combatControls}</div>` : "";
-    const initiativeCarousel = hasCombatants ? `<div class="tovf-challenge-hud-initiative${carouselDirection}">${combatants}</div>` : "";
+      ? `<button type="button" data-hud-action="endCombat" title="${escape(localize("TOVF.ChallengeManager.Hud.EndCombat"))}"><i class="fa-solid fa-flag-checkered" inert></i></button>`
+      : `<button type="button" data-hud-action="startCombat" title="${escape(localize("TOVF.ChallengeManager.Hud.StartCombat"))}"><i class="fa-solid fa-play" inert></i></button>`;
+    const activeCombatant = game.combat?.combatant;
+    const canEndOwnTurn = combatStarted && !isGM && activeCombatant?.actor?.testUserPermission(game.user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER);
+    const playerTurnControl = canEndOwnTurn ? `<button type="button" data-hud-action="endOwnTurn" title="${escape(localize("TOVF.ChallengeManager.Hud.EndTurn"))}"><i class="fa-solid fa-forward-step" inert></i></button>` : "";
+    const combatControls = hasCombatants && (isGM || canEndOwnTurn) ? `<div class="tovf-challenge-hud-combat-controls">${isGM ? `${turnControls}${npcRoll}${combatToggle}` : playerTurnControl}</div>` : "";
+    const encounterElapsed = encounterStartedAt ? formatElapsed(Date.now() - encounterStartedAt) : "";
+    const encounterTimer = showEncounterTimer ? `<small class="tovf-challenge-hud-encounter-timer" data-encounter-timer ${encounterStartedAt ? `data-start-at="${encounterStartedAt}"` : ""}>${encounterElapsed}</small>` : "";
+    const roundCounter = hasCombatants ? `<div class="tovf-challenge-hud-round"><span>${localize("TOVF.ChallengeManager.Hud.Round")}</span><div><i class="fa-solid fa-hourglass-half" inert></i><strong>${game.combat?.round ?? 0}</strong></div>${combatControls}${encounterTimer}</div>` : "";
+    const initiativeCarousel = hasCombatants && showInitiativeCarousel
+      ? `<div class="tovf-challenge-hud-initiative${carouselDirection}">${combatants}</div>`
+      : "";
     this.element.innerHTML = `<div class="tovf-challenge-hud-bar"><div class="tovf-challenge-hud-left">${controls}${roundCounter}</div>${initiativeCarousel}</div>`;
     this.#carouselCombatId = game.combat?.id ?? null;
     this.#carouselStep = hasCombatants ? carouselStep : null;
@@ -612,12 +737,13 @@ class ChallengeHud {
     }
     if (action === "startCombat") { await game.combat?.startCombat(); return; }
     if (action === "previousTurn") { await game.combat?.previousTurn(); return; }
-    if (action === "nextTurn") { await game.combat?.nextTurn(); return; }
+    if (action === "nextTurn" || action === "endOwnTurn") { await game.combat?.nextTurn(); return; }
     if (action === "endCombat") { await game.combat?.endCombat(); return; }
     if (action === "rollInitiative") {
-      const actor = game.actors.get(button.dataset.actorId);
-      if (!actor || (!game.user.isGM && !actor.testUserPermission(game.user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER))) return;
-      await actor.rollInitiative({ rerollInitiative: false, createCombatants: false });
+      const combatant = game.combat?.combatants.get(button.dataset.combatantId);
+      const actor = combatant?.actor;
+      if (!combatant || !actor || (!game.user.isGM && !actor.testUserPermission(game.user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER))) return;
+      await game.combat.rollInitiative([combatant.id], { rerollInitiative: false });
       return;
     }
     if (action === "rollNpcInitiative") {
@@ -651,11 +777,20 @@ class ChallengeHud {
       return;
     }
     if (action === "doom") {
-      const next = Math.max(0, game.settings.get(MODULE_ID, SETTINGS.doom) + Number(button.dataset.amount));
-      await setDoom(next);
+      const isSpend = Boolean(button.dataset.doomId);
+      const blocked = isSpend && !await spendDoomAction({
+        id: button.dataset.doomId,
+        oncePerEncounter: button.dataset.doomOnce === "true"
+      });
+      if (blocked) return;
+      const next = isSpend
+        ? game.settings.get(MODULE_ID, SETTINGS.doom)
+        : Math.max(0, game.settings.get(MODULE_ID, SETTINGS.doom) + Number(button.dataset.amount));
+      if (!isSpend) await setDoom(next);
       if (button.dataset.doomChat === "true") {
         const current = game.settings.get(MODULE_ID, SETTINGS.announceDoom) ? `<div class="tovf-doom-chat-total"><span>${Handlebars.escapeExpression(game.i18n.localize("TOVF.ChallengeManager.Doom.Remaining"))}</span><strong>${next}</strong></div>` : "";
-        await ChatMessage.create({ speaker: ChatMessage.getSpeaker(), content: `<section class="tovf-doom-chat"><header><i class="fa-solid fa-skull-crossbones" inert></i><span>${Handlebars.escapeExpression(game.i18n.localize("TOVF.ChallengeManager.Doom.Bank"))}</span></header><div class="tovf-doom-chat-action"><i class="fa-solid ${button.dataset.doomIcon}" inert></i><strong>${Handlebars.escapeExpression(button.textContent.trim())}</strong></div>${current}</section>` });
+        const label = button.dataset.doomLabel ?? button.textContent.trim();
+        await ChatMessage.create({ speaker: ChatMessage.getSpeaker(), content: `<section class="tovf-doom-chat"><header><i class="fa-solid fa-skull-crossbones" inert></i><span>${Handlebars.escapeExpression(game.i18n.localize("TOVF.ChallengeManager.Doom.Bank"))}</span></header><div class="tovf-doom-chat-action"><i class="fa-solid ${button.dataset.doomIcon}" inert></i><strong>${Handlebars.escapeExpression(label)}</strong></div>${current}</section>` });
       }
       this.render();
       return;
@@ -685,6 +820,18 @@ class ChallengeHud {
     const type = event.target.value;
     for (const select of this.element.querySelectorAll("[data-hud-roll-key]")) select.hidden = select.dataset.kind !== type;
     this.element.querySelector("[data-hud-dc]").hidden = type === "die";
+  }
+
+  updateTimers(now = Date.now()) {
+    if (!this.rendered) return;
+    for (const timer of this.element.querySelectorAll("[data-start-at]")) {
+      const elapsed = now - Number(timer.dataset.startAt);
+      timer.textContent = formatElapsed(elapsed);
+      if (!timer.matches("[data-turn-timer]")) continue;
+      timer.classList.remove("is-delayed", "is-warning", "is-overdue");
+      const state = turnTimerState(elapsed);
+      if (state) timer.classList.add(state);
+    }
   }
 
   close() {
@@ -1029,6 +1176,15 @@ function refreshRollRequestMessage(message) {
 }
 
 export function registerChallengeManager() {
+  registerScheduledTask({
+    id: "challengeHud.timers",
+    intervalMs: 1000,
+    run: now => {
+      if (!game.combat?.started) return;
+      emitModuleEvent("challengeHudTimers", { now });
+    }
+  });
+  subscribeModuleEvent("challengeHudTimers", ({ now }) => panel?.updateTimers(now));
   game.settings.registerMenu(MODULE_ID, "challengeHud", {
     name: "TOVF.ChallengeManager.Settings.Menu.Name",
     label: "TOVF.ChallengeManager.Settings.Menu.Label",
@@ -1081,6 +1237,24 @@ export function registerChallengeManager() {
     hint: "TOVF.ChallengeManager.Settings.MaxInitiativeCards.Hint",
     onChange: () => void refreshPanel()
   });
+  game.settings.register(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_SETTING, {
+    scope: "client",
+    config: false,
+    type: Boolean,
+    default: true,
+    name: "TOVF.ChallengeManager.Settings.ShowInitiativeCarousel.Name",
+    hint: "TOVF.ChallengeManager.Settings.ShowInitiativeCarousel.Hint",
+    onChange: () => {
+      if (!game.user.isGM && game.combat?.started && game.settings.get(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_SETTING)) void openPanel();
+      else void refreshPanel();
+    }
+  });
+  for (const [key, name, hint] of [
+    [SHOW_ENCOUNTER_TIMER_SETTING, "TOVF.ChallengeManager.Settings.ShowEncounterTimer.Name", "TOVF.ChallengeManager.Settings.ShowEncounterTimer.Hint"],
+    [SHOW_TURN_TIMER_SETTING, "TOVF.ChallengeManager.Settings.ShowTurnTimer.Name", "TOVF.ChallengeManager.Settings.ShowTurnTimer.Hint"]
+  ]) {
+    game.settings.register(MODULE_ID, key, { scope: "client", config: false, type: Boolean, default: true, name, hint, onChange: () => void refreshPanel() });
+  }
   for (const [key, type, value] of [
     [SETTINGS.doom, Number, 0],
     [SETTINGS.active, Boolean, false],
@@ -1128,6 +1302,9 @@ export function registerChallengeManager() {
   });
   Hooks.on("updateCombat", (combat, changes) => {
     const startedNow = Number(changes.round) === 1 && Number(changes.turn ?? combat?.turn) === 0;
+    if (Object.hasOwn(changes, "turn") || Object.hasOwn(changes, "round")) {
+      void updateCombatTiming(combat, { turnChanged: true });
+    }
     if (pendingDoomCombatId === combat?.id || startedNow) {
       requestCombatDoomInitialization(combat);
     }
@@ -1142,7 +1319,9 @@ export function registerChallengeManager() {
   Hooks.on("combatStart", combat => {
     pendingDoomCombatId = combat.id;
     initializedDoomCombatId = null;
-    if (game.settings.get(MODULE_ID, AUTO_OPEN_SETTING)) void openPanel();
+    void updateCombatTiming(combat, { encounterStarted: true, turnChanged: true });
+    if (game.settings.get(MODULE_ID, AUTO_OPEN_SETTING)
+      || (!game.user.isGM && game.settings.get(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_SETTING))) void openPanel();
   });
   Hooks.on("deleteCombat", async () => {
     initializedDoomCombatId = null;
@@ -1158,7 +1337,8 @@ export function registerChallengeManager() {
 export function activateChallengeManager() {
   panel ??= game.user.isGM ? new ChallengeHud() : null;
   if (game.user.isGM && game.settings.get(MODULE_ID, AUTO_OPEN_ON_READY_SETTING)) void openPanel();
-  else if ((game.combat?.turns?.length ?? 0) > 0 && game.settings.get(MODULE_ID, AUTO_OPEN_SETTING)) void openPanel();
+  else if ((game.combat?.turns?.length ?? 0) > 0 && (game.settings.get(MODULE_ID, AUTO_OPEN_SETTING)
+    || (!game.user.isGM && game.combat?.started && game.settings.get(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_SETTING)))) void openPanel();
   game.modules.get(MODULE_ID).api ??= {};
   Object.assign(game.modules.get(MODULE_ID).api, {
     openChallengeManager: openPanel,

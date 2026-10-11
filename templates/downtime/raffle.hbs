@@ -1,0 +1,54 @@
+<div class="tovf-raffle-root">
+  <header class="tovf-raffle-hero">
+    <img src="{{actor.img}}" alt="">
+    <div><span>Feuerschwinge Raffle</span><h1>{{raffle.title}}</h1><p>{{raffle.description}}</p></div>
+    <strong class="status {{raffle.status}}">{{raffle.status}}</strong>
+  </header>
+
+  {{#if gm}}
+  <section class="tovf-raffle-config">
+    <div class="tovf-raffle-title-row"><label><span>Titel</span><input name="title" value="{{raffle.title}}"></label><button type="button" class="new-round" data-action="startNew"><i class="fa-solid fa-rotate"></i> Neue Verlosung</button><label class="raffle-enabled"><span>Aktiv</span><input type="checkbox" name="enabled" {{checked raffle.enabled}}></label></div>
+    <div class="tovf-raffle-settings-layout">
+      <label class="raffle-description"><span>Beschreibung</span><textarea name="description">{{raffle.description}}</textarea></label>
+      <div class="raffle-compact-settings">
+        <div class="raffle-setting-row raffle-setting-row-three">
+          <label><span>Lospreis</span><input name="ticketPrice" type="number" min="0" value="{{raffle.ticketPrice}}"></label>
+          <label><span>Währung</span><select name="currency"><option value="gold" {{#if (eq raffle.currency "gold")}}selected{{/if}}>Gold</option><option value="downtime" {{#if (eq raffle.currency "downtime")}}selected{{/if}}>Downtime</option></select></label>
+          <label><span>Loslimit</span><input name="limit" type="number" min="0" value="{{raffle.limit}}"></label>
+        </div>
+        <div class="raffle-setting-row raffle-setting-row-two">
+          <label><span>Teilnahme pro</span><select name="participationScope"><option value="character" {{#if (eq raffle.participationScope "character")}}selected{{/if}}>Charakter</option><option value="player" {{#if (eq raffle.participationScope "player")}}selected{{/if}}>Spieler</option></select></label>
+          <label class="repeat-winners"><span>Mehrfachgewinn</span><input type="checkbox" name="allowRepeatWinners" {{checked raffle.allowRepeatWinners}}></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="tovf-raffle-participants">
+      <div class="section-title"><h3>Teilnehmende</h3><span>{{raffle.entries.length}}</span></div>
+      <div class="participant-add"><select name="participant">{{#each participantCharacters}}<option value="{{uuid}}">{{name}} · {{playerName}}</option>{{/each}}</select><button type="button" data-action="addParticipant" {{#unless participantCharacters.length}}disabled{{/unless}}><i class="fa-solid fa-user-plus"></i> Hinzufügen</button></div>
+      <div class="participant-list">{{#each raffle.entries}}<span><i class="fa-solid fa-user"></i> {{characterName}}<small>{{#if playerName}}{{playerName}} · {{/if}}{{tickets}} Los(e)</small><button type="button" data-action="removeParticipant" data-uuid="{{characterUuid}}" aria-label="Entfernen"><i class="fa-solid fa-xmark"></i></button></span>{{else}}<p>Noch niemand nimmt teil.</p>{{/each}}</div>
+    </div>
+
+    <div class="tovf-raffle-prizes">
+      <div class="section-title"><h3>Preise</h3><button type="button" data-action="addPrize"><i class="fa-solid fa-plus"></i> Paket</button></div>
+      <datalist id="tovf-raffle-categories"><option value="Nebenpreis"></option><option value="Hauptgewinn"></option></datalist>
+      <div class="prize-list">{{#each prizeRows}}<article class="tovf-raffle-prize {{#if featured}}featured{{/if}} {{#if exhausted}}exhausted{{/if}}" data-prize data-prize-id="{{id}}">
+        <header class="prize-package-head"><label>Kategorie<input name="category" list="tovf-raffle-categories" value="{{categoryValue}}" placeholder="Nebenpreis (Standard)"></label><label class="package-name">Bezeichnung<input name="packageName" value="{{name}}" placeholder="z. B. Das große Abenteuerpaket"></label><label class="package-contingent"><span>Kontingent <i class="fa-solid fa-circle-info" title="Wie oft dieses Paket insgesamt gezogen werden kann."></i></span><input name="prizeQuantity" type="number" min="1" value="{{quantity}}"></label></header>
+        <div class="package-rewards">{{#each rewards}}<div class="package-reward" data-reward data-reward-id="{{id}}">
+          <label class="reward-kind">Art<select name="kind"><option value="text" {{#if (eq kind "text")}}selected{{/if}}>Freitext</option><option value="gold" {{#if (eq kind "gold")}}selected{{/if}}>Gold</option><option value="downtime" {{#if (eq kind "downtime")}}selected{{/if}}>Downtime</option><option value="item" {{#if (eq kind "item")}}selected{{/if}}>Item</option></select></label>
+          <label class="reward-name">Bezeichnung<input name="rewardName" value="{{name}}" placeholder="z. B. Goldener Schlüssel"></label>
+          <label class="reward-amount"><span>Anzahl</span><input name="amount" type="number" min="1" value="{{amount}}"></label>
+          <label class="reward-item">Item<div class="item-drop {{#if uuid}}has-item{{/if}}" data-item-drop tabindex="0"><img src="{{#if img}}{{img}}{{else}}icons/svg/item-bag.svg{{/if}}" alt=""><span>{{#if uuid}}{{name}}{{else}}Item hier hineinziehen{{/if}}</span></div><input type="hidden" name="uuid" value="{{uuid}}"><input type="hidden" name="itemImg" value="{{img}}"></label>
+          <button type="button" class="icon-only reward-remove" data-action="removeReward" data-prize-id="{{../id}}" data-reward-index="{{rewardIndex}}" aria-label="Preis aus Paket entfernen" {{#if (eq ../rewards.length 1)}}disabled{{/if}}><i class="fa-solid fa-trash"></i></button>
+        </div>{{/each}}</div>
+        <div class="package-actions"><button type="button" data-action="addReward" data-prize-id="{{id}}"><i class="fa-solid fa-plus"></i> Preis ins Paket</button></div>
+        <footer><span><strong>{{remaining}}</strong> von {{quantity}} übrig</span><button type="button" data-action="draw" data-prize-id="{{id}}" {{#if ../canDraw}}{{#if exhausted}}disabled{{/if}}{{else}}disabled{{/if}}><i class="fa-solid fa-dice"></i> Paket ziehen</button><button type="button" class="icon-only" data-action="removePrize" data-index="{{index}}" aria-label="Paket entfernen"><i class="fa-solid fa-trash"></i></button></footer>
+      </article>{{else}}<p class="empty">Noch keine Preise angelegt.</p>{{/each}}</div>
+    </div>
+    <footer class="config-actions"><button type="button" data-action="save"><i class="fa-solid fa-floppy-disk"></i> Änderungen speichern</button></footer>
+  </section>
+  {{else}}
+  <section class="tovf-raffle-player"><div class="tovf-raffle-prize-cards">{{#each prizeRows}}<article class="{{#if featured}}featured{{/if}}"><i class="fa-solid fa-gift"></i><div class="prize-card-copy"><strong>{{displayName}}</strong><small>{{#each rewards}}{{displayName}}{{#unless @last}} · {{/unless}}{{/each}}</small></div><small>{{remaining}} verfügbar</small></article>{{/each}}</div>{{#if mine}}<div class="tovf-raffle-joined"><span>Du nimmst mit <strong>{{mine.characterName}}</strong> teil.</span><input type="hidden" name="joinedCharacter" value="{{mine.characterUuid}}"><button type="button" data-action="leave"><i class="fa-solid fa-user-minus"></i> Teilnahme zurückziehen</button></div>{{else}}<div class="tovf-raffle-join"><label>Charakter<select name="character">{{#each characters}}<option value="{{uuid}}">{{name}}</option>{{/each}}</select></label><button type="button" data-action="join" {{#unless canJoin}}disabled{{/unless}}>Teilnehmen</button></div>{{/if}}</section>
+  {{/if}}
+  <section class="tovf-raffle-history"><h2><i class="fa-solid fa-clock-rotate-left"></i> Ziehungshistorie</h2>{{#each raffle.history}}<article><strong>{{prize}}</strong><span>{{winner.characterName}}</span>{{#if rewards}}<small>{{#each rewards}}{{this}}{{#unless @last}} · {{/unless}}{{/each}}</small>{{/if}}</article>{{else}}<p>Noch keine Ziehung.</p>{{/each}}</section>
+</div>

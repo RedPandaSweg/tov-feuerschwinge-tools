@@ -46,12 +46,15 @@ export class StationPresetApp extends HandlebarsApplicationMixin(ApplicationV2) 
     const context = await super._prepareContext(options);
     return {
       ...context,
-      presets: STATION_PRESETS.map(preset => ({
+      presets: await Promise.all(STATION_PRESETS.map(async preset => ({
         ...preset,
         name: game.i18n.localize(stationPresetNameKey(preset.id)),
-        description: game.i18n.localize(stationPresetDescriptionKey(preset.id)),
+        description: await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+          game.i18n.localize(stationPresetDescriptionKey(preset.id)),
+          { async: true }
+        ),
         imported: Array.from(game.actors).some(actor => actor.getFlag?.(MODULE_ID, "preset")?.stationId === preset.id)
-      }))
+      })))
     };
   }
 

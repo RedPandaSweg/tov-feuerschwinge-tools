@@ -4,7 +4,7 @@ import { MODULE_ID } from "../downtime/constants.mjs";
 import { campaignState, campaignAction, fullGM, redemptionPreview, isCampaignWorld } from "./service.mjs?v=3.7.8-permissions-1";
 import { compareSnapshots, validateSnapshot, sessionMonth } from "./data.mjs";
 import { defaultRules, settlementPreview, ruleForDate } from "./rules.mjs";
-import { playerCharacters, sessionProgress, milestoneEntries, levelFromMilestones, SessionService } from "../downtime/session-service.mjs";
+import { playerCharacters, sessionProgress, milestoneEntries, milestoneLevelForActor, rewardLevelForActor, SessionService } from "../downtime/session-service.mjs";
 import { reconciliationPlan } from "./reconciliation.mjs";
 import { sessionLinkPreview } from "./session-links.mjs";
 import { weeklyPreview } from "./weekly.mjs";
@@ -67,7 +67,7 @@ export class CampaignApp extends HandlebarsApplicationMixin(ApplicationV2) {
       .sort((a, b) => String(a.name ?? "").localeCompare(String(b.name ?? ""), game.i18n.lang)).map(c => {
       const actor = game.actors.find(a => a.uuid === state.characterLinks[c.id]);
       const progress = actor ? sessionProgress(actor) : null;
-      return { ...c, foundryGold: actor ? GoldService.getGold(actor) : null, personName: personName(c.userId), actorUuid: actor?.uuid, actorName: actor?.name, foundryMilestones: progress?.milestones, expectedLevel: progress ? levelFromMilestones(progress.milestones) : null, mismatch: !!progress && progress.milestones !== c.milestones,
+      return { ...c, foundryGold: actor ? GoldService.getGold(actor) : null, personName: personName(c.userId), actorUuid: actor?.uuid, actorName: actor?.name, foundryMilestones: progress?.milestones, expectedLevel: progress ? milestoneLevelForActor(actor, progress) : null, mismatch: !!progress && progress.milestones !== c.milestones,
         actorOptions: playerCharacters().map(a => ({ id: a.uuid, name: a.name, selected: a.uuid === actor?.uuid })) };
     });
     const people = (snapshot?.people ?? []).map(p => ({ ...p, name: personName(p.id), displayName: state.personNames[p.id] ?? "", characterNames: snapshot.characters.filter(c => c.userId === p.id).map(c => c.name).join(", "), rewardSelected: p.id === rewardPerson,
@@ -128,7 +128,7 @@ export class CampaignApp extends HandlebarsApplicationMixin(ApplicationV2) {
       openClaims: claims.filter(claim => claim.remaining > 0), claims, weeks: admin ? weeklyPreview(state, this._month, history).map(w => ({ ...w, historical: this._month < new Date().toISOString().slice(0, 7), options: people.map(p => ({ id: p.id, name: p.name, selected: w.recipients.includes(p.id) })) })) : [], sessions, preview, previewError, settled: state.settlements[this._month],
       poolMode: ruleForDate(state.rules, `${this._month}-01`)?.community.distribution === "pool",
       localUsers: game.users.filter(u => !snapshot?.people.some(p => personAccountIds(state, p.id).includes(u.id))).map(u => ({ id: u.id, name: u.name })),
-      ownCharacters: charactersForPerson(state, rewardPerson).map(actor => ({ actorUuid: actor.uuid, name: actor.name, foundryMilestones: sessionProgress(actor).milestones, expectedLevel: levelFromMilestones(sessionProgress(actor).milestones) })),
+      ownCharacters: charactersForPerson(state, rewardPerson).map(actor => ({ actorUuid: actor.uuid, name: actor.name, foundryMilestones: sessionProgress(actor).milestones, expectedLevel: rewardLevelForActor(actor) })),
       redemptions: state.redemptions.filter(r => r.personId === rewardPerson).slice().reverse().map(r => ({ ...r, canAssignHistorical: admin && r.historical && r.status === "redeemed" && !r.actorUuid, historicalActors: charactersForPerson(state, r.personId).map(a => ({ uuid: a.uuid, name: a.name })).sort((a, b) => a.name.localeCompare(b.name)), sourceLabel: rewardSourceLabel(state, r, history), requestedByName: game.users.get(r.requestedBy)?.name, kindLabel: sourceNames()[r.kind], statusLabel: statusNames()[r.status], needsReview: admin && ["processing", "review"].includes(r.status), date: new Date(r.createdAt).toLocaleString(game.i18n.lang), stepsLabel: r.steps.join(", ") })),
       rules, rewards: ["gm", "community"].map(kind => ({ kind, label: sourceNames()[kind], ...rules[kind].reward, sessionLinked: rules[kind].reward.mode === "session", goldModes: [["level", uiText("TOVF.Interface.FromLevelTable_47cf4e", "Nach Leveltabelle")], ["fixed", uiText("TOVF.Interface.FixedGoldAmount_acfaa5", "Fester Goldbetrag")], ["none", uiText("TOVF.Interface.NoGold_6ec9ab", "Kein Gold")]].map(([id, label]) => ({ id, label, selected: rules[kind].reward.goldMode === id })) })),
       modes: [["activeWeeks", uiText("TOVF.Interface.WeeksWithAtLeastOnePlayedGuild_20c36d", "Wochen mit mindestens einer gespielten Gildensession")], ["ratio", uiText("TOVF.Interface.SessionsActiveGMs_8317b6", "Sessions / aktive Spielleiter")], ["fixed", uiText("TOVF.Interface.FixedCount_49ac63", "Feste Anzahl")], ["sessions", uiText("TOVF.Interface.NumberOfPlayedSessions_8fb686", "Anzahl gespielter Sessions")]].map(([id, label]) => ({ id, label, selected: rules.community.mode === id })),

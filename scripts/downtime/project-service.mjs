@@ -5,7 +5,7 @@ import { GoldService } from "./gold-service.mjs";
 import { ResourceService } from "./resource-service.mjs";
 import { RewardService } from "./reward-service.mjs";
 import { StationEngine } from "./station-engine.mjs";
-import { actorKnowsSpell, categoriesMatch, getStationData, recipeData, round, spellScrollRecipeData, toolRequirementStatus } from "./utils.mjs?v=3.4.2-requirement-feedback-1";
+import { actorKnowsSpell, categoriesMatch, getStationData, recipeData, round, spellScrollRecipeData, spellScrollScribingRecipeData, toolRequirementStatus } from "./utils.mjs?v=3.4.2-requirement-feedback-1";
 import { getSystemAdapter } from "./system-adapter.mjs";
 
 export class ProjectService {
@@ -33,19 +33,24 @@ export class ProjectService {
     ) ?? null;
   }
 
-  static async project(projectUuid, actor = null) {
+  static async project(projectUuid, actor = null, stationActor = null) {
     const item = await fromUuid(projectUuid);
     if (!item || item.documentName !== "Item") {
       throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ProjectMissing"));
     }
     const scrollProject = await spellScrollRecipeData(item);
-    const definition = scrollProject?.definition ?? recipeData(item, { sourceUuid: projectUuid });
+    const station = stationActor ? getStationData(stationActor) : null;
+    const isPersonalSpell = item.type === "spell" && actor && (item.actor ?? item.parent)?.uuid === actor.uuid;
+    const scribingProject = station?.spellScrollScribing && isPersonalSpell
+      ? spellScrollScribingRecipeData(item)
+      : null;
+    const definition = scrollProject?.definition ?? scribingProject?.definition ?? recipeData(item, { sourceUuid: projectUuid });
     if (actor) await assertCraftingAccess(actor, item, definition);
     return { item, definition };
   }
 
   static async start(actor, stationActor, projectUuid, batchQuantity = 1) {
-    const { item, definition } = await this.project(projectUuid, actor);
+    const { item, definition } = await this.project(projectUuid, actor, stationActor);
     const station = getStationData(stationActor);
     if (!station.enabled) {
       throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.StationDisabled"));
@@ -60,13 +65,14 @@ export class ProjectService {
     const resultItem = definition.isCustom && resultUuid
       ? await fromUuid(resultUuid).catch(() => null)
       : item;
-    if (actorKnowsSpell(actor, resultItem, definition.spellScroll ? { origin: "wizard" } : {})) {
+    if (!definition.spellScrollScribing && actorKnowsSpell(actor, resultItem, definition.spellScroll ? { origin: "wizard" } : {})) {
       throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.SpellAlreadyKnown"));
     }
     const isPublic = station.recipes.includes(projectUuid);
     const isPersonal = (item.actor ?? item.parent)?.uuid === actor.uuid;
     const isDynamicSpellScroll = definition.spellScroll && station.spellScrollRecipes && isPersonal;
-    if (!isPublic && !isDynamicSpellScroll && (!isPersonal || !categoriesMatch(station.categories, definition.categories))) {
+    const isDynamicSpellScrollScribing = definition.spellScrollScribing && station.spellScrollScribing && isPersonal;
+    if (!isPublic && !isDynamicSpellScroll && !isDynamicSpellScrollScribing && (!isPersonal || !categoriesMatch(station.categories, definition.categories))) {
       throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ProjectCategoryMismatch"));
     }
     const states = this.get(actor);
@@ -120,7 +126,7 @@ export class ProjectService {
 
   static async invest(actor, stationActor, projectUuid, requestedDowntime, check = null) {
     let station = getStationData(stationActor);
-    const { definition } = await this.project(projectUuid, actor);
+    const { definition } = await this.project(projectUuid, actor, stationActor);
     station = StationEngine.projectConfiguration(station, definition);
     const states = this.get(actor);
     const state = states.find(entry =>
@@ -184,7 +190,7 @@ export class ProjectService {
 
   static async useProgressItem(actor, stationActor, projectUuid, itemUuid, requestedQuantity = 1) {
     let station = getStationData(stationActor);
-    const { definition } = await this.project(projectUuid, actor);
+    const { definition } = await this.project(projectUuid, actor, stationActor);
     station = StationEngine.projectConfiguration(station, definition);
     const states = this.get(actor);
     const state = states.find(entry => entry.stationUuid === stationActor.uuid && (entry.projectUuid === projectUuid || entry.recipeUuid === projectUuid));
@@ -224,7 +230,7 @@ export class ProjectService {
 
   static async resolveRoll(actor, stationActor, projectUuid, check) {
     let station = getStationData(stationActor);
-    const { definition } = await this.project(projectUuid, actor);
+    const { definition } = await this.project(projectUuid, actor, stationActor);
     station = StationEngine.projectConfiguration(station, definition);
     const states = this.get(actor);
     const state = states.find(entry =>
@@ -378,7 +384,7 @@ export class ProjectService {
 
   static async resolveCompletionCheck(actor, stationActor, projectUuid, check) {
     let station = getStationData(stationActor);
-    const { definition } = await this.project(projectUuid, actor);
+    const { definition } = await this.project(projectUuid, actor, stationActor);
     station = StationEngine.projectConfiguration(station, definition);
     const states = this.get(actor);
     const state = states.find(entry => entry.stationUuid === stationActor.uuid && (entry.projectUuid === projectUuid || entry.recipeUuid === projectUuid));

@@ -6,6 +6,7 @@ import {
   SETTINGS
 } from "./constants.mjs";
 import { getSystemAdapter } from "./system-adapter.mjs";
+import { spellScrollLevel } from "../spell-scrolls.mjs?v=3.8.5-scroll-activation-1";
 
 export function itemIdentifier(item) {
   return String(item?.system?.identifier?.value ?? item?.system?.identifier ?? item?.system?.slug ?? item?.getFlag?.(MODULE_ID, "resourceIdentifier") ?? item?.name ?? "").trim().toLowerCase();
@@ -286,6 +287,33 @@ export async function spellScrollRecipeData(item) {
       ingredients: [],
       completionCosts: [],
       rewards: [{ uuid: spell.uuid, quantity: 1, spellbookOrigin: "wizard" }]
+    }
+  };
+}
+
+export function spellScrollScribingRecipeData(spell) {
+  if (spell?.documentName !== "Item" || spell.type !== "spell" || !spell.parent) return null;
+  const level = spellScrollLevel(spell);
+  if (!level) return null;
+  const definition = recipeData(spell, { sourceUuid: spell.uuid });
+  return {
+    spell,
+    definition: {
+      ...definition,
+      isCustom: true,
+      spellScrollScribing: true,
+      projectName: game.i18n.format("DOWNTIME_MANAGER.Project.SpellScrollScribingName", { spell: spell.name }),
+      description: game.i18n.format("DOWNTIME_MANAGER.Project.SpellScrollScribingDescription", { spell: spell.name }),
+      resultUuid: spell.uuid,
+      itemPrice: level.price,
+      progressCost: level.price,
+      requiredProgress: level.price,
+      goldCost: round(level.price * 0.5, 4),
+      repeatable: true,
+      collaborative: false,
+      ingredients: [],
+      completionCosts: [],
+      rewards: [{ uuid: spell.uuid, quantity: 1, spellScroll: true }]
     }
   };
 }

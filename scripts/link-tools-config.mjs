@@ -3,6 +3,7 @@ import { auditCharacterLinks, repairLegacyCharacterLinks } from "./tcv-link-repa
 import { openCompendiumAudit } from "./compendium-audit.mjs";
 import { weaponOptionActivitiesApi } from "./integrations/weapon-option-activities.mjs";
 import { repairMissingActorItemImages } from "./actor-item-image-repair.mjs";
+import { repairActorItemSources } from "./actor-item-source-repair.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -10,13 +11,14 @@ class LinkToolsConfig extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
     id: "tovf-link-tools",
     classes: ["tovf-link-tools"],
-    position: { width: 560, height: 640 },
+    position: { width: 560, height: 720 },
     window: { title: "TOVF.LinkTools.Title" },
     actions: {
       audit: this.#audit,
       auditCompendiums: this.#auditCompendiums,
       repair: this.#repair,
       repairMissingImages: this.#repairMissingImages,
+      repairItemSources: this.#repairItemSources,
       synchronizeWeaponActivities: this.#synchronizeWeaponActivities
     }
   };
@@ -51,6 +53,10 @@ class LinkToolsConfig extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static #repairMissingImages() {
     return this.constructor.#run(this, repairMissingActorItemImages);
+  }
+
+  static #repairItemSources() {
+    return this.constructor.#run(this, repairActorItemSources);
   }
 
   static #synchronizeWeaponActivities() {

@@ -1,15 +1,25 @@
 import { canonicalSpellName } from "./spell-name-markers.mjs?v=3.5.0-spell-markers-1";
+import { CONTENT_MODULE_ID, MODULE_ID } from "./core/constants.mjs";
 
-function sourceUuidOf(item) {
-  return String(
-    item?.getFlag?.("core", "sourceId")
-    ?? item?._stats?.compendiumSource
-    ?? ""
-  ).trim();
+const SOURCE_ONLY_TYPES = new Set(["background", "class", "heritage", "lineage", "subclass"]);
+
+function sourceUuidsOf(item) {
+  return new Set([
+    item?.getFlag?.(MODULE_ID, "preferredCompendiumSource"),
+    item?.getFlag?.("core", "sourceId"),
+    item?._stats?.compendiumSource
+  ].map(value => String(value ?? "").trim()).filter(Boolean));
 }
 
 export function isCompendiumItem(item) {
   return item?.documentName === "Item" && String(item.uuid ?? "").startsWith("Compendium.");
+}
+
+export function canSynchronizeCompendiumItem(item) {
+  if (!isCompendiumItem(item) || SOURCE_ONLY_TYPES.has(item.type)) return false;
+  const pack = item.compendium ?? game.packs.get(item.pack);
+  const packageId = pack?.metadata?.packageName ?? pack?.metadata?.package ?? "";
+  return packageId === CONTENT_MODULE_ID;
 }
 
 function spellCircle(item) {
@@ -36,8 +46,7 @@ export function matchingActorItems(source, { includeEquivalent = false } = {}) {
 
   return game.actors.contents.flatMap(actor => actor.items.contents.flatMap(item => {
     if (item.getFlag(game.system.id, "cachedFor")) return [];
-    const direct = sourceUuidOf(item) === source.uuid
-      && (source.type === "spell" || item.name === source.name);
+    const direct = sourceUuidsOf(item).has(source.uuid);
     if (direct) return [{ actor, item, match: "direct" }];
     if (includeEquivalent && equivalentSpell(source, item)) return [{ actor, item, match: "equivalent" }];
     return [];
@@ -83,6 +92,7 @@ export function replacementData(source, target) {
   }
   data._id = target.id;
   foundry.utils.setProperty(data, "flags.core.sourceId", source.uuid);
+  foundry.utils.setProperty(data, `flags.${MODULE_ID}.preferredCompendiumSource`, source.uuid);
   if (target.type === "spell" && data.flags?.[game.system.id]) {
     delete data.flags[game.system.id].relationship;
   }
@@ -102,7 +112,7 @@ export async function normalizeLegacyItemEffects(item) {
 }
 
 export async function synchronizeCompendiumItem(source) {
-  if (!game.user.isGM || !isCompendiumItem(source)) return;
+  if (!game.user.isGM || !canSynchronizeCompendiumItem(source)) return;
 
   const candidates = matchingActorItems(source, { includeEquivalent: source.type === "spell" });
   if (!candidates.length) {

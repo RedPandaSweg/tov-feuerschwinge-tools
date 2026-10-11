@@ -1,5 +1,6 @@
 import { FLAGS, MODULE_ID } from "./constants.mjs";
 import { getSystemAdapter } from "./system-adapter.mjs";
+import { createSpellScrollData } from "../spell-scrolls.mjs?v=3.8.5-scroll-activation-1";
 import {
   getQuantity,
   quantityUpdate,
@@ -114,6 +115,20 @@ export class RewardService {
       const source = await fromUuid(reward.uuid);
       if (!source || source.documentName !== "Item") {
         throw new Error(game.i18n.format("DOWNTIME_MANAGER.Errors.RewardMissing", { uuid: reward.uuid }));
+      }
+      if (reward.spellScroll) {
+        const sourceId = String(source._stats?.compendiumSource ?? source.getFlag?.("core", "sourceId") ?? "").trim();
+        const spellUuid = sourceId.startsWith("Compendium.") ? sourceId : source.uuid;
+        const existing = actor.items.find(item => String(item.getFlag?.(MODULE_ID, "spellScroll")?.spellUuid ?? "") === spellUuid);
+        if (existing) {
+          await existing.update(quantityUpdate(existing, round(getQuantity(existing) + quantity, 6)));
+          created.push(existing.name);
+        } else {
+          const data = await createSpellScrollData(source, { quantity });
+          const documents = await actor.createEmbeddedDocuments("Item", [data]);
+          created.push(documents[0]?.name ?? data.name);
+        }
+        continue;
       }
       const wantedUuid = String(reward.uuid).toLowerCase();
       const wantedIdentifier = stableIdentifier(source);

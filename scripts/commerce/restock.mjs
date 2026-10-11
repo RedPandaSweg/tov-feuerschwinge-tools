@@ -2,8 +2,8 @@ import { MODULE_ID } from "../core/constants.mjs";
 import { emitModuleEvent } from "../core/events.mjs?v=3.7.8-module-events-1";
 import { deleteExistingEmbeddedDocuments } from "../core/document-operations.mjs?v=3.7.8-safe-documents-1";
 import { merchantConfig } from "./service.mjs?v=3.7.8-runtime-audit-1";
-import { addItem, cleanTransferredItem, findStackableItem } from "./transactions.mjs?v=3.7.8-runtime-audit-1";
-import { addMerchantSpellScrollOffer, merchantSpellScrollOffers, saveMerchantSpellScrollOffers } from "../spell-scrolls.mjs?v=3.7.8-clearance-label-1";
+import { addItem, cleanTransferredItem, findStackableItem } from "./transactions.mjs?v=3.8.5-identifier-fix-1";
+import { addMerchantSpellScrollOffer, merchantSpellScrollOffers, saveMerchantSpellScrollOffers } from "../spell-scrolls.mjs?v=3.8.5-scroll-activation-1";
 
 const TRADEABLE_TYPES = new Set(["ammunition", "armor", "consumable", "container", "gear", "sundry", "tool", "weapon"]);
 const running = new Set();

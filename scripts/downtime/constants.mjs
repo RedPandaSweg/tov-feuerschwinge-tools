@@ -29,7 +29,8 @@ export const FLAGS = Object.freeze({
   ACTIVE: "active",
   LAST_LOGIN_AT: "lastLoginAt",
   DOWNTIME_ITEM: "downtimeItem",
-  SHARED_PROJECTS: "sharedProjects"
+  SHARED_PROJECTS: "sharedProjects",
+  RAFFLE: "raffle"
 });
 
 export const SETTINGS = Object.freeze({
@@ -40,6 +41,7 @@ export const SETTINGS = Object.freeze({
   SESSION_TRANSFER_SCENES: "sessionTransferScenes",
   ACTIVE_SESSION: "activeSession",
   SESSION_IMPORT_HISTORY: "sessionImportHistory",
+  SESSION_TRANSFER_LOG: "sessionTransferLog",
   LAST_SESSION_RESULT: "lastSessionResult",
   SESSION_REWARDS: "sessionRewards",
   SESSION_HISTORY_JOURNAL: "sessionHistoryJournal",
@@ -131,6 +133,10 @@ export const DEFAULT_SESSION_PROGRESS = Object.freeze({
   milestones: 0,
   sessionsPlayed: 0,
   lastMilestoneWeek: null,
+  // The optional maximum level of the Tier of Play a character deliberately
+  // remains in. Milestones continue to be recorded; only derived progression
+  // and rewards are capped once that level was actually reached.
+  tierCapLevel: null,
   passiveDowntime: {}
 });
 
@@ -328,6 +334,7 @@ export const DEFAULT_STATION_CONFIG = Object.freeze({
   requiredTool: null,
   progressItems: [],
   spellScrollRecipes: false,
+  spellScrollScribing: false,
   recipes: [],
   modifiers: [],
   rollTable: [],

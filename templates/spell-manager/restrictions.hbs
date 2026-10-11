@@ -1,0 +1,13 @@
+<div class="restrictions">
+  {{#if replacementOptions}}
+    <div class="replacement">
+      <div class="form-group">
+        <label>{{localize "BF.Advancement.Spellcasting.Replacement.Label"}}</label>
+        <select name="replaces">{{selectOptions replacementOptions}}</select>
+      </div>
+    </div>
+  {{/if}}
+  {{#if restrictions.schools}}
+    <div class="restriction"><strong>{{localize "BF.Spell.School.Label"}}</strong>: {{restrictions.schools}}</div>
+  {{/if}}
+</div>

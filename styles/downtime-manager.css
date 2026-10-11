@@ -312,7 +312,7 @@
 .downtime-manager.station-config [data-section="general"] input[type="number"] { width: 110px; }
 .downtime-manager.station-config [data-section="general"] input[type="text"] { width: min(100%, 260px); }
 .downtime-manager.station-config [data-section="general"] select { width: min(100%, 230px); }
-.downtime-manager.station-config [data-section="general"] textarea { min-height: 52px; height: 52px; }
+.downtime-manager.station-config [data-section="general"] prose-mirror[name="description"] { min-height: 180px; }
 .downtime-manager.station-config [data-section="actor-value"] .sc-title-row { margin-top: .9rem; align-items: center; }
 .downtime-manager.station-config [data-section="actor-value"] .sc-title-row + .sc-list { margin-top: .4rem; }
 .downtime-manager.station-config [data-section="checks"] .sc-section-actions,
@@ -549,6 +549,9 @@
 .downtime-manager .sc-station-preset { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto; gap: .75rem; align-items: center; padding: .65rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; }
 .downtime-manager .sc-station-preset > img { width: 72px; height: 72px; object-fit: cover; border: 0; border-radius: 5px; }
 .downtime-manager .sc-station-preset h3, .downtime-manager .sc-station-preset p { margin: 0 0 .35rem; }
+.downtime-manager .sc-preset-description, .downtime-manager .sc-station-description { max-width: 52rem; }
+.downtime-manager :is(.sc-preset-description, .sc-station-description) table { width: 100%; margin: .5rem 0; }
+.downtime-manager :is(.sc-preset-description, .sc-station-description) :is(th, td) { padding: .3rem .45rem; text-align: left; }
 .downtime-manager .sc-station-preset-actions { display: flex; flex-direction: column; gap: .45rem; min-width: 12rem; }
 .downtime-manager .sc-character-reward-row { grid-template-columns: minmax(6rem, .8fr) minmax(8rem, 1.2fr) auto; }
 .downtime-manager .sc-character-reward-row > select { width: 100%; min-width: 0; }

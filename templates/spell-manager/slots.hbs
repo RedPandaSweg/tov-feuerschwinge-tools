@@ -1,0 +1,23 @@
+<section class="slots">
+  <h3 class="tovf-spell-manager-summary">
+    <span><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> Source of Magic: <b>{{tovfSpellManager.source}}</b></span>
+    <span><i class="fa-solid fa-circle-notch" aria-hidden="true"></i> {{localize "BF.Spell.Circle.Maximum"}}: <b>{{tovfSpellManager.maximumCircle}}</b></span>
+  </h3>
+  <ul class="unlist spell-list news-slots">
+    {{#each slots}}
+      <li {{#if selected}}class="selected"{{/if}}>
+        <button type="button" class="tovf-slot-choice" data-action="tovfSelectSlot" data-tovf-select-slot="{{@index}}" aria-pressed="{{#if selected}}true{{else}}false{{/if}}">
+          <span class="icon">{{#if spell.img}}<img src="{{spell.img}}" alt="">{{else}}<span class="placeholder">{{number}}</span>{{/if}}</span>
+          <span class="name">{{#if spell.name}}{{spell.name}}{{else}}{{localize name}}{{/if}}</span>
+          <span class="tovf-spell-circle {{#if mark.replace}}replace{{/if}}">
+            {{#if mark.replace}}
+              <i class="fa-solid fa-arrows-rotate" aria-label="Zauber austauschen"></i>
+            {{else}}
+              <span class="tovf-circle-star" aria-hidden="true">✦</span><b>{{mark.text}}</b>
+            {{/if}}
+          </span>
+        </button>
+      </li>
+    {{/each}}
+  </ul>
+</section>

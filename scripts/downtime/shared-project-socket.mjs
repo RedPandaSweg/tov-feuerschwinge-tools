@@ -1,5 +1,5 @@
 import { MODULE_ID } from "./constants.mjs";
-import { SharedProjectService } from "./shared-project-service.mjs?v=3.4.2-roll-result-only-1";
+import { SharedProjectService } from "./shared-project-service.mjs?v=3.8.5-applied-roll-progress-1";
 
 const pending = new Map();
 let requestQueue = Promise.resolve();

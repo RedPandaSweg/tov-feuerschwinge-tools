@@ -10,7 +10,7 @@ import {
   MODULE_ID,
   SETTINGS
 } from "./constants.mjs";
-import { StationApp } from "./station-app.mjs?v=3.4.2-roll-result-only-1";
+import { StationApp } from "./station-app.mjs?v=3.8.5-applied-roll-progress-1";
 import { StationConfigApp } from "./station-config-app.mjs?v=3.4.2-progress-item-controls-1";
 import { ModuleItemSettingsApp } from "./module-item-settings-app.mjs";
 import { PlayerActorFolderSettingsApp } from "./player-actor-folder-settings-app.mjs";
@@ -25,7 +25,7 @@ import { UserTransferApp } from "../transfer/user-transfer-app.mjs";
 import { DowntimeItemApp } from "./downtime-item-app.mjs";
 import { StationPresetApp } from "./station-preset-app.mjs";
 import { playerCharacters, sessionProgress, SessionService } from "./session-service.mjs";
-import { registerSharedProjectSocket } from "./shared-project-socket.mjs?v=3.4.2-roll-result-only-1";
+import { registerSharedProjectSocket } from "./shared-project-socket.mjs?v=3.8.5-applied-roll-progress-1";
 import { downtimeItemData, DowntimeItemService } from "./downtime-item-service.mjs";
 import { addHeaderControl, defaultStationData, isRecipeItem, isStation } from "./utils.mjs";
 import {
@@ -37,7 +37,10 @@ import { MIGRATION_SETTING, migrateIntegratedDowntime } from "./migration.mjs";
 import { openFeuerschwingeSettings } from "../settings-categories.mjs";
 import { createWorldSpellScroll } from "../spell-scrolls.mjs?v=3.7.8-clearance-label-1";
 import { GMToolsApp } from "./gm-tools-app.mjs?v=3.8.0-unresolved-advancement-formulas-1";
-import { isCompendiumItem, synchronizeCompendiumItem } from "../item-compendium-sync.mjs?v=3.5.0-cross-source-spell-sync-8";
+import { canSynchronizeCompendiumItem, synchronizeCompendiumItem } from "../item-compendium-sync.mjs?v=3.8.5-preferred-source-sync-1";
+import { RaffleApp, configureRaffle } from "./raffle-app.mjs?v=3.8.5-raffle-packages-3";
+import { isRaffle } from "./raffle-service.mjs?v=3.8.5-raffle-packages-2";
+import { registerRaffleSocket } from "./raffle-socket.mjs?v=3.8.5-raffle-packages-2";
 
 function documentFromApp(app, documentName) {
   const document =
@@ -60,6 +63,8 @@ function openStation(actor) {
 
   new StationApp(actor).render(true);
 }
+
+function openRaffle(actor) { if (isRaffle(actor)) new RaffleApp(actor).render(true); }
 
 function openDashboard() {
   if (game.user.isGM) { const app = new GMToolsApp(); app.tab = "projects"; app.render(true); }
@@ -128,7 +133,7 @@ function registerTokenDoubleClick() {
   prototype._canView = function (user, event) {
     const isCommerce = this.actor?.getFlag?.(MODULE_ID, "merchant")?.enabled === true
       || this.actor?.getFlag?.(MODULE_ID, "auctionHouse")?.enabled === true;
-    if (isStation(this.actor) || isCommerce) {
+    if (isStation(this.actor) || isCommerce || isRaffle(this.actor)) {
       if (!this.layer?.active) return false;
       if (canvas.regions?._placementContext) return false;
       if (this.layer._draggedToken) return false;
@@ -157,6 +162,7 @@ function registerTokenDoubleClick() {
       openStation(this.actor);
       return;
     }
+    if (isRaffle(this.actor)) { event?.stopPropagation?.(); openRaffle(this.actor); return; }
 
     return originalDoubleClick.call(this, event);
   };
@@ -175,6 +181,7 @@ export function registerDowntime() {
 
   game.settings.register(MODULE_ID, SETTINGS.ACTIVE_SESSION, { scope: "world", config: false, type: Object, default: {} });
   game.settings.register(MODULE_ID, SETTINGS.SESSION_IMPORT_HISTORY, { scope: "world", config: false, type: Object, default: { schemaVersion: 1, entries: [] } });
+  game.settings.register(MODULE_ID, SETTINGS.SESSION_TRANSFER_LOG, { scope: "world", config: false, type: Object, default: { schemaVersion: 1, entries: [] } });
   game.settings.register(MODULE_ID, SETTINGS.LAST_SESSION_RESULT, { scope: "world", config: false, type: Object, default: {} });
   game.settings.register(MODULE_ID, SETTINGS.SESSION_REWARDS, { scope: "world", config: false, type: Object, default: createDefaultSessionRewards(getSystemAdapter().getDefaultGoldItemUuid()) });
   game.settings.register(MODULE_ID, SETTINGS.SESSION_HISTORY_JOURNAL, { scope: "world", config: false, type: String, default: "" });
@@ -287,6 +294,7 @@ export function registerDowntime() {
 
 export async function activateDowntime() {
   if (game.system.id !== "black-flag" || !game.user) return;
+  registerRaffleSocket();
   void game.user.setFlag(MODULE_ID, FLAGS.LAST_LOGIN_AT, Date.now()).catch(error =>
     console.warn(`${MODULE_ID} | Could not record the current user's last login`, error));
 
@@ -402,7 +410,9 @@ function actorHeaderControls(app, controls) {
       const merchant = actor.getFlag(MODULE_ID, "merchant")?.enabled === true;
       const auctionHouse = actor.getFlag(MODULE_ID, "auctionHouse")?.enabled === true;
       const action = await foundry.applications.api.DialogV2.wait({
+        classes: ["tovf-actor-actions-dialog"],
         window: { title: game.i18n.localize("DOWNTIME_MANAGER.Headers.Feuerschwinge") },
+        position: { width: 560 },
         buttons: [
           { action: "merchant", icon: "fa-solid fa-shop", label: merchant ? uiText("TOVF.Interface.OpenAndManageMerchant_3334c1", "Händler öffnen und verwalten") : uiText("TOVF.Interface.ConfigureAsMerchant_7e184b", "Als Händler einrichten"), callback: () => "merchant" },
           { action: "auction", icon: "fa-solid fa-gavel", label: auctionHouse ? uiText("TOVF.Interface.OpenAuctionHouse_9a5133", "Auktionshaus öffnen") : "Als Auktionshaus einrichten", callback: () => "auction" },
@@ -410,11 +420,13 @@ function actorHeaderControls(app, controls) {
             ? game.i18n.localize("DOWNTIME_MANAGER.Headers.ConfigureStation")
             : game.i18n.localize("DOWNTIME_MANAGER.Headers.MakeStation"), callback: () => "station" },
           ...(isStation(actor) ? [{ action: "openStation", icon: "fa-solid fa-screwdriver-wrench", label: game.i18n.localize("DOWNTIME_MANAGER.Headers.OpenStation"), callback: () => "openStation" }] : [])
+          , { action: "raffle", icon: "fa-solid fa-ticket", label: isRaffle(actor) ? "Raffle öffnen und verwalten" : "Als Raffle-NPC einrichten", callback: () => "raffle" }
         ],
         rejectClose: false
       });
       if (action === "station") return configureStation(actor, app);
       if (action === "openStation") return openStation(actor);
+      if (action === "raffle") return isRaffle(actor) ? openRaffle(actor) : configureRaffle(actor);
       const commerce = await import("../commerce/app.mjs?v=3.7.8-runtime-audit-1");
       if (action === "merchant") return merchant ? commerce.openCommerce({ mode: "merchant", merchantId: actor.id, shopPage: "management" }) : commerce.configureMerchantActor(actor, app);
       if (action === "auction") return auctionHouse ? commerce.openCommerce({ mode: "auction", auctionHouseId: actor.id }) : commerce.configureAuctionHouseActor(actor, app);
@@ -447,7 +459,7 @@ function itemHeaderControls(app, controls) {
           callback: () => "downtime"
         }];
 
-        if (isCompendiumItem(item)) {
+        if (canSynchronizeCompendiumItem(item)) {
           buttons.push({
             action: "synchronize",
             icon: "fa-solid fa-arrows-rotate",
@@ -466,9 +478,11 @@ function itemHeaderControls(app, controls) {
         }
 
         const action = await foundry.applications.api.DialogV2.wait({
+          classes: ["tovf-actor-actions-dialog"],
           window: {
             title: game.i18n.localize("DOWNTIME_MANAGER.Headers.Feuerschwinge")
           },
+          position: { width: 510 },
           buttons,
           rejectClose: false
         });

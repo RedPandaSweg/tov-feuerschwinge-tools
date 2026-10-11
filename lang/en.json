@@ -170,6 +170,30 @@
       "Failed": "The chat message could not be deleted.",
       "Rejected": "You may only delete your own chat messages."
     },
+    "ServerUpdateWarning": {
+      "Tool": "Send server warning",
+      "ComposerTitle": "Warning for all players",
+      "Preset": "Template",
+      "OverrideHint": "You can enter a custom title and message. Empty fields use the selected template text.",
+      "CustomTitle": "Custom title",
+      "CustomTitlePlaceholder": "Optional when using a template",
+      "CustomMessage": "Custom message",
+      "CustomMessagePlaceholder": "Optional when using a template",
+      "Preview": "Preview",
+      "PreviewTitle": "Review server warning",
+      "Send": "Send to players",
+      "Confirm": "Send this warning to {count} connected players now?",
+      "Sent": "The warning was sent to {count} connected players.",
+      "Acknowledge": "Understood",
+      "FullGMOnly": "Only a full Game Master may send server warnings.",
+      "MissingContent": "Title and message cannot be empty.",
+      "Presets": {
+        "Update": { "Label": "Server update is about to start", "Title": "Server update", "Message": "The server will be updated shortly. Please finish your current actions and wait until the server is available again." },
+        "Restart": { "Label": "Server restart is about to start", "Title": "Server restart", "Message": "The server will restart shortly. Please finish your current actions and wait until the server is available again. Please say so in chat if you need another moment." },
+        "Complete": { "Label": "Update complete – reload now", "Title": "Update complete", "Message": "The update is complete. Please reload Foundry now so that all changes are applied." },
+        "Custom": { "Label": "Custom warning" }
+      }
+    },
     "Argon": {
       "CharacterLevel": "Level {level}",
       "LegacyAdapterActive": "Disable “Argon - Combat HUD (BLACK-FLAG)”. Feuerschwinge now provides this Argon integration itself.",
@@ -466,6 +490,13 @@
       "ImagesConfirm": "Found {items} missing images on {actors} Actors. {matched} receive an unambiguous Compendium image; {fallback} receive the frog-with-heart fallback. A backup will be downloaded before the repair.",
       "ImagesNone": "No empty or unloadable Actor Item images were found.",
       "ImagesComplete": "Repaired {items} missing Item images on {actors} Actors. The fallback image was used {fallback} times.",
+      "SourcesTitle": "Feuerschwinge Item sources",
+      "SourcesHint": "Assigns Actor Items to Feuerschwinge compendiums wherever possible. Unambiguous matches use Item type and identifier or name; their name, identifier, and compendium link are then set to the Feuerschwinge source. Classes and other character options are not replaced in full. Ambiguous and missing matches are downloaded as a diagnostic report.",
+      "SourcesRepair": "Normalize Item sources",
+      "SourcesScanning": "Comparing Actor Items with the Feuerschwinge compendiums...",
+      "SourcesConfirm": "Found an unambiguous Feuerschwinge source for {items} Items on {actors} Actors. {identifier} were matched by identifier and {name} by name. {ambiguous} mappings are ambiguous and {unmatched} Items have no match; those remain unchanged. The name, identifier, and compendium link of unambiguous matches will be normalized. A backup will be downloaded first.",
+      "SourcesNone": "No Item sources need normalization. {ambiguous} mappings are ambiguous and {unmatched} Items have no Feuerschwinge match.",
+      "SourcesComplete": "Normalized {items} Item sources on {actors} Actors to Feuerschwinge. {ambiguous} ambiguous and {unmatched} unmatched Items remained unchanged.",
       "WeaponActivitiesTitle": "Weapon Option Activities",
       "WeaponActivitiesHint": "Synchronizes Activities for selected Weapon Options once across world Weapons, Actor Weapons, and the Feuerschwinge Item compendium. This operation does not run automatically.",
       "WeaponActivities": "Synchronize Weapon Activities",
@@ -602,7 +633,9 @@
         "Conditions": "Conditions",
         "Actions": "Actions in Combat",
         "Movement": "Movement in Combat",
+        "Luck": "Luck",
         "Playing": "Playing the Game",
+        "Doom": "Doom",
         "Missing": "The rules reference could not be opened."
       },
       "Settings": {
@@ -637,6 +670,18 @@
         "MaxInitiativeCards": {
           "Name": "Maximum initiative cards",
           "Hint": "Sets how many initiative cards are displayed in the Challenge HUD for this user only."
+        },
+        "ShowInitiativeCarousel": {
+          "Name": "Show initiative carousel",
+          "Hint": "Shows or hides the initiative carousel in this Challenge HUD."
+        },
+        "ShowEncounterTimer": {
+          "Name": "Show encounter duration",
+          "Hint": "Shows the encounter's elapsed real time below the round counter."
+        },
+        "ShowTurnTimer": {
+          "Name": "Show turn duration",
+          "Hint": "Shows the current turn's elapsed real time below initiative cards."
         }
       },
       "Encounter": {
@@ -644,12 +689,33 @@
         "ActiveAdversaries": "Active adversaries",
         "MaxCR": "Highest CR"
       },
+      "Hud": {
+        "Round": "Round",
+        "RollInitiative": "Roll initiative",
+        "RollNpcInitiative": "Roll initiative for all NPCs",
+        "PreviousTurn": "Previous turn",
+        "NextTurn": "Next turn",
+        "EndTurn": "End turn",
+        "StartCombat": "Start combat",
+        "EndCombat": "End combat"
+      },
       "Doom": {
         "Bank": "Doom Bank",
-        "Advantage": "Advantage (1)",
-        "Disadvantage": "Disadvantage (1)",
-        "ExtraAction": "Extra Action (2)",
-        "Recharge": "Recharge (3)",
+        "Advantage": "Advantage",
+        "AdvantageHint": "1 Doom: Gain Advantage on an Attack Roll. No encounter limit.",
+        "Disadvantage": "PC Save Disadvantage",
+        "DisadvantageHint": "1 Doom: Give a PC Disadvantage on a Saving Throw. No encounter limit.",
+        "Refresh": "Refresh Feature",
+        "RefreshHint": "1 Doom: Refresh a limited-use feature. Once per encounter.",
+        "AutomaticSave": "Automatic Save",
+        "AutomaticSaveHint": "1 Doom: A Saving Throw automatically succeeds. Once per encounter.",
+        "AutomaticHit": "Automatic Hit",
+        "AutomaticHitHint": "1 Doom: An Attack Roll automatically hits. Once per encounter.",
+        "Movement": "Doom Movement",
+        "MovementHint": "1 Doom: A creature moves up to half its Speed without Opportunity Attacks. Use only at the end of another creature's turn. No encounter limit.",
+        "OncePerEncounter": "Once per encounter",
+        "AlreadyUsed": "This Doom action has already been used this encounter.",
+        "Insufficient": "Not enough Doom.",
         "Recalculate": "Recalculate Doom Points",
         "RecalculateFailed": "The Doom Points could not be recalculated. See the console for details.",
         "Increase": "Doom increased",
@@ -828,6 +894,7 @@
       "ImportPreview": "{count} characters from primary world “{source}” will be imported.",
       "ImportAction": "Import",
       "ImportComplete": "Session import complete: {create} created, {update} updated.",
+      "ImportUpdated": "Session updated: {create} participants added. Existing session characters were left unchanged.",
       "ResultExportComplete": "{count} character states were exported as a session result.",
       "ResultImportComplete": "{count} character results were applied.",
       "ResultImportSkipped": "{count} invalid character or Item change(s) were skipped. See the console for details.",
@@ -1891,6 +1958,8 @@
       "Expertise": "Expertise",
       "AlreadyKnown": "{name} (already known)",
       "SpellScrollTransferDescription": "Transfer {spell}, a {circle}-circle Spell, into the Wizard's spellbook.",
+      "SpellScrollScribingName": "Scribe Spellscroll: {spell}",
+      "SpellScrollScribingDescription": "Create a Spellscroll of {spell}.",
       "CharacterRewardTypes": { "language": "Language", "skill": "Skill", "tool": "Tool", "weapon": "Weapon", "armor": "Armor" },
       "Collaborative": "Collaborative project with a leader",
       "Participants": "Participants",
@@ -2007,6 +2076,8 @@
       "NoPublicProjects": "No public projects configured.",
       "SpellScrollRecipes": "Offer Spellscrolls from the character inventory",
       "SpellScrollRecipesHint": "Creates automatic spellbook-transfer projects from this module's Spellscrolls. The Spellscroll is not consumed.",
+      "SpellScrollScribing": "Scribe known Spells as Spellscrolls",
+      "SpellScrollScribingHint": "Creates automatic projects for the character's Spells. Requires a Spellcasting feature and Artist Tools or a Skill Proficiency matching the Magic Source.",
       "ProjectItem": "Downtime project",
       "Projects": "Projects",
       "ProgressChange": "Progress",
@@ -2141,6 +2212,8 @@
       "SpellScrollCantrip": "Cantrip Spellscrolls cannot be transferred into a spellbook.",
       "SpellScrollWizardRequired": "Transferring a Spellscroll requires at least 1 level in Wizard.",
       "SpellScrollSourceUnavailable": "This Spell's magic source is not available for transfer.",
+      "SpellScrollScribingSpellcastingRequired": "Scribing a Spellscroll requires a Spellcasting feature.",
+      "SpellScrollScribingProficiencyRequired": "This Magic Source requires Proficiency in Artist Tools or the matching Skill: Arcana for Arcane and Wyrd, Nature for Primordial, or Religion for Divine.",
       "InvalidGoldCost": "The gold cost is invalid.",
       "InvalidGoldReward": "The gold reward is invalid.",
       "ExactChangeMissing": "The character has no copper denomination to represent exact change.",
@@ -2281,7 +2354,7 @@
     },
     "Session": {
       "NewWarning": { "Title": "Start a new session?", "Heading": "WARNING: This session has not been fully rewarded.", "Text": "Starting a new session now discards the current session state. Are you sure you want to continue without awarding rewards?", "Wait": "Continue anyway ({seconds})", "Confirm": "Start new session anyway" },
-      "Title": "Session manager", "Name": "Session title", "Summary": "Summary", "Multiplier": "Gold multiplier", "Untitled": "Session rewards",
+      "Title": "Session Manager", "Name": "Session title", "Summary": "Summary", "Multiplier": "Gold multiplier", "Untitled": "Session rewards",
       "Workflow": { "Title": "Session transfer", "Status": "Status", "Prepare": "Create session package", "SessionFile": "Session package", "Begin": "Import session package", "End": "End session and export result", "ResultFile": "Session result", "Complete": "Import session result", "NewSession": "New Session", "ResetConfirm": "Reset the current session state? Imported Actors, folders, Macros, and compendiums are retained.", "ResetComplete": "The session state was reset. A new session package can now be imported.", "Cleanup": "Delete imported session content", "CleanupConfirm": "Delete the {actors} imported characters and companions together with their session folder and reset the session? Macros and compendiums are retained. This can only be restored from a backup.", "CleanupComplete": "The imported characters, companions, and their session folder have been deleted. A new session can now be imported.", "ReturnedHint": "Character results have been applied. Review the selection, then award the session rewards.", "Locked": "The exported session is locked until its result is imported.", "Statuses": { "empty": "No active session", "draft": "Draft", "exported": "Session package created", "imported": "Ready to play", "played": "Result exported", "returned": "Characters returned", "awarded": "Rewards awarded" } },
       "Level": "Level", "Available": "Available downtime", "Downtime": "Downtime", "Milestones": "Milestones", "Passive": "Passive in current period",
       "HighestMilestone": "Highest guild progress: {milestones} milestones · level {level} · tier {tier} · {characters}.", "CatchUpActive": "Catch-up is active.",
@@ -2315,7 +2388,7 @@
         "kitchen": { "Name": "Kitchen", "Description": "A workplace for cooking and provisioning." },
         "workplace": { "Name": "Workplace", "Description": "Weekly work in 5-downtime blocks with a skill or tool check, wages, and workplace-specific reputation." },
         "library": { "Name": "Research Station", "Description": "Long-term collaborative research with 5 × proficiency progress per downtime and a check every 5 downtime." },
-        "scriptorium": { "Name": "Scriptorium", "Description": "Transfers eligible Spells from this module's Spellscrolls into a Wizard's spellbook without consuming the Spellscroll." },
+        "scriptorium": { "Name": "Scriptorium", "Description": "<p>A scriptorium is a place where magical formulas are studied, copied, and committed to parchment.</p><p>Wizards can copy eligible Spellscrolls into their Spellbook here.</p><p>Spellcasters can scribe their Spells into Spellscrolls here. The Magic Sources available to them depend on their Proficiencies:</p><table><tbody><tr><th>Proficiency</th><td>Artist Tools</td><td>Arcana</td><td>Nature</td><td>Religion</td></tr><tr><th>Magic Sources</th><td>All</td><td>Arcane and Wyrd</td><td>Primordial</td><td>Divine</td></tr></tbody></table>" },
         "training-grounds": { "Name": "Training Station", "Description": "Training with 10 plus relevant ability and instructor bonus per downtime, a check every 5 downtime, and a final check." },
         "tavern": { "Name": "Carousing Station", "Description": "A 5-downtime activity for contacts and favors; social class, costs, and results are configured per project." },
         "workshop": { "Name": "Tinker's Workshop", "Description": "A workshop for mechanisms, repairs, and inventions." },

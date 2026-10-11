@@ -51,6 +51,12 @@ function stackSignature(item, { merchantStock = false } = {}) {
   return JSON.stringify(data);
 }
 
+function itemIdentifier(item) {
+  const identifier = item?.system?.identifier;
+  const value = identifier && typeof identifier === "object" ? identifier.value : identifier;
+  return typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
+}
+
 export function findStackableItem(actor, itemData, { stackWeapons = false, merchantStock = false } = {}) {
   if (itemData.type === "weapon" && !stackWeapons) return null;
   const sourceUuid = String(itemData.flags?.[MODULE_ID]?.merchantItem?.sourceUuid ?? "");
@@ -59,9 +65,9 @@ export function findStackableItem(actor, itemData, { stackWeapons = false, merch
       && item.getFlag(MODULE_ID, "merchantItem")?.sourceUuid === sourceUuid);
     if (sourced) return sourced;
     if (merchantStock) {
-      const identifier = String(itemData.system?.identifier ?? "").trim();
+      const identifier = itemIdentifier(itemData);
       const legacy = actor.items.find(item => item.type === itemData.type && (identifier
-        ? String(item.system?.identifier ?? "").trim() === identifier
+        ? itemIdentifier(item) === identifier
         : item.name.trim().localeCompare(itemData.name.trim(), undefined, { sensitivity: "base" }) === 0));
       if (legacy) return legacy;
     }

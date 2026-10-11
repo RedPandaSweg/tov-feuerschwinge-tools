@@ -13,7 +13,7 @@ const SOURCE_MODULES = packageId => (
 );
 const FALLBACK_ITEM_IMAGE = "icons/svg/item-bag.svg";
 const LIBRARY_INDEX_PACK = "tov-feuerschwinge-library-index";
-const LIBRARY_INDEX_VERSION = 8;
+const LIBRARY_INDEX_VERSION = 9;
 const DND5E_SOURCE_ID = "dnd5e";
 const KCTG_5E_SOURCE_ID = "kctg-5e";
 const KCTG_5E_SOURCE_BOOK = "KCTG-5e";
@@ -732,6 +732,10 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
   #magicType = "";
   #magicBase = "";
   #magicItemSort = "name";
+  #weaponType = "";
+  #weaponDamageType = "";
+  #weaponProperty = "";
+  #weaponTrait = "";
   #monsterType = "";
   #monsterSize = "";
   #monsterCrMin = "";
@@ -771,6 +775,8 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           "system.type.value",
           "system.type.base",
           "system.properties",
+          "system.options",
+          "system.damage.base.type",
           "system.rarity",
           "system.attunement.value",
           "system.price.value",
@@ -852,6 +858,10 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           magicItemCategory: category === "magicItems" ? String(foundry.utils.getProperty(entry, "system.type.category") ?? "") : "",
           magicItemType: category === "magicItems" ? String(foundry.utils.getProperty(entry, "system.type.value") ?? "") : "",
           magicItemBase: category === "magicItems" ? String(foundry.utils.getProperty(entry, "system.type.base") ?? "") : "",
+          weaponType: entry.type === "weapon" ? String(foundry.utils.getProperty(entry, "system.type.value") ?? "") : "",
+          weaponDamageType: entry.type === "weapon" ? String(foundry.utils.getProperty(entry, "system.damage.base.type") ?? "") : "",
+          weaponProperties: entry.type === "weapon" ? collectionValues(foundry.utils.getProperty(entry, "system.properties")).map(String) : [],
+          weaponTraits: entry.type === "weapon" ? collectionValues(foundry.utils.getProperty(entry, "system.options")).map(String) : [],
           showPrice,
           priceGold,
           priceValue: new Intl.NumberFormat(game.i18n.lang, { maximumFractionDigits: 6 }).format(priceValue),
@@ -940,6 +950,19 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     const magicBases = this.#category === "magicItems" && this.#detail ? magicOptions(magicTypeEntries, "magicItemBase") : [];
     if (this.#magicBase && !magicBases.some(option => option.value === this.#magicBase)) this.#magicBase = "";
     const spellFilterEntries = magicTypeEntries.filter(entry => !this.#magicBase || entry.magicItemBase === this.#magicBase);
+    const weaponEntries = spellFilterEntries.filter(entry => entry.itemType === "weapon");
+    const showWeaponFilters = this.#category === "items" && Boolean(this.#subcategory) && weaponEntries.length > 0;
+    const weaponTypes = this.#spellOptionCounts(weaponEntries, entry => [entry.weaponType], value => configLabel(CONFIG.BlackFlag.weaponTypes, value));
+    if (this.#weaponType && !weaponTypes.some(option => option.value === this.#weaponType)) this.#weaponType = "";
+    const weaponTypeEntries = weaponEntries.filter(entry => !this.#weaponType || entry.weaponType === this.#weaponType);
+    const weaponDamageTypes = this.#spellOptionCounts(weaponTypeEntries, entry => [entry.weaponDamageType], value => configLabel(CONFIG.BlackFlag.damageTypes, value));
+    if (this.#weaponDamageType && !weaponDamageTypes.some(option => option.value === this.#weaponDamageType)) this.#weaponDamageType = "";
+    const weaponDamageEntries = weaponTypeEntries.filter(entry => !this.#weaponDamageType || entry.weaponDamageType === this.#weaponDamageType);
+    const weaponProperties = this.#spellOptionCounts(weaponDamageEntries, entry => entry.weaponProperties, value => configLabel(CONFIG.BlackFlag.weaponProperties, value));
+    if (this.#weaponProperty && !weaponProperties.some(option => option.value === this.#weaponProperty)) this.#weaponProperty = "";
+    const weaponPropertyEntries = weaponDamageEntries.filter(entry => !this.#weaponProperty || entry.weaponProperties.includes(this.#weaponProperty));
+    const weaponTraits = this.#spellOptionCounts(weaponPropertyEntries, entry => entry.weaponTraits, value => configLabel(CONFIG.BlackFlag.weaponOptions, value));
+    if (this.#weaponTrait && !weaponTraits.some(option => option.value === this.#weaponTrait)) this.#weaponTrait = "";
     const spellCastingTimes = this.#spellOptionCounts(spellFilterEntries, entry => [entry.spellCastingTime], value => (
       game.i18n.localize(`TOVF.Library.SpellCastingTime.${value}`) !== `TOVF.Library.SpellCastingTime.${value}`
         ? game.i18n.localize(`TOVF.Library.SpellCastingTime.${value}`)
@@ -1025,6 +1048,10 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       && matchesSpellMulti(resolutions, "resolution")
       && matchesSpellMulti(properties, "property")
       && (!this.#magicAttunement || entry.magicAttunement === this.#magicAttunement)
+      && (!this.#weaponType || entry.weaponType === this.#weaponType)
+      && (!this.#weaponDamageType || entry.weaponDamageType === this.#weaponDamageType)
+      && (!this.#weaponProperty || entry.weaponProperties?.includes(this.#weaponProperty))
+      && (!this.#weaponTrait || entry.weaponTraits?.includes(this.#weaponTrait))
       && (!this.#monsterType || entry.monster?.creatureType === this.#monsterType)
       && (!this.#monsterSize || entry.monster?.size === this.#monsterSize)
       && (!entry.monster || numberMatches(entry.challengeRating, this.#monsterCrMin, this.#monsterCrMax))
@@ -1090,6 +1117,15 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       showSpellFilters: this.#category === "spells",
       showMonsterFilters: this.#category === "monsters",
       showMagicItemFilters: this.#category === "magicItems",
+      showWeaponFilters,
+      weaponTypes,
+      weaponDamageTypes,
+      weaponProperties,
+      weaponTraits,
+      selectedWeaponType: this.#weaponType,
+      selectedWeaponDamageType: this.#weaponDamageType,
+      selectedWeaponProperty: this.#weaponProperty,
+      selectedWeaponTrait: this.#weaponTrait,
       magicAttunementOptions: ["none", "optional", "required"].map(value => ({
         value,
         label: game.i18n.localize(`TOVF.Library.Attunement.${value}`),
@@ -1290,6 +1326,17 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           this.#magicBase = "";
         } else if (property === "magicBase") {
           this.#magicBase = event.currentTarget.value;
+        } else if (property === "weaponType") {
+          this.#weaponType = event.currentTarget.value;
+          this.#weaponDamageType = this.#weaponProperty = this.#weaponTrait = "";
+        } else if (property === "weaponDamageType") {
+          this.#weaponDamageType = event.currentTarget.value;
+          this.#weaponProperty = this.#weaponTrait = "";
+        } else if (property === "weaponProperty") {
+          this.#weaponProperty = event.currentTarget.value;
+          this.#weaponTrait = "";
+        } else if (property === "weaponTrait") {
+          this.#weaponTrait = event.currentTarget.value;
         } else if (property === "spellSort") {
           this.#spellSort = event.currentTarget.value;
         } else if (property === "monsterType") {
@@ -1416,6 +1463,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#resetSpellFilters();
     this.#magicAttunement = "";
     this.#magicCategory = this.#magicType = this.#magicBase = "";
+    this.#weaponType = this.#weaponDamageType = this.#weaponProperty = this.#weaponTrait = "";
     this.render();
   }
 
@@ -1424,6 +1472,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#detail = "";
     this.#extra = "";
     this.#magicCategory = this.#magicType = this.#magicBase = "";
+    this.#weaponType = this.#weaponDamageType = this.#weaponProperty = this.#weaponTrait = "";
     this.render();
   }
 

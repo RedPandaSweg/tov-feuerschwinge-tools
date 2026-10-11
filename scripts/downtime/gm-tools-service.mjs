@@ -7,7 +7,7 @@ import {
 } from "./constants.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
 import { ProjectService } from "./project-service.mjs";
-import { isActiveCharacter, milestoneEntries, playerCharacters, sessionProgress } from "./session-service.mjs";
+import { actorLevel, isActiveCharacter, milestoneEntries, playerCharacters, sessionProgress, TIER_CAP_LEVELS } from "./session-service.mjs";
 import { assignMilestoneEvidence, milestoneEvidence } from "../campaign/milestone-evidence.mjs";
 import { round } from "./utils.mjs";
 import { deleteExistingEmbeddedDocuments } from "../core/document-operations.mjs?v=3.7.8-safe-documents-1";
@@ -71,15 +71,23 @@ function collectionDocuments(collection) {
   return collection?.contents ?? [...(collection?.values?.() ?? [])];
 }
 
-const LEGACY_EFFECT_FORMULA_REFERENCES = [
-  "@traits.movement.base",
-  "@abilities.dexterity.mod",
-  "@abilities.str.mod",
-  "@attributes.proficiency",
-  "@attributes.spell.mod",
-  "@prof",
-  "@base"
-];
+// Match Black Flag's formula resolver: only a reference which cannot be found
+// in the roll data supplied to that evaluation is a problem. Do not maintain
+// a list of supposedly old paths here: valid paths depend on the evaluator.
+const FORMULA_REFERENCE_PATTERN = /@([a-z.0-9_-]+)/gi;
+
+function unresolvedFormulaReferences(formula, document) {
+  const rollData = document?.getRollData?.({ deterministic: true });
+  // A document without roll data cannot be classified reliably. Black Flag
+  // itself will surface a preparation error if it ever evaluates it.
+  if (!rollData) return [];
+  const references = new Set();
+  for (const match of String(formula ?? "").matchAll(FORMULA_REFERENCE_PATTERN)) {
+    const reference = match[1];
+    if (foundry.utils.getProperty(rollData, reference) == null) references.add(`@${reference}`);
+  }
+  return [...references];
+}
 
 function actorEffects(actor) {
   return [
@@ -99,34 +107,34 @@ function legacyEffectFormulaChanges() {
   const matches = [];
   for (const actor of collectionDocuments(game.actors)) {
     for (const effect of actorEffects(actor)) {
-      const indexes = [];
+      const referencesByIndex = new Map();
       for (const [index, change] of collectionDocuments(effect.changes).entries()) {
-        const value = String(change?.value ?? "");
-        if (LEGACY_EFFECT_FORMULA_REFERENCES.some(reference => value.includes(reference))) indexes.push(index);
+        // Item enchantments are prepared by Black Flag against the owning
+        // Item's deterministic roll data; Actor effects use the Actor. This
+        // matches the replacement data passed by each document type.
+        const references = unresolvedFormulaReferences(change?.value, effect.parent ?? actor);
+        if (references.length) referencesByIndex.set(index, references);
       }
       const legacyType = effect.type === "standard" || effect._source?.type === "standard";
-      if (indexes.length || legacyType) matches.push({ actor, effect, indexes, legacyType });
+      if (referencesByIndex.size || legacyType) matches.push({ actor, effect, referencesByIndex, legacyType });
     }
   }
   return matches;
 }
 
-function cleanLegacyAdvancementFormulas(value) {
-  let removed = 0;
+function unresolvedAdvancementFormulas(value, item) {
+  let count = 0;
   const visit = node => {
     if (!node || typeof node !== "object") return;
     if (Array.isArray(node?.configuration?.changes)) {
-      const before = node.configuration.changes.length;
-      node.configuration.changes = node.configuration.changes.filter(change => {
-        const formula = String(change?.value ?? "");
-        return !LEGACY_EFFECT_FORMULA_REFERENCES.some(reference => formula.includes(reference));
-      });
-      removed += before - node.configuration.changes.length;
+      for (const change of node.configuration.changes) {
+        if (unresolvedFormulaReferences(change?.value, item).length) count += 1;
+      }
     }
     for (const child of Object.values(node)) visit(child);
   };
   visit(value);
-  return removed;
+  return count;
 }
 
 function legacyAdvancementFormulaItems() {
@@ -135,8 +143,8 @@ function legacyAdvancementFormulaItems() {
     for (const item of collectionDocuments(actor.items)) {
       const advancement = foundry.utils.deepClone(item._source?.system?.advancement);
       if (!advancement) continue;
-      const removed = cleanLegacyAdvancementFormulas(advancement);
-      if (removed) matches.push({ actor, item, advancement, removed });
+      const unresolved = unresolvedAdvancementFormulas(advancement, item);
+      if (unresolved) matches.push({ actor, item, advancement, unresolved });
     }
   }
   return matches;
@@ -270,13 +278,13 @@ export class GMToolsService {
     const matches = legacyEffectFormulaChanges();
     const advancementMatches = legacyAdvancementFormulaItems();
     const entries = [
-        ...matches.flatMap(({ actor, effect, indexes, legacyType }) => {
+        ...matches.flatMap(({ actor, effect, referencesByIndex, legacyType }) => {
           const owner = effect.parent?.documentName === "Item" ? effect.parent : effect;
           const source = formulaSource(owner);
           const location = effect.parent?.documentName === "Item"
             ? `${effect.parent.name} · ${effect.name}`
             : effect.name;
-          const formulaEntries = indexes.map(index => {
+          const formulaEntries = [...referencesByIndex.entries()].map(([index, references]) => {
             const change = collectionDocuments(effect.changes)[index] ?? {};
             return {
               actorName: actor.name,
@@ -284,7 +292,7 @@ export class GMToolsService {
               location,
               path: `changes.${index}.value`,
               formula: String(change.value ?? ""),
-              references: LEGACY_EFFECT_FORMULA_REFERENCES.filter(reference => String(change.value ?? "").includes(reference)).join(", "),
+              references: references.join(", "),
               ...source
             };
           });
@@ -307,7 +315,7 @@ export class GMToolsService {
             if (Array.isArray(node?.configuration?.changes)) {
               node.configuration.changes.forEach((change, index) => {
                 const formula = String(change?.value ?? "");
-                const references = LEGACY_EFFECT_FORMULA_REFERENCES.filter(reference => formula.includes(reference));
+                const references = unresolvedFormulaReferences(formula, item);
                 if (references.length) entries.push({
                   actorName: actor.name,
                   documentUuid: item.uuid,
@@ -340,10 +348,10 @@ export class GMToolsService {
     })).sort((left, right) => left.sourceName.localeCompare(right.sourceName, game.i18n.lang)
       || left.sourceId.localeCompare(right.sourceId, game.i18n.lang));
     return {
-      changes: matches.reduce((count, entry) => count + entry.indexes.length, 0),
+      changes: matches.reduce((count, entry) => count + entry.referencesByIndex.size, 0),
       types: matches.filter(entry => entry.legacyType).length,
       effects: matches.length,
-      advancementChanges: advancementMatches.reduce((count, entry) => count + entry.removed, 0),
+      advancementChanges: advancementMatches.reduce((count, entry) => count + entry.unresolved, 0),
       advancementItems: advancementMatches.length,
       actors: new Set([...matches, ...advancementMatches].map(entry => entry.actor.uuid)).size,
       groups
@@ -499,6 +507,11 @@ export class GMToolsService {
     entries = assignMilestoneEvidence(entries, rows, existingEntries, milestoneEvidence(actor.uuid));
     const milestones = finiteNumber(entries.length, milestoneLabel, { integer: true });
     const sessionsPlayed = finiteNumber(values.sessionsPlayed, game.i18n.localize("DOWNTIME_MANAGER.GMTools.SessionsPlayed"), { integer: true });
+    const rawTierCap = String(values.tierCapLevel ?? "").trim();
+    const tierCapLevel = rawTierCap ? Math.floor(Number(rawTierCap)) : null;
+    if (tierCapLevel !== null && (!TIER_CAP_LEVELS.includes(tierCapLevel) || tierCapLevel < actorLevel(actor))) {
+      throw new Error(uiText("DOWNTIME_MANAGER.GMTools.TierCapInvalid", "Das Tier-Limit muss dem aktuellen Charakterlevel entsprechen oder darüber liegen."));
+    }
     let passiveDowntime;
     try {
       passiveDowntime = values.passiveDowntime === undefined ? sessionProgress(actor).passiveDowntime ?? {} : JSON.parse(String(values.passiveDowntime));
@@ -517,6 +530,7 @@ export class GMToolsService {
       milestoneEntries: entries,
       sessionsPlayed,
       lastMilestoneWeek: String(values.lastMilestoneWeek ?? "").trim() || null,
+      tierCapLevel,
       passiveDowntime
     };
     await storeUndo({ kind: "actor", tab: "characters", actorUuid: actor.uuid, before });

@@ -1,5 +1,5 @@
 import { MODULE_ID } from "./core/constants.mjs";
-import { activateDowntime, registerDowntime } from "./downtime/main.mjs?v=3.8.0-unresolved-advancement-formulas-1";
+import { activateDowntime, registerDowntime } from "./downtime/main.mjs?v=3.8.5-raffle-withdraw-9";
 import { activateVoidTaint, registerVoidTaint } from "./void-taint/main.mjs?v=3.3.0-void-taint-1";
 import { installBlackFlagCompatibility } from "./integrations/black-flag-compatibility.mjs?v=3.7.8-forward-consumption-1";
 import {
@@ -22,7 +22,7 @@ const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   characterCreation: "./integrations/character-creation-overrides.mjs",
   weaponOptions: "./integrations/weapon-option-activities.mjs?v=3.2.4-tooltip-links-2",
   playerUnpause: "./player-unpause.mjs",
-  compendiumLibrary: "./compendium-library.mjs?v=3.8.0-kctg-library-source-1",
+  compendiumLibrary: "./compendium-library.mjs?v=3.8.5-weapon-library-filters-1",
   dnd5eItemImporter: "./dnd5e-item-importer.mjs?v=3.8.0-import-spell-school-1",
   challengeManager: "./challenge-manager.mjs?v=3.8.0-standalone-combat-hud-23",
   linkTools: "./link-tools-config.mjs",
@@ -33,17 +33,19 @@ const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   settingsCategories: "./settings-categories.mjs",
   help: "./help-config.mjs",
   activityChaining: "./activity-chaining.mjs?v=3.3.1-follow-up-filter-2",
-  compatibility: "./integrations/compatibility-layer.mjs?v=3.8.0-isolated-feature-loads-1",
+  compatibility: "./integrations/compatibility-layer.mjs?v=3.8.5-main-sheet-layout-13",
   compendiumUsability: "./compendium-usability.mjs",
   chatImagePopouts: "./chat-image-popout.mjs",
   chatMessageDeletion: "./chat-message-deletion.mjs",
   chatTimestamps: "./chat-timestamps.mjs",
   effectGroups: "./effect-groups.mjs?v=3.7.8-safe-documents-1",
-  tokenPresets: "./token-presets.mjs?v=3.7.6-actor-presets-1",
+  tokenPresets: "./token-presets.mjs?v=3.8.5-biography-preset-link-1",
   tokenLightAura: "./token-light-aura.mjs",
-  simpleTileTriggers: "./simple-tile-triggers.mjs?v=3.2.2",
+  simpleTileTriggers: "./simple-tile-triggers.mjs?v=3.8.5-scene-hud-3",
+  sceneActionHud: "./scene-action-hud.mjs?v=3.8.5-scene-hud-9",
+  serverUpdateWarning: "./server-update-warning.mjs?v=3.9.0-custom-warning-1",
   commerce: "./commerce/main.mjs?v=3.7.8-runtime-audit-1",
-  contestedActivity: "./contested-activity.mjs",
+  contestedActivity: "./contested-activity.mjs?v=3.8.5-direct-registration-1",
   talentBackgrounds: "./talent-backgrounds.mjs?v=3.3.1-talent-backgrounds-6",
   spellScrolls: "./spell-scrolls.mjs?v=3.7.8-clearance-label-1",
   spellNameMarkers: "./spell-name-markers.mjs?v=3.5.0-spell-markers-1",
@@ -170,6 +172,7 @@ function initSteps() {
   return compactSteps([
     ["blackFlagCompatibility", installBlackFlagCompatibility],
     step("simpleTileTriggers", "simpleTileTriggers", "registerSimpleTileTriggers"),
+    step("sceneActionHud", "sceneActionHud", "registerSceneActionHud"),
     step("commerce", "commerce", "registerCommerce"),
     step("chatTimestamps", "chatTimestamps", "installChatTimestamps"),
     step("compendiumUsability", "compendiumUsability", "installCompendiumUsability"),
@@ -185,6 +188,7 @@ function initSteps() {
     step("compendiumLibrary", "compendiumLibrary", "registerCompendiumLibrary"),
     step("dnd5eItemImporter", "dnd5eItemImporter", "registerDnd5eItemImporter"),
     step("weaponCustomization", "weaponCustomization", "registerWeaponCustomization"),
+    step("contestedActivity", "contestedActivity", "registerContestedActivity"),
     step("challengeManager", "challengeManager", "registerChallengeManager"),
     step("featurePool", "featurePool", "registerFeaturePoolIntegration"),
     step("tokenSizeSync", "tokenSizeSync", "registerTokenSizeSync"),
@@ -204,6 +208,8 @@ function readyEarlySteps() {
     step("compatibilityActivation", "compatibility", "activateCompatibilityLayer"),
     step("moduleEventsActivation", "events", "activateModuleEvents"),
     step("simpleTileTriggerActivation", "simpleTileTriggers", "activateSimpleTileTriggers"),
+    step("sceneActionHudActivation", "sceneActionHud", "activateSceneActionHud"),
+    step("serverUpdateWarningActivation", "serverUpdateWarning", "activateServerUpdateWarning"),
     step("commerceActivation", "commerce", "activateCommerce"),
     step("schedulerActivation", "scheduler", "activateScheduler"),
     step("playerUnpauseActivation", "playerUnpause", "activatePlayerUnpause"),

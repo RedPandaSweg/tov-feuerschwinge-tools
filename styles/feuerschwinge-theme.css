@@ -483,6 +483,45 @@
   background: rgba(8, 6, 5, .78);
 }
 
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .dice-roll .dice-flavor:has(.tovf-skill-check-icon) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .38rem;
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .dice-roll .tovf-skill-check-icon {
+  color: var(--tovf-color-ember-hot);
+  font-size: .9em;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 90%));
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .dice-roll .tovf-skill-result {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 64px;
+  gap: .38rem;
+  align-items: start;
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .dice-roll :is(.tovf-skill-roll-token, .tovf-skill-roll-art) {
+  width: 64px;
+  height: 64px;
+  margin: 0;
+  border: 1px solid var(--tovf-color-bronze-light);
+  border-radius: 6px;
+  background: rgba(8, 6, 5, .86);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, .3), 0 0 6px rgba(239, 88, 24, .22);
+  object-fit: cover;
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .dice-roll .tovf-skill-roll-token {
+  border-color: var(--tovf-color-ember-hot);
+}
+
+:is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .dice-roll .tovf-skill-roll-values {
+  min-width: 0;
+}
+
 :is(#chat, #chat-popout, #chat-notifications) .chat-message.black-flag .dice-roll.success .dice-total {
   color: #dff0c5;
   border-color: #829b58;
@@ -694,6 +733,352 @@
   text-shadow: 0 0 4px rgba(255, 138, 43, .7);
 }
 
+.application.tovf-spell-manager-dialog {
+  --bf-background-color-blue: var(--tovf-color-bronze-dark);
+  --bf-background-color-dark-blue: var(--tovf-color-coal-soft);
+  --bf-border-color-blue: var(--tovf-color-bronze-light);
+  --bf-border-color-light-blue: var(--tovf-color-ember-hot);
+  --bf-text-color-black: var(--tovf-color-text);
+  --bf-text-color-blue: var(--tovf-color-gold-light);
+  --bf-scrollbar-color: var(--tovf-color-ember);
+  --color-scrollbar: var(--tovf-color-ember);
+  color: var(--tovf-color-text);
+  font-family: var(--tovf-font-ui);
+}
+
+.application.tovf-spell-manager-dialog :is(.slots, .spells) {
+  scrollbar-color: var(--tovf-color-ember) transparent;
+}
+
+.application.tovf-spell-manager-dialog :is(.slots, .spells)::-webkit-scrollbar-thumb {
+  border: 2px solid var(--tovf-color-soot);
+  background: linear-gradient(180deg, var(--tovf-color-ember-hot), var(--tovf-color-bronze));
+}
+
+.application.tovf-spell-manager-dialog .window-header {
+  color: var(--tovf-color-gold-light);
+  background:
+    radial-gradient(circle at 16% 120%, rgba(255, 112, 28, .38), transparent 34%),
+    linear-gradient(180deg, #541f10, #160907);
+  border-bottom: var(--tovf-border-strong);
+  box-shadow: inset 0 -1px var(--tovf-color-ember), 0 3px 10px rgba(239, 88, 24, .2);
+}
+
+.application.tovf-spell-manager-dialog .window-content {
+  background: var(--tovf-surface-window);
+  grid-template-areas:
+    "slots slots"
+    "restrictions restrictions"
+    "spells spells"
+    "controls controls";
+  grid-template-columns: minmax(15rem, 1fr) minmax(15rem, 1fr);
+  grid-template-rows: max-content max-content minmax(16rem, 1fr) max-content;
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-manager {
+  padding: .35rem .5rem .5rem;
+  border: 1px solid var(--tovf-color-bronze);
+  border-radius: var(--tovf-radius);
+  background: var(--tovf-surface-panel);
+  box-shadow: var(--tovf-shadow-panel);
+}
+
+.application.tovf-spell-manager-dialog .window-content > .slots {
+  max-block-size: 18rem;
+  padding: .45rem .65rem .5rem;
+  border: 0;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(239, 88, 24, .16), transparent 52%),
+    linear-gradient(180deg, rgba(53, 24, 14, .97), rgba(19, 11, 8, .96));
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, .34);
+}
+
+.application.tovf-spell-manager-dialog .window-content > .slots .news-slots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .3rem .45rem;
+  margin: 0;
+  padding: .2rem 0 0;
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-manager-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: .4rem 1.5rem;
+  min-height: 2.2rem;
+  margin: 0;
+  padding: .35rem .65rem;
+  color: var(--tovf-color-gold-light);
+  font-size: 1rem;
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-manager-summary > span {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-manager-summary i {
+  color: var(--tovf-color-ember-hot);
+}
+
+.application.tovf-spell-manager-dialog .tovf-slot-choice {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 2.15rem minmax(0, 1fr) 2rem;
+  align-items: center;
+  gap: .45rem;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.8rem;
+  height: 2.8rem;
+  margin: 0;
+  padding: .3rem .45rem .3rem .35rem;
+  border: 1px solid var(--tovf-color-bronze);
+  border-left: 3px solid var(--tovf-color-bronze-light);
+  border-radius: var(--tovf-radius-small);
+  color: var(--tovf-color-text);
+  background:
+    linear-gradient(90deg, rgba(111, 48, 22, .4), transparent 38%),
+    rgba(18, 10, 7, .82);
+  text-align: left;
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, .3);
+}
+
+.application.tovf-spell-manager-dialog .tovf-slot-choice:is(:hover, :focus-visible) {
+  border-color: var(--tovf-color-ember-hot);
+  background: rgba(105, 42, 18, .5);
+}
+
+.application.tovf-spell-manager-dialog .slots li.selected > .tovf-slot-choice {
+  border-color: var(--tovf-color-gold);
+  border-left-color: var(--tovf-color-ember-hot);
+  background:
+    linear-gradient(90deg, rgba(181, 66, 20, .58), transparent 52%),
+    rgba(30, 13, 8, .9);
+  box-shadow: inset 0 0 10px rgba(255, 138, 43, .12), 0 0 6px rgba(239, 88, 24, .28);
+}
+
+.application.tovf-spell-manager-dialog .tovf-slot-choice .name {
+  display: flex;
+  align-items: center;
+  min-height: 2rem;
+  font-size: .82rem;
+  line-height: 1.15;
+}
+
+.application.tovf-spell-manager-dialog .window-content > .controls {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  padding: var(--tovf-space-sm);
+  border-top: 1px solid var(--tovf-color-bronze);
+}
+
+.application.tovf-spell-manager-dialog .window-content > .restrictions:not(:has(.replacement, .restriction)) {
+  display: none;
+  padding: 0;
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-manager-toolbar {
+  padding-bottom: .15rem;
+  border-bottom: 1px solid var(--tovf-color-bronze);
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-manager-search {
+  border-color: var(--tovf-color-bronze-light);
+  background: rgba(8, 6, 5, .72);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, .36);
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-manager-search > i {
+  color: var(--tovf-color-ember-hot);
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-manager-search input {
+  color: var(--tovf-color-text);
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-manager-circles button {
+  border: 1px solid var(--tovf-color-bronze);
+  border-radius: var(--tovf-radius-small);
+  color: var(--tovf-color-text-muted);
+  background: rgba(30, 15, 10, .82);
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-manager-circles button:is(:hover, :focus-visible) {
+  color: var(--tovf-color-gold-light);
+  border-color: var(--tovf-color-ember-hot);
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-manager-circles button.active {
+  color: #fff2d1;
+  border-color: var(--tovf-color-ember-hot);
+  background: var(--tovf-surface-control-hover);
+  box-shadow: var(--tovf-shadow-ember), inset 0 0 9px rgba(0, 0, 0, .34);
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-manager-list {
+  margin: 0;
+  padding: .05rem .1rem .1rem;
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-manager-list > li {
+  align-self: stretch;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-manager-list > li:is(:hover, :focus-within) {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-manager-list > li.selected {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.application.tovf-spell-manager-dialog :is(.tovf-spell-manager-list, .news-slots) > li::before {
+  display: none;
+}
+
+.application.tovf-spell-manager-dialog .news-slots > li {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-choice {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) 2rem;
+  align-items: center;
+  gap: .45rem;
+  width: calc(100% - .6rem);
+  min-height: 3rem;
+  height: calc(100% - .24rem);
+  margin: .12rem .3rem;
+  padding: .25rem .35rem;
+  border: 1px solid var(--tovf-color-bronze-dark);
+  border-radius: 1.35rem;
+  color: var(--tovf-color-text);
+  background: rgba(35, 18, 12, .72);
+  text-align: left;
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-choice > :is(.icon, .name, .tovf-spell-circle) {
+  align-self: center;
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-choice .name {
+  display: flex;
+  align-items: center;
+  min-height: 2rem;
+  font-size: .82rem;
+  line-height: 1.15;
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-choice:is(:hover, :focus-visible) {
+  border-color: var(--tovf-color-ember-hot);
+  background: rgba(105, 42, 18, .5);
+}
+
+.application.tovf-spell-manager-dialog li.selected > .tovf-spell-choice {
+  border-color: var(--tovf-color-gold-light);
+  background: linear-gradient(90deg, rgba(166, 61, 19, .54), rgba(48, 19, 10, .66));
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-choice:disabled {
+  opacity: .48;
+  cursor: not-allowed;
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-circle {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-self: center;
+  justify-self: center;
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid var(--tovf-color-bronze-light);
+  border-radius: 50%;
+  color: var(--tovf-color-gold-light);
+  background: rgba(10, 6, 4, .84);
+  line-height: 1;
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-circle > .tovf-circle-star {
+  position: absolute;
+  margin-top: 0.1rem;
+  padding-left: 0.05rem;
+  color: var(--tovf-color-bronze-light);
+  font-size: 2.5rem;
+  font-weight: bold;
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-circle > b {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff2d1;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 1px 2px #000, 0 0 3px #000;
+}
+
+.application.tovf-spell-manager-dialog li.selected .tovf-spell-circle {
+  border-color: var(--tovf-color-ember-hot);
+  color: #fff2d1;
+  background: rgba(51, 17, 8, .92);
+}
+
+.application.tovf-spell-manager-dialog li.selected .tovf-spell-circle > .tovf-circle-star {
+  color: var(--tovf-color-ember-hot);
+  filter: drop-shadow(0 0 5px rgba(255, 138, 43, .78));
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-circle.replace > i {
+  color: var(--tovf-color-gold-light);
+  font-size: .9rem;
+  filter: none;
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-manager-list .icon img {
+  border: 1px solid var(--tovf-color-bronze-light);
+  border-radius: 50%;
+  box-shadow: 0 0 5px rgba(239, 88, 24, .28);
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-manager-list .name {
+  color: var(--tovf-color-gold-light);
+}
+
+.application.tovf-spell-manager-dialog .tovf-spell-manager-list .name small {
+  color: var(--tovf-color-ember-hot);
+}
+
+.application.tovf-spell-manager-dialog :is(.slots, .restrictions, .controls) {
+  border-color: var(--tovf-color-bronze);
+}
+
 :is(.black-flag.actor.sheet, .black-flag.item.sheet) .window-header {
   color: var(--tovf-color-gold-light);
   background:
@@ -730,7 +1115,6 @@
 :is(.black-flag.actor.sheet, .black-flag.item.sheet) :is(fieldset, .block, .stat-block) {
   color: var(--tovf-color-text);
   background: var(--tovf-surface-panel);
-  border-color: var(--tovf-color-bronze);
   box-shadow: inset 0 0 10px rgba(0, 0, 0, .28);
 }
 
@@ -788,7 +1172,6 @@
   color: var(--tovf-color-gold-light);
   background: radial-gradient(circle, rgba(83, 38, 21, .96), rgba(20, 12, 9, .99));
   border-color: var(--tovf-color-bronze-light);
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, .38), 0 0 6px rgba(239, 88, 24, .18);
 }
 
 .black-flag.pc.sheet .abilities .ability .ability-save button.value {

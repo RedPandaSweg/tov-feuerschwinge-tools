@@ -135,6 +135,15 @@
       </select>
     </nav>
     {{/if}}
+    {{#if showWeaponFilters}}
+    <nav class="tovf-library-filters secondary tovf-library-weapon-filters" aria-label="Weapon filters">
+      <strong class="filter-label">Waffenfilter</strong>
+      <label><span>Typ</span><select data-library-filter="weaponType"><option value="">Alle</option>{{#each weaponTypes}}<option value="{{value}}" {{#if (eq value ../selectedWeaponType)}}selected{{/if}}>{{label}} ({{count}})</option>{{/each}}</select></label>
+      <label><span>Schadenstyp</span><select data-library-filter="weaponDamageType"><option value="">Alle</option>{{#each weaponDamageTypes}}<option value="{{value}}" {{#if (eq value ../selectedWeaponDamageType)}}selected{{/if}}>{{label}} ({{count}})</option>{{/each}}</select></label>
+      <label><span>Property</span><select data-library-filter="weaponProperty"><option value="">Alle</option>{{#each weaponProperties}}<option value="{{value}}" {{#if (eq value ../selectedWeaponProperty)}}selected{{/if}}>{{label}} ({{count}})</option>{{/each}}</select></label>
+      <label><span>Weapon Trait</span><select data-library-filter="weaponTrait"><option value="">Alle</option>{{#each weaponTraits}}<option value="{{value}}" {{#if (eq value ../selectedWeaponTrait)}}selected{{/if}}>{{label}} ({{count}})</option>{{/each}}</select></label>
+    </nav>
+    {{/if}}
     {{#if showMonsterFilters}}
     <details class="tovf-library-spell-filters" open>
       <summary><span><i class="fa-solid fa-filter" inert></i> {{localize "TOVF.Library.MonsterFilters.Title"}}</span>{{#if monsterFilterCount}}<small>{{localize "TOVF.Library.SpellFilters.Active" count=monsterFilterCount}}</small>{{/if}}</summary>

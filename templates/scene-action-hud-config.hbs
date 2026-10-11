@@ -1,0 +1,31 @@
+<section class="tab {{tab.cssClass}} tovf-scene-hud-config" data-tab="tovfSceneHud" data-group="sheet" data-tovf-scene-hud-config>
+  <textarea hidden name="flags.tov-feuerschwinge-tools.sceneActionHud">{{configJson}}</textarea>
+  <div class="form-group"><label>HUD aktivieren</label><input type="checkbox" data-hud-enabled {{checked config.enabled}}></div>
+  <ol class="tovf-scene-hud-sections">
+    {{#each config.sections as |section sectionIndex|}}
+    <li class="tovf-scene-hud-section-editor" data-hud-section-id="{{section.id}}">
+      <header class="tovf-scene-hud-section-head">
+        <strong><i class="fa-solid fa-table-columns"></i> Bereich {{section.displayIndex}}</strong><label>Spalten<select data-section-columns><option value="1" {{#if (eq section.columns 1)}}selected{{/if}}>1</option><option value="2" {{#if (eq section.columns 2)}}selected{{/if}}>2</option><option value="3" {{#if (eq section.columns 3)}}selected{{/if}}>3</option></select></label>
+        <span><button type="button" class="icon fa-solid fa-chevron-up" data-hud-editor-action="sectionUp" aria-label="Bereich nach oben"></button><button type="button" class="icon fa-solid fa-chevron-down" data-hud-editor-action="sectionDown" aria-label="Bereich nach unten"></button><button type="button" class="icon fa-solid fa-trash" data-hud-editor-action="removeSection" aria-label="Bereich entfernen"></button></span>
+      </header>
+      <ol class="tovf-scene-hud-blocks">
+        {{#each section.items as |block blockIndex|}}
+        <li data-hud-block-id="{{block.id}}" class="tovf-scene-hud-block {{block.type}}">
+          <header><strong><i class="fa-solid {{#if (eq block.type "button")}}fa-square{{else}}fa-align-left{{/if}}"></i> {{#if (eq block.type "button")}}Button{{else}}Text{{/if}}</strong><label>Breite<select data-block-span><option value="1" {{#if (eq block.span 1)}}selected{{/if}}>1 Spalte</option><option value="2" {{#if (eq block.span 2)}}selected{{/if}}>2 Spalten</option><option value="3" {{#if (eq block.span 3)}}selected{{/if}}>3 Spalten</option></select></label><span><button type="button" class="icon fa-solid fa-arrow-left" data-hud-editor-action="blockPreviousSection" aria-label="In vorherigen Bereich verschieben" title="In vorherigen Bereich" {{#unless block.canMovePrevious}}disabled{{/unless}}></button><button type="button" class="icon fa-solid fa-arrow-right" data-hud-editor-action="blockNextSection" aria-label="In nächsten Bereich verschieben" title="In nächsten Bereich" {{#unless block.canMoveNext}}disabled{{/unless}}></button><button type="button" class="icon fa-solid fa-chevron-up" data-hud-editor-action="blockUp" aria-label="Nach oben"></button><button type="button" class="icon fa-solid fa-chevron-down" data-hud-editor-action="blockDown" aria-label="Nach unten"></button><button type="button" class="icon fa-solid fa-trash" data-hud-editor-action="removeBlock" aria-label="Entfernen"></button></span></header>
+          {{#if (eq block.type "text")}}<prose-mirror data-hud-block-text value="{{block.text}}" class="tovf-scene-hud-editor"></prose-mirror>{{else}}<input type="text" data-hud-block-text value="{{block.text}}" placeholder="Buttonbeschriftung">{{/if}}
+          {{#if (eq block.type "button")}}
+          <ol class="tovf-scene-hud-actions">{{#each block.actions as |action actionIndex|}}<li data-hud-action-id="{{action.id}}">
+            <header><strong>{{#if (eq action.type "spawnCharacter")}}Charakter spawnen{{else if (eq action.type "removeSpawned")}}Eigene Token entfernen{{else if (eq action.type "executeMacro")}}Makro ausführen{{else}}Szene anzeigen{{/if}}</strong><span><button type="button" class="icon fa-solid fa-chevron-up" data-hud-editor-action="actionUp" aria-label="Nach oben"></button><button type="button" class="icon fa-solid fa-chevron-down" data-hud-editor-action="actionDown" aria-label="Nach unten"></button><button type="button" class="icon fa-solid fa-trash" data-hud-editor-action="removeAction" aria-label="Entfernen"></button></span></header>
+            {{#if (eq action.type "spawnCharacter")}}<div class="tovf-hud-coordinate-row"><label>X<input type="number" data-action-field="x" value="{{action.x}}"></label><label>Y<input type="number" data-action-field="y" value="{{action.y}}"></label></div>{{else if (eq action.type "executeMacro")}}<div class="tovf-macro-drop" data-macro-drop>{{#if action.macroUuid}}{{action.macroName}}{{else}}Makro hierher ziehen{{/if}}</div><label><input type="checkbox" data-action-field="runAsGM" data-action-field-type="checkbox" {{checked action.runAsGM}}> Als Spielleitung ausführen</label><textarea data-action-field="arguments" data-action-field-type="text" rows="2" placeholder='Arguments (JSON)'>{{action.arguments}}</textarea>{{else if (eq action.type "viewScene")}}<div class="tovf-scene-drop" data-scene-drop>{{#if action.sceneUuid}}{{action.sceneName}}{{else}}Szene hierher ziehen{{/if}}</div>{{/if}}
+          </li>{{else}}<li class="empty">Noch keine Aktionen.</li>{{/each}}</ol>
+          <div class="tovf-scene-hud-add"><select data-new-action-type><option value="spawnCharacter">Charakter spawnen</option><option value="removeSpawned">Eigene Token entfernen</option><option value="viewScene">Szene anzeigen</option><option value="executeMacro">Makro ausführen</option></select><button type="button" data-hud-editor-action="addAction"><i class="fa-solid fa-plus"></i> Aktion</button></div>
+          {{/if}}
+        </li>
+        {{else}}<li class="empty">Noch keine Elemente in diesem Bereich.</li>{{/each}}
+      </ol>
+      <div class="tovf-scene-hud-add"><select data-new-block-type><option value="text">Text</option><option value="button">Button</option></select><button type="button" data-hud-editor-action="addBlock"><i class="fa-solid fa-plus"></i> Element</button></div>
+    </li>
+    {{else}}<li class="empty">Noch keine HUD-Bereiche.</li>{{/each}}
+  </ol>
+  <div class="tovf-scene-hud-add tovf-scene-hud-add-section"><button type="button" data-hud-editor-action="addSection"><i class="fa-solid fa-table-columns"></i> Bereich hinzufügen</button></div>
+</section>

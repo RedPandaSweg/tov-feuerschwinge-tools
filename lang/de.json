@@ -170,6 +170,30 @@
       "Failed": "Die Chatnachricht konnte nicht gelöscht werden.",
       "Rejected": "Du darfst nur deine eigenen Chatnachrichten löschen."
     },
+    "ServerUpdateWarning": {
+      "Tool": "Server-Warnung senden",
+      "ComposerTitle": "Warnung an alle Spieler",
+      "Preset": "Vorlage",
+      "OverrideHint": "Titel und Nachricht können frei eingetragen werden. Leere Felder übernehmen den Text der gewählten Vorlage.",
+      "CustomTitle": "Eigener Titel",
+      "CustomTitlePlaceholder": "Optional bei einer Vorlage",
+      "CustomMessage": "Eigene Nachricht",
+      "CustomMessagePlaceholder": "Optional bei einer Vorlage",
+      "Preview": "Vorschau",
+      "PreviewTitle": "Server-Warnung prüfen",
+      "Send": "An Spieler senden",
+      "Confirm": "Diese Warnung jetzt an {count} verbundene Spieler senden?",
+      "Sent": "Die Warnung wurde an {count} verbundene Spieler gesendet.",
+      "Acknowledge": "Verstanden",
+      "FullGMOnly": "Nur ein vollständiger Spielleiter darf Server-Warnungen senden.",
+      "MissingContent": "Titel und Nachricht dürfen nicht leer sein.",
+      "Presets": {
+        "Update": { "Label": "Server-Update steht bevor", "Title": "Server-Update", "Message": "Der Server wird gleich aktualisiert. Bitte beendet eure aktuellen Aktionen und wartet, bis der Server wieder erreichbar ist." },
+        "Restart": { "Label": "Server-Neustart steht bevor", "Title": "Server-Neustart", "Message": "Der Server wird gleich neu gestartet. Bitte beendet eure aktuellen Aktionen und wartet, bis der Server wieder erreichbar ist. Schreibt bitte kurz im Chat, falls ihr noch einen Moment braucht." },
+        "Complete": { "Label": "Update abgeschlossen – bitte neu laden", "Title": "Update abgeschlossen", "Message": "Das Update ist abgeschlossen. Bitte ladet Foundry jetzt neu, damit alle Änderungen übernommen werden." },
+        "Custom": { "Label": "Eigene Warnung" }
+      }
+    },
     "Argon": {
       "CharacterLevel": "Stufe {level}",
       "LegacyAdapterActive": "Deaktiviere „Argon - Combat HUD (BLACK-FLAG)“. Feuerschwinge stellt diese Argon-Integration jetzt selbst bereit.",
@@ -465,6 +489,13 @@
       "ImagesConfirm": "Auf {actors} Actors wurden {items} fehlende Bilder gefunden. {matched} erhalten ein eindeutig zugeordnetes Compendium-Bild; {fallback} erhalten den Frosch mit Herz als Ersatzbild. Vor der Reparatur wird ein Backup heruntergeladen.",
       "ImagesNone": "Keine leeren oder nicht ladbaren Actor-Item-Bilder gefunden.",
       "ImagesComplete": "{items} fehlende Item-Bilder auf {actors} Actors repariert. Das Ersatzbild wurde {fallback}-mal verwendet.",
+      "SourcesTitle": "Feuerschwinge-Itemquellen",
+      "SourcesHint": "Ordnet Actor-Items bevorzugt den Feuerschwinge-Compendien zu. Eindeutige Treffer werden über Item-Typ und Identifier oder Name erkannt; anschließend werden Name, Identifier und Compendium-Link auf die Feuerschwinge-Quelle gesetzt. Klassen und andere Charakteroptionen werden dabei nicht inhaltlich ersetzt. Mehrdeutige und fehlende Treffer werden als Diagnosebericht heruntergeladen.",
+      "SourcesRepair": "Itemquellen bereinigen",
+      "SourcesScanning": "Actor-Items und Feuerschwinge-Compendien werden abgeglichen ...",
+      "SourcesConfirm": "Für {items} Items auf {actors} Actors wurde eine eindeutige Feuerschwinge-Quelle gefunden. Davon wurden {identifier} über den Identifier und {name} über den Namen zugeordnet. {ambiguous} Zuordnungen sind mehrdeutig, {unmatched} Items haben keinen Treffer und bleiben unverändert. Name, Identifier und Compendium-Link der eindeutigen Treffer werden vereinheitlicht. Vorher wird ein Backup heruntergeladen.",
+      "SourcesNone": "Keine zu bereinigenden Itemquellen gefunden. {ambiguous} Zuordnungen sind mehrdeutig, {unmatched} Items haben keinen Feuerschwinge-Treffer.",
+      "SourcesComplete": "{items} Itemquellen auf {actors} Actors mit Feuerschwinge vereinheitlicht. {ambiguous} mehrdeutige und {unmatched} nicht gefundene Items blieben unverändert.",
       "WeaponActivitiesTitle": "Weapon-Option-Activities",
       "WeaponActivitiesHint": "Synchronisiert die Activities ausgewählter Weapon Options einmalig für alle Weapons in der Welt, auf Actors und im Feuerschwinge-Item-Compendium. Der Vorgang startet nicht automatisch.",
       "WeaponActivities": "Weapon-Activities synchronisieren",
@@ -598,10 +629,12 @@
       "Rules": {
         "Title": "Cheat Sheets",
         "Short": "Regeln",
-        "Conditions": "Zustände",
+        "Conditions": "Conditions",
         "Actions": "Aktionen im Combat",
         "Movement": "Bewegung im Combat",
+        "Luck": "Luck",
         "Playing": "Das Spiel spielen",
+        "Doom": "Doom",
         "Missing": "Die Regelreferenz konnte nicht geöffnet werden."
       },
       "Settings": {
@@ -636,6 +669,18 @@
         "MaxInitiativeCards": {
           "Name": "Maximale Initiativekarten",
           "Hint": "Legt nur für diesen Benutzer fest, wie viele Initiativekarten gleichzeitig im Challenge HUD angezeigt werden."
+        },
+        "ShowInitiativeCarousel": {
+          "Name": "Initiative Carousel anzeigen",
+          "Hint": "Blendet das Initiative Carousel in diesem Challenge HUD ein oder aus."
+        },
+        "ShowEncounterTimer": {
+          "Name": "Encounter-Laufzeit anzeigen",
+          "Hint": "Zeigt unter dem Rundencounter die vergangene reale Zeit des Encounters an."
+        },
+        "ShowTurnTimer": {
+          "Name": "Zugdauer anzeigen",
+          "Hint": "Zeigt unter den Initiativekarten die vergangene reale Zeit des aktuellen Zuges an."
         }
       },
       "Encounter": {
@@ -643,12 +688,33 @@
         "ActiveAdversaries": "Aktive Gegner",
         "MaxCR": "Höchste CR"
       },
+      "Hud": {
+        "Round": "Runde",
+        "RollInitiative": "Initiative würfeln",
+        "RollNpcInitiative": "Initiative für alle NPCs würfeln",
+        "PreviousTurn": "Vorheriger Zug",
+        "NextTurn": "Nächster Zug",
+        "EndTurn": "Zug beenden",
+        "StartCombat": "Combat starten",
+        "EndCombat": "Combat beenden"
+      },
       "Doom": {
         "Bank": "Doom Bank",
-        "Advantage": "Advantage (1)",
-        "Disadvantage": "Disadvantage (1)",
-        "ExtraAction": "Extra Aktion (2)",
-        "Recharge": "Recharge (3)",
+        "Advantage": "Advantage",
+        "AdvantageHint": "1 Doom: Advantage auf einen Attack Roll. Kein Encounter-Limit.",
+        "Disadvantage": "PC Save Disadvantage",
+        "DisadvantageHint": "1 Doom: Disadvantage auf einen Saving Throw eines PCs. Kein Encounter-Limit.",
+        "Refresh": "Feature auffrischen",
+        "RefreshHint": "1 Doom: Ein Limited-Use Feature auffrischen. Einmal pro Encounter.",
+        "AutomaticSave": "Save gelingt",
+        "AutomaticSaveHint": "1 Doom: Ein Saving Throw gelingt automatisch. Einmal pro Encounter.",
+        "AutomaticHit": "Attack trifft",
+        "AutomaticHitHint": "1 Doom: Ein Attack Roll trifft automatisch. Einmal pro Encounter.",
+        "Movement": "Doom Movement",
+        "MovementHint": "1 Doom: Eine Kreatur bewegt sich bis zur halben Speed ohne Opportunity Attacks. Nur am Ende des Turns einer anderen Kreatur. Kein Encounter-Limit.",
+        "OncePerEncounter": "1× pro Encounter",
+        "AlreadyUsed": "Diese Doom-Aktion wurde in diesem Encounter bereits verwendet.",
+        "Insufficient": "Nicht genug Doom.",
         "Recalculate": "Doom Points neu berechnen",
         "RecalculateFailed": "Die Doom Points konnten nicht neu berechnet werden. Details stehen in der Konsole.",
         "Increase": "Doom erhöht",
@@ -827,6 +893,7 @@
       "ImportPreview": "{count} Charaktere aus der Hauptwelt „{source}“ werden übernommen.",
       "ImportAction": "Importieren",
       "ImportComplete": "Sessionimport abgeschlossen: {create} neu, {update} aktualisiert.",
+      "ImportUpdated": "Session aktualisiert: {create} Teilnehmer ergänzt. Bereits bespielte Sessioncharaktere blieben unverändert.",
       "ResultExportComplete": "{count} Charakterstände wurden als Sessionergebnis exportiert.",
       "ResultImportComplete": "{count} Charakterergebnisse wurden übernommen.",
       "ResultImportSkipped": "{count} fehlerhafte Charakter- oder Itemänderung(en) wurden übersprungen. Details stehen in der Konsole.",
@@ -1901,6 +1968,8 @@
                                              "Expertise":  "Expertise",
                                              "AlreadyKnown":  "{name} (bereits vorhanden)",
                                              "SpellScrollTransferDescription": "Übertrage {spell}, einen Spell des {circle}. Circles, in das Spellbook des Wizards.",
+                                             "SpellScrollScribingName": "Spellscroll herstellen: {spell}",
+                                             "SpellScrollScribingDescription": "Stelle eine Spellscroll von {spell} her.",
                                              "CharacterRewardTypes": { "language": "Sprache", "skill": "Fertigkeit", "tool": "Werkzeug", "weapon": "Waffe", "armor": "Rüstung" },
                                              "Collaborative":  "Gemeinschaftsprojekt mit Projektleiter",
                                              "Participants":  "Teilnehmer",
@@ -2018,6 +2087,8 @@
                                              "NoPublicProjects":  "Keine öffentlichen Projekte konfiguriert.",
                                              "SpellScrollRecipes": "Spellscrolls aus dem Charakterinventar anbieten",
                                              "SpellScrollRecipesHint": "Erzeugt automatisch Projekte zur Übertragung unserer Spellscrolls ins Spellbook. Die Spellscroll wird nicht verbraucht.",
+                                             "SpellScrollScribing": "Eigene Spells als Spellscrolls herstellen",
+                                             "SpellScrollScribingHint": "Erzeugt automatische Projekte für die Spells des Charakters. Benötigt ein Spellcasting-Feature sowie Artist Tools oder eine zur Magic Source passende Skill-Proficiency.",
                                              "ProjectItem":  "Downtime-Projekt",
                                              "Projects":  "Projekte",
                                              "PublicProjects":  "Öffentliche Projekte",
@@ -2159,6 +2230,8 @@
                                             "SpellScrollCantrip": "Cantrip-Spellscrolls können nicht ins Spellbook übertragen werden.",
                                             "SpellScrollWizardRequired": "Zum Übertragen einer Spellscroll ist mindestens 1 Level in Wizard erforderlich.",
                                             "SpellScrollSourceUnavailable": "Die Magic Source dieses Spells ist nicht zum Übertragen freigeschaltet.",
+                                            "SpellScrollScribingSpellcastingRequired": "Zum Herstellen einer Spellscroll ist ein Spellcasting-Feature erforderlich.",
+                                            "SpellScrollScribingProficiencyRequired": "Für diese Magic Source ist Proficiency in Artist Tools oder im passenden Skill erforderlich: Arcana für Arcane und Wyrd, Nature für Primordial oder Religion für Divine.",
                                             "InvalidDowntime":  "Gib eine positive Downtime-Menge von höchstens {maximum} ein.",
                                             "InvalidRollTable":  "Die Ergebnistabelle enthält ungültige, überlappende oder doppelte Zeilen für natürliche Ergebnisse.",
                                             "InvalidValueTiers":  "Die Wertebereiche sind ungültig oder überlappen sich.",
@@ -2321,7 +2394,7 @@
                                                                   "kitchen": { "Name": "Küche", "Description": "Ein Arbeitsplatz zum Kochen und Vorbereiten von Proviant." },
                                                                   "workplace": { "Name": "Arbeitsstation", "Description": "Wöchentliche Arbeit in 5-Downtime-Blöcken mit Skill Check oder Tool Check, Lohn und stationsbezogenem Ruf." },
                                                                   "library": { "Name": "Forschungsstation", "Description": "Langfristige, gemeinschaftsfähige Forschung mit 5 × Proficiency Bonus Fortschritt pro Downtime und einem Wurf nach jeweils 5 Downtime." },
-                                                                  "scriptorium": { "Name": "Skriptorium", "Description": "Überträgt geeignete Spells von unseren Spellscrolls in das Spellbook eines Wizards, ohne die Spellscroll zu verbrauchen." },
+                                                                  "scriptorium": { "Name": "Skriptorium", "Description": "<p>Ein Skriptorium ist ein Ort, an dem magische Formeln studiert, übertragen und niedergeschrieben werden.</p><p>Wizards können hier geeignete Spellscrolls in ihr Spellbook übertragen.</p><p>Spellcaster können hier ihre Spells als Spellscrolls niederschreiben. Welche Magic Sources ihnen dabei offenstehen, hängt von ihren Proficiencies ab:</p><table><tbody><tr><th>Proficiency</th><td>Artist Tools</td><td>Arcana</td><td>Nature</td><td>Religion</td></tr><tr><th>Magic Sources</th><td>Alle</td><td>Arcane und Wyrd</td><td>Primordial</td><td>Divine</td></tr></tbody></table>" },
                                                                   "training-grounds": { "Name": "Ausbildungsstation", "Description": "Ausbildung mit 10 plus relevantem Attribut und Ausbilderbonus pro Downtime, Ausbildungswurf nach 5 Downtime und abschließender Prüfung." },
                                                                   "tavern": { "Name": "Geselligkeitsstation", "Description": "Eine 5-Downtime-Aktivität für Kontakte und Gefallen; Gesellschaftsschicht, Kosten und Ergebnis werden im Projekt festgelegt." },
                                                                   "workshop": { "Name": "Tüftlerwerkstatt", "Description": "Eine Werkstatt für Mechanismen, Reparaturen und Erfindungen." },

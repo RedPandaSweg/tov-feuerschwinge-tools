@@ -1,5 +1,5 @@
 import { MODULE_ID } from "./constants.mjs";
-import { levelFromMilestones, sessionProgress } from "./session-service.mjs";
+import { milestoneLevelForActor, sessionProgress } from "./session-service.mjs";
 
 export async function craftingAccess(actor, item, definition) {
   if (definition.spellScroll) {
@@ -30,6 +30,28 @@ export async function craftingAccess(actor, item, definition) {
         message: game.i18n.localize("DOWNTIME_MANAGER.Errors.SpellScrollSourceUnavailable") };
     }
   }
+  if (definition.spellScrollScribing) {
+    if (!actor?.system?.spellcasting?.hasSpellcastingAdvancement) {
+      return { minimum: 1, blocked: true,
+        message: game.i18n.localize("DOWNTIME_MANAGER.Errors.SpellScrollScribingSpellcastingRequired") };
+    }
+    const proficiency = (group, key) => Number(actor.system?.proficiencies?.[group]?.[key]?.proficiency?.multiplier ?? 0) > 0;
+    const rawSources = item?.system?.source;
+    const sourceEntries = typeof rawSources === "string" ? [rawSources] : Array.from(rawSources ?? []);
+    const sources = new Set(sourceEntries.map(value => String(value).trim().toLowerCase()).filter(Boolean));
+    const allowedSources = new Set();
+    if (proficiency("tools", "artist")) allowedSources.add("*");
+    if (proficiency("skills", "arcana")) {
+      allowedSources.add("arcane");
+      allowedSources.add("wyrd");
+    }
+    if (proficiency("skills", "nature")) allowedSources.add("primordial");
+    if (proficiency("skills", "religion")) allowedSources.add("divine");
+    if (!allowedSources.has("*") && ![...sources].some(source => allowedSources.has(source))) {
+      return { minimum: 1, blocked: true,
+        message: game.i18n.localize("DOWNTIME_MANAGER.Errors.SpellScrollScribingProficiencyRequired") };
+    }
+  }
   const override = definition.minimumCraftingLevel;
   let minimum = 1;
   if (override !== undefined && override !== null && override !== "") {
@@ -43,7 +65,7 @@ export async function craftingAccess(actor, item, definition) {
       minimum = Math.max(minimum, Math.min(20, Math.floor(Number(levels[String(output?.system?.rarity ?? "").trim()]) || 1)));
     }
   }
-  const level = actor ? levelFromMilestones(sessionProgress(actor).milestones) : 0;
+  const level = actor ? milestoneLevelForActor(actor, sessionProgress(actor)) : 0;
   return { minimum, blocked: level < minimum,
     message: game.i18n.format("TOVF.CraftingLevel.Locked", { level: minimum }) };
 }

@@ -2,6 +2,7 @@ import { uiText } from "./core/localization.mjs";
 import { MODULE_ID } from "./core/constants.mjs";
 
 const FLAG = "simpleTileTrigger";
+const SCENE_HUD_FLAG = "sceneActionHud";
 const SPAWN_FLAG = "playerSpawn";
 const ACTION_TYPES = new Set(["spawnCharacter", "removeSpawned", "viewScene", "executeMacro"]);
 const running = new Set();
@@ -10,7 +11,7 @@ const SOCKET_SCOPE = "simple-tile-triggers";
 const pendingGMExecutions = new Map();
 let socketInstalled = false;
 
-function cleanAction(source = {}) {
+export function cleanSimpleTriggerAction(source = {}) {
   const type = ACTION_TYPES.has(source.type) ? source.type : "spawnCharacter";
   const action = { id: String(source.id || foundry.utils.randomID()), type };
   if (type === "spawnCharacter") {
@@ -29,6 +30,7 @@ function cleanAction(source = {}) {
   }
   return action;
 }
+const cleanAction = cleanSimpleTriggerAction;
 
 function tileConfiguration(tile) {
   const source = tile?.getFlag(MODULE_ID, FLAG) ?? {};
@@ -141,7 +143,7 @@ async function viewScene(action) {
   await scene.view();
 }
 
-async function executeMacroLocal(action, tile, { user = game.user, actor = null, token = null, scene = null } = {}) {
+async function executeMacroLocal(action, source, { user = game.user, actor = null, token = null, scene = null } = {}) {
   if (!action.macroUuid) throw new Error(uiText("TOVF.Interface.NoMacroIsConfiguredForThisAction_8215c0", "Für diese Aktion wurde kein Makro festgelegt."));
   const macro = await fromUuid(action.macroUuid);
   if (macro?.documentName !== "Macro") throw new Error("Das hinterlegte Makro wurde nicht gefunden.");
@@ -153,7 +155,8 @@ async function executeMacroLocal(action, tile, { user = game.user, actor = null,
   }
   token ??= canvas.tokens?.controlled?.[0] ?? null;
   actor ??= token?.actor ?? user?.character ?? null;
-  scene ??= tile?.parent ?? canvas.scene;
+  const tile = source?.documentName === "Tile" ? source : null;
+  scene ??= source?.documentName === "Scene" ? source : source?.parent ?? canvas.scene;
   const named = foundry.utils.isPlainObject(args)
     ? Object.fromEntries(Object.entries(args).filter(([key]) => /^[A-Za-z_$][\w$]*$/.test(key)))
     : {};
@@ -169,8 +172,8 @@ async function executeMacroLocal(action, tile, { user = game.user, actor = null,
   });
 }
 
-async function executeMacroAsGM(action, tile) {
-  if (game.user.isGM) return executeMacroLocal(action, tile);
+async function executeMacroAsGM(action, source) {
+  if (game.user.isGM) return executeMacroLocal(action, source);
   const gm = activeGM();
   if (!gm) throw new Error(uiText("TOVF.Interface.AGMMustBeConnectedForThis_ae87b2", "Für diese Makro-Aktion muss eine Spielleitung verbunden sein."));
   const requestId = foundry.utils.randomID();
@@ -191,7 +194,8 @@ async function executeMacroAsGM(action, tile) {
     requestId,
     targetGMId: gm.id,
     userId: game.user.id,
-    tileUuid: tile.uuid,
+    sourceUuid: source.uuid,
+    tileUuid: source.documentName === "Tile" ? source.uuid : null,
     actionId: action.id,
     sceneId: canvas.scene?.id ?? null,
     tokenUuid: controlled?.document?.uuid ?? null,
@@ -200,8 +204,20 @@ async function executeMacroAsGM(action, tile) {
   return promise;
 }
 
-async function executeMacro(action, tile) {
-  return action.runAsGM ? executeMacroAsGM(action, tile) : executeMacroLocal(action, tile);
+async function executeMacro(action, source) {
+  return action.runAsGM ? executeMacroAsGM(action, source) : executeMacroLocal(action, source);
+}
+
+export async function executeSimpleTriggerActions(source, actions, { allowedActorIds = [] } = {}) {
+  const config = { allowedActorIds: Array.isArray(allowedActorIds) ? allowedActorIds : [] };
+  if (!canUseTrigger(config)) throw new Error(uiText("TOVF.Interface.NoneOfYourCharactersMayUseThis_172c29", "Keiner deiner Charaktere darf diesen Auslöser verwenden."));
+  for (const raw of actions ?? []) {
+    const action = cleanAction(raw);
+    if (action.type === "spawnCharacter") await spawnCharacter(action, config);
+    else if (action.type === "removeSpawned") await removeSpawnedTokens();
+    else if (action.type === "viewScene") await viewScene(action);
+    else if (action.type === "executeMacro") await executeMacro(action, source);
+  }
 }
 
 async function trigger(tile) {
@@ -210,12 +226,7 @@ async function trigger(tile) {
   try {
     const config = tileConfiguration(tile);
     if (!canUseTrigger(config)) throw new Error(uiText("TOVF.Interface.NoneOfYourCharactersMayUseThis_172c29", "Keiner deiner Charaktere darf diesen Auslöser verwenden."));
-    for (const action of config.actions) {
-      if (action.type === "spawnCharacter") await spawnCharacter(action, config);
-      else if (action.type === "removeSpawned") await removeSpawnedTokens();
-      else if (action.type === "viewScene") await viewScene(action);
-      else if (action.type === "executeMacro") await executeMacro(action, tile);
-    }
+    await executeSimpleTriggerActions(tile, config.actions, config);
   } catch (error) {
     console.error(`${MODULE_ID} | Simple tile trigger failed`, error);
     ui.notifications.error(error.message);
@@ -499,16 +510,22 @@ function exposeApi() {
 async function handleGMExecutionRequest(message) {
   const user = game.users.get(message.userId);
   if (!user?.active) throw new Error(uiText("TOVF.Interface.TheTriggeringUserIsNoLongerConnected_1668e8", "Der auslösende Benutzer ist nicht mehr verbunden."));
-  const tile = await fromUuid(message.tileUuid);
-  if (tile?.documentName !== "Tile" || tile.parent?.id !== message.sceneId) throw new Error(uiText("TOVF.Interface.TheTriggeringTileWasNotFound_cc397b", "Das auslösende Tile wurde nicht gefunden."));
-  if (tile.hidden && !user.isGM) throw new Error(uiText("TOVF.Interface.ThisTileCannotBeTriggered_22e807", "Dieses Tile darf nicht ausgelöst werden."));
-  const config = tileConfiguration(tile);
+  const source = await fromUuid(message.sourceUuid || message.tileUuid);
+  if (!source || !["Tile", "Scene"].includes(source.documentName)) throw new Error("Der auslösende HUD- oder Tile-Eintrag wurde nicht gefunden.");
+  const scene = source.documentName === "Scene" ? source : source.parent;
+  if (scene?.id !== message.sceneId) throw new Error("Die auslösende Szene ist nicht mehr aktiv.");
+  if (source.documentName === "Tile" && source.hidden && !user.isGM) throw new Error(uiText("TOVF.Interface.ThisTileCannotBeTriggered_22e807", "Dieses Tile darf nicht ausgelöst werden."));
+  const config = source.documentName === "Tile" ? tileConfiguration(source) : source.getFlag(MODULE_ID, SCENE_HUD_FLAG) ?? {};
   if (!config.enabled || !canUseTrigger(config, user)) throw new Error(uiText("TOVF.Interface.YouMayNotUseThisTrigger_f7befd", "Du darfst diesen Auslöser nicht verwenden."));
-  const action = config.actions.find(entry => entry.id === message.actionId && entry.type === "executeMacro" && entry.runAsGM);
+  const configuredActions = source.documentName === "Tile" ? config.actions : [
+    ...(config.blocks ?? []),
+    ...(config.sections ?? []).flatMap(section => section.items ?? [])
+  ].flatMap(block => block.type === "button" ? block.actions ?? [] : []);
+  const action = configuredActions.map(cleanAction).find(entry => entry.id === message.actionId && entry.type === "executeMacro" && entry.runAsGM);
   if (!action) throw new Error("Die GM-Makro-Aktion ist nicht mehr hinterlegt.");
 
   const tokenDocument = message.tokenUuid ? await fromUuid(message.tokenUuid) : null;
-  if (tokenDocument && (tokenDocument.documentName !== "Token" || tokenDocument.parent?.id !== tile.parent.id
+  if (tokenDocument && (tokenDocument.documentName !== "Token" || tokenDocument.parent?.id !== scene.id
     || !tokenDocument.actor?.testUserPermission(user, "OWNER"))) {
     throw new Error(uiText("TOVF.Interface.TheSuppliedTokenDoesNotBelongTo_24a541", "Der übergebene Token gehört nicht zum auslösenden Benutzer."));
   }
@@ -517,7 +534,7 @@ async function handleGMExecutionRequest(message) {
     throw new Error(uiText("TOVF.Interface.TheSuppliedCharacterDoesNotBelongTo_b7c695", "Der übergebene Charakter gehört nicht zum auslösenden Benutzer."));
   }
   const token = tokenDocument?.object ?? tokenDocument;
-  await executeMacroLocal(action, tile, { user, actor, token, scene: tile.parent });
+  await executeMacroLocal(action, source, { user, actor, token, scene });
   return true;
 }
 

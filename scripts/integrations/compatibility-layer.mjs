@@ -6,11 +6,17 @@ const DEFINITIONS = Object.freeze({
     ["weaponOptionActivities", "./weapon-option-activities.mjs?v=3.2.4-tooltip-links-2", "installWeaponOptionActivities"],
     ["activityChaining", "../activity-chaining.mjs?v=3.3.1-follow-up-filter-2", "installActivityChaining"],
     ["toolAbility", "./tool-ability.mjs", "installToolAbilitySelection"],
+    ["toolProficiencyRemoval", "./tool-proficiency-removal.mjs", "installToolProficiencyRemoval"],
+    ["spellLearningPersistence", "./spell-learning-persistence.mjs", "installSpellLearningPersistence"],
     ["theurgeSpellcasting", "./theurge-spellcasting.mjs?v=3.7.7-theurge-replacement-2", "installTheurgeSpellcasting"]
   ],
   documentUi: [
     ["customBackground", "./custom-background.mjs?v=3.3.1-custom-background-16", "installCustomBackground"],
-    ["activeEffectChangesUi", "../active-effect-changes-ui.mjs?v=3.7.8-actor-effect-delete-3", "installActiveEffectChangesUi"]
+    ["spellManager", "./spell-manager.mjs", "installSpellManager"],
+    ["activeEffectChangesUi", "../active-effect-changes-ui.mjs?v=3.7.8-actor-effect-delete-3", "installActiveEffectChangesUi"],
+    ["enchantActivityUi", "./enchant-activity-ui.mjs?v=3.8.5-enchant-library-5", "installEnchantActivityUi"],
+    ["spellcastingFilterControls", "./spellcasting-filter-controls.mjs?v=3.8.5-spell-filter-controls-1", "installSpellcastingFilterControls"],
+    ["skillListControls", "./skill-list-controls.mjs?v=3.8.5-skill-chat-cards-2", "installSkillListControls"]
   ],
   optionalModules: [
     ["argon", "./argon-black-flag-compatibility.mjs?v=3.7.8-argon-module-check-2", "installArgonBlackFlagCompatibility"]

@@ -4,10 +4,10 @@ import { purchaseAnimals } from "./animals.mjs";
 import { offerPurchaseAccess } from "./offer-access.mjs";
 import { levelFromMilestones, sessionProgress } from "../downtime/session-service.mjs";
 import { balanceInCopper, changeCurrency, formatCopper, itemQuantity, priceInCopper, quantityForPrice, validateCurrencyChange } from "./currency.mjs?v=3.5.0-item-quantity-1";
-import { addItem, cleanTransferredItem, exchange, removeItem, transferItem } from "./transactions.mjs?v=3.7.8-runtime-audit-1";
+import { addItem, cleanTransferredItem, exchange, removeItem, transferItem } from "./transactions.mjs?v=3.8.5-identifier-fix-1";
 import {
   createSpellScrollData, merchantSpellScrollOffers, resolveSpellScrollOffer, saveMerchantSpellScrollOffers
-} from "../spell-scrolls.mjs?v=3.7.8-clearance-label-1";
+} from "../spell-scrolls.mjs?v=3.8.5-scroll-activation-1";
 
 export const COMMERCE_SETTING = "commerceState";
 export const COMMERCE_RARITY_LEVELS_SETTING = "commerceRarityLevels";

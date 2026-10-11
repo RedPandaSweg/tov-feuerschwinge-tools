@@ -7,12 +7,12 @@ import { getSystemAdapter } from "../downtime/system-adapter.mjs";
 import { formatCopper, itemQuantity, priceInCopper, purse, quantityForPrice, quantityUpdate } from "./currency.mjs?v=3.5.0-item-quantity-1";
 import { broadcastPeerTrade, commerceRequest } from "./socket.mjs?v=3.7.8-runtime-audit-1";
 import { AUCTION_HOUSE_FLAG, commerceState, enableMerchantViewerAccess, isAuctionHouse, merchantAccess, merchantAllowsActor, merchantAvailableToUser, merchantConfig, merchantItemPurchaseAccess, merchantStockQuantity, ownedCharacters, rarityMinimumLevel } from "./service.mjs?v=3.7.8-runtime-audit-1";
-import { addItem, cleanTransferredItem } from "./transactions.mjs?v=3.7.8-runtime-audit-1";
+import { addItem, cleanTransferredItem } from "./transactions.mjs?v=3.8.5-identifier-fix-1";
 import { RestockConfigApp } from "./restock-app.mjs?v=3.7.8-runtime-audit-1";
 import {
   addMerchantSpellScrollOffer, createSpellScrollData, merchantSpellScrollOffers,
   resolveSpellScrollOffer, saveMerchantSpellScrollOffers
-} from "../spell-scrolls.mjs?v=3.7.8-clearance-label-1";
+} from "../spell-scrolls.mjs?v=3.8.5-scroll-activation-1";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const TRADEABLE_TYPES = new Set(["ammunition", "armor", "consumable", "container", "gear", "sundry", "tool", "weapon"]);

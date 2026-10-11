@@ -1,0 +1,21 @@
+<section class="spells tovf-spell-manager" data-tovf-spell-manager>
+  <div class="tovf-spell-manager-toolbar">
+    <label class="tovf-spell-manager-search"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><input type="search" data-tovf-spell-search placeholder="Zauber durchsuchen" autocomplete="off" value="{{tovfSpellManager.search}}"></label>
+    <div class="tovf-spell-manager-circles" role="group" aria-label="Nach Spell Circle filtern">
+      <button type="button" data-tovf-circle="all" {{#if tovfSpellManager.allSelected}}class="active" aria-pressed="true"{{else}}aria-pressed="false"{{/if}}>Alle</button>
+      {{#each tovfSpellManager.circles}}<button type="button" data-tovf-circle="{{value}}" {{#if selected}}class="active" aria-pressed="true"{{else}}aria-pressed="false"{{/if}}>{{label}}</button>{{/each}}
+    </div>
+  </div>
+  <ul class="unlist spell-list tovf-spell-manager-list">
+    {{#each spells}}
+      <li {{#if selected}}class="selected"{{/if}} data-spell-uuid="{{uuid}}" data-tovf-spell-circle="{{circle}}" data-tovf-search="{{search}}" {{#if hidden}}hidden{{/if}}>
+        <button type="button" class="tovf-spell-choice" data-tovf-select-spell="{{uuid}}" aria-pressed="{{#if selected}}true{{else}}false{{/if}}" {{disabled disabled}}>
+          <span class="icon"><img src="{{img}}" alt=""></span>
+          <span class="name">{{name}}</span>
+          <span class="tovf-spell-circle" aria-label="Spell Circle {{circle}}"><span class="tovf-circle-star" aria-hidden="true">✦</span><b>{{circleMark}}</b></span>
+        </button>
+      </li>
+    {{/each}}
+  </ul>
+  <p class="notes" data-tovf-no-spells {{#if spells.length}}hidden{{/if}}>Keine Zauber entsprechen dem aktuellen Filter.</p>
+</section>

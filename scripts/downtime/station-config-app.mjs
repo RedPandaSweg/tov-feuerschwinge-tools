@@ -116,6 +116,7 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
     }));
     return {
       actorName: this.actor.name,
+      actorUuid: this.actor.uuid,
       station,
       categoryPicker,
       characterValueCategories: categoryPicker.selected.map(category => ({ ...category, selected: category.id === station.actorValue.category })),
@@ -258,6 +259,7 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
     station.displayName = String(value("displayName") ?? "").trim();
     station.description = String(value("description") ?? "");
     station.spellScrollRecipes = checked("spellScrollRecipes");
+    station.spellScrollScribing = checked("spellScrollScribing");
     station.categories = parseCategories(Array.from(this.element.querySelectorAll('[name="categories"]'), input => input.value));
     station.baseProgress = numberOr(value("baseProgress"));
     station.requiresRoll = checked("requiresRoll");

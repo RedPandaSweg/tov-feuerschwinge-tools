@@ -262,6 +262,39 @@ class TokenPresetApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 }
 
+function biographyRoot(element) {
+  return element instanceof HTMLElement ? element : element?.[0] ?? null;
+}
+
+function actorTokenForPresets(actor) {
+  const activeToken = actor?.getActiveTokens?.(true, true)?.[0];
+  return activeToken?.document ?? actor?.prototypeToken ?? null;
+}
+
+function addBiographyPresetLink(app, element) {
+  const actor = app?.document;
+  if (actor?.documentName !== "Actor" || !actor.isOwner) return;
+  const root = biographyRoot(element);
+  const tokenFigure = root?.querySelector?.('[data-tab="biography"] .artwork .icon:nth-of-type(2)');
+  if (!tokenFigure || tokenFigure.querySelector("[data-tovf-biography-token-presets]")) return;
+  const token = actorTokenForPresets(actor);
+  if (!token) return;
+
+  const button = document.createElement("button");
+  const explanation = "Token-Presets verwalten alternative Token-Darstellungen. Sie eignen sich besonders für Wildshapes mit eigenen Charakterbögen sowie für verschiedene Größen, Outfits oder andere Tokenbilder.";
+  button.type = "button";
+  button.className = "tovf-biography-token-presets";
+  button.dataset.tovfBiographyTokenPresets = "true";
+  button.dataset.tooltip = explanation;
+  button.setAttribute("aria-label", explanation);
+  button.innerHTML = '<i class="fa-solid fa-images" aria-hidden="true"></i><span>Token-Presets</span>';
+  button.addEventListener("click", event => {
+    event.preventDefault();
+    new TokenPresetApp(actorTokenForPresets(actor) ?? token).render({ force: true });
+  });
+  tokenFigure.append(button);
+}
+
 export function registerTokenPresets() {
   Hooks.on("renderTokenHUD", (app, html) => {
     const token = app.object?.document;
@@ -279,6 +312,8 @@ export function registerTokenPresets() {
     button.addEventListener("click", event => { event.preventDefault(); new TokenPresetApp(token).render({ force: true }); });
     right.prepend(button);
   });
+  Hooks.on("renderApplicationV2", addBiographyPresetLink);
+  Hooks.on("renderActorSheet", addBiographyPresetLink);
 }
 
 export function activateTokenPresetSocket() {

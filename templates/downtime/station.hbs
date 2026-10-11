@@ -1,5 +1,5 @@
 <div class="sc-body">
-  <div class="sc-title-row"><div><h2>{{stationName}}</h2>{{#if stationDescription}}<p>{{stationDescription}}</p>{{/if}}</div>{{#if isGM}}<button type="button" data-action="configure"><i class="fa-solid fa-gear"></i> {{localize "DOWNTIME_MANAGER.Actions.Configure"}}</button>{{/if}}</div>
+  <div class="sc-title-row"><div><h2>{{stationName}}</h2>{{#if stationDescription}}<div class="sc-station-description">{{{stationDescription}}}</div>{{/if}}</div>{{#if isGM}}<button type="button" data-action="configure"><i class="fa-solid fa-gear"></i> {{localize "DOWNTIME_MANAGER.Actions.Configure"}}</button>{{/if}}</div>
   {{#if disabled}}<p class="notification warning">{{localize "DOWNTIME_MANAGER.Station.Disabled"}}</p>{{/if}}
   {{#if noActor}}<p>{{localize "DOWNTIME_MANAGER.Station.SelectCrafter"}}</p>{{else}}
     <div class="sc-summary"><span><strong>{{localize "DOWNTIME_MANAGER.Station.Crafter"}}:</strong> {{actorName}}</span><span><strong>{{localize "DOWNTIME_MANAGER.Station.Downtime"}}:</strong> {{downtime}}</span>{{#if showGold}}<span><strong>{{localize "DOWNTIME_MANAGER.Station.Gold"}}:</strong> {{gold}} {{localize "DOWNTIME_MANAGER.Currency.GP"}}</span>{{/if}}{{#if actorValueEnabled}}<span><strong>{{actorValueLabel}}:</strong> {{actorValue}}</span>{{/if}}</div>

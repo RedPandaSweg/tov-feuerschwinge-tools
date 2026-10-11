@@ -104,6 +104,31 @@ export function tierOfPlay(level) {
   return 4;
 }
 
+export const TIER_CAP_LEVELS = Object.freeze([4, 10, 16, 20]);
+
+/** Return a valid personal Tier of Play maximum, or null when progression is uncapped. */
+export function tierCapLevel(progress) {
+  const value = Math.floor(Number(progress?.tierCapLevel));
+  return TIER_CAP_LEVELS.includes(value) ? value : null;
+}
+
+/** Milestone progression honors a personal Tier of Play cap without discarding milestones. */
+export function milestoneLevelForActor(actor, progress = sessionProgress(actor)) {
+  const derived = levelFromMilestones(progress?.milestones);
+  const cap = tierCapLevel(progress);
+  return cap ? Math.min(derived, cap) : derived;
+}
+
+/**
+ * A capped character is rewarded from their actual character level up to the
+ * selected Tier of Play maximum. This avoids paying the maximum early when a
+ * cap was selected before the character has genuinely reached it.
+ */
+export function rewardLevelForActor(actor, progress = sessionProgress(actor)) {
+  const cap = tierCapLevel(progress);
+  return cap ? Math.min(actorLevel(actor), cap) : milestoneLevelForActor(actor, progress);
+}
+
 export function milestoneCatchUpEnabled() {
   return game.settings.get(MODULE_ID, SETTINGS.MILESTONE_CATCH_UP)?.enabled !== false;
 }
@@ -111,12 +136,12 @@ export function milestoneCatchUpEnabled() {
 export function highestMilestoneProgress(actors = playerCharacters().filter(isActiveCharacter)) {
   const entries = actors.map(actor => {
     const milestones = Math.max(0, Math.floor(Number(sessionProgress(actor).milestones) || 0));
-    const level = levelFromMilestones(milestones);
+    const level = milestoneLevelForActor(actor);
     return { actor, milestones, level, tier: tierOfPlay(level) };
   });
   const highestMilestones = Math.max(0, ...entries.map(entry => entry.milestones));
   const leaders = entries.filter(entry => entry.milestones === highestMilestones);
-  const highestLevel = levelFromMilestones(highestMilestones);
+  const highestLevel = Math.max(1, ...entries.map(entry => entry.level));
   return { milestones: highestMilestones, level: highestLevel, tier: tierOfPlay(highestLevel), leaders };
 }
 
@@ -297,7 +322,7 @@ export class SessionService {
     for (const uuid of actorUuids) {
       const actor = await fromUuid(uuid).catch(() => null);
       if (!actor || actor.documentName !== "Actor") throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Session.Errors.ActorMissing"));
-      const rewardLevel = levelFromMilestones(sessionProgress(actor).milestones);
+      const rewardLevel = rewardLevelForActor(actor);
       const reward = selectedReward(rewardForLevel(rewardLevel), rewardColumns);
       await RewardService.validateItems(reward.items);
       actors.push({ actor, reward });
@@ -329,12 +354,14 @@ export class SessionService {
       for (const actor of playerCharacters()) {
         const progress = sessionProgress(actor);
         if (selected.has(actor.uuid)) {
-          const rewardLevel = levelFromMilestones(progress.milestones);
+          const rewardLevel = rewardLevelForActor(actor, progress);
           const reward = byUuid.get(actor.uuid)?.reward ?? selectedReward(rewardForLevel(rewardLevel), rewardColumns);
           const details = await sessionRewardDetails(reward, multiplier);
           await RewardService.grantItems(actor, details.items);
-          const actorTier = tierOfPlay(levelFromMilestones(progress.milestones));
-          const mayCatchUp = catchUpEnabled && actorTier < guildProgress.tier;
+          const actorTier = tierOfPlay(milestoneLevelForActor(actor, progress));
+          // A character who deliberately reached their cap is not behind the
+          // guild and must not receive unlimited catch-up milestones.
+          const mayCatchUp = catchUpEnabled && !(tierCapLevel(progress) && actorLevel(actor) >= tierCapLevel(progress)) && actorTier < guildProgress.tier;
           const milestone = awardMilestones && (progress.lastMilestoneWeek !== week || mayCatchUp) ? 1 : 0;
           const rows = milestoneEntries(actor);
           if (milestone) rows.push({ source: "session", note: active.title || "", week, historyId: String(active.id), timestamp: Date.now() });
@@ -345,7 +372,7 @@ export class SessionService {
           });
           participants.push({ actorUuid: actor.uuid, actorName: actor.name, gold: details.gold, downtime: details.downtime, rewards: details.items, milestone });
         } else if (isActiveCharacter(actor)) {
-          const passiveLevel = levelFromMilestones(progress.milestones);
+          const passiveLevel = rewardLevelForActor(actor, progress);
           const baseDowntime = sessionDowntime(passiveLevel);
           const current = Number(progress.passiveDowntime?.[periodKey] ?? 0);
           const amount = passiveConfig.enabled
@@ -449,7 +476,7 @@ export class SessionService {
       const historicalMilestones = existing
         ? Math.max(0, Number(sessionProgress(actor).milestones) - Number(existing.milestone ?? 0))
         : Number(passive.get(actor.uuid)?.milestones ?? sessionProgress(actor).milestones);
-      const reward = selectedReward(rewardForLevel(levelFromMilestones(historicalMilestones)), record.rewardColumns);
+      const reward = selectedReward(rewardForLevel(rewardLevelForActor(actor, { ...sessionProgress(actor), milestones: historicalMilestones })), record.rewardColumns);
       const details = await sessionRewardDetails(reward, Number(record.multiplier) || 1);
       actors.push({ actorUuid: actor.uuid, actorName: actor.name, selected: Boolean(existing), gold: Number(existing?.gold ?? details.gold), downtime: details.downtime, defaultRewards: details.items });
     }

@@ -3,7 +3,7 @@
   <div class="sc-list sc-station-preset-list">
     {{#each presets}}<article class="sc-station-preset">
       <img src="{{img}}" alt="">
-      <div class="grow"><h3><i class="{{icon}}"></i> {{name}}</h3><p>{{description}}</p><span class="sc-category-chip">{{category}}</span></div>
+      <div class="grow"><h3><i class="{{icon}}"></i> {{name}}</h3><div class="sc-preset-description">{{{description}}}</div><span class="sc-category-chip">{{category}}</span></div>
       <div class="sc-station-preset-actions">
         <label class="checkbox"><input type="checkbox" data-project-for="{{id}}"> {{localize "DOWNTIME_MANAGER.StationPresets.IncludeProject"}}</label>
         <button type="button" data-action="importPreset" data-preset-id="{{id}}"><i class="fa-solid fa-download"></i> {{#if imported}}{{localize "DOWNTIME_MANAGER.StationPresets.ImportAgain"}}{{else}}{{localize "DOWNTIME_MANAGER.StationPresets.Import"}}{{/if}}</button>

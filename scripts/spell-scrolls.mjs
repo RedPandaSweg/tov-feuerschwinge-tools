@@ -76,6 +76,19 @@ function spellScrollDescription(spell, level) {
   return `${description}${statistics}`;
 }
 
+function spellActivation(spell) {
+  const activities = spell?.system?.activities;
+  const entries = activities?.values ? [...activities.values()]
+    : Array.isArray(activities) ? activities : Object.values(activities ?? {});
+  const source = entries.find(activity => activity?.activation?.primary) ?? entries[0];
+  const activation = foundry.utils.deepClone(source?.activation ?? {});
+  return {
+    ...activation,
+    type: typeof activation.type === "string" && activation.type ? activation.type : "action",
+    primary: true
+  };
+}
+
 export async function createSpellScrollData(spell, { quantity = 1 } = {}) {
   if (spell?.documentName !== "Item" || spell.type !== "spell") throw new Error(uiText("TOVF.Interface.NoSpellWasSelected_dd9482", "Es wurde kein Spell ausgewählt."));
   const level = spellScrollLevel(spell);
@@ -102,7 +115,7 @@ export async function createSpellScrollData(spell, { quantity = 1 } = {}) {
       type: "cast",
       name: `Cast ${displayName}`,
       img: spell.img,
-      activation: { primary: true },
+      activation: spellActivation(spell),
       consumption: { targets: [{ type: "item", target: "", value: "1", scaling: { mode: "", formula: "" } }] },
       system: {
         spell: {

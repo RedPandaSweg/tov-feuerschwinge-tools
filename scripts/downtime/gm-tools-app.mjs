@@ -4,15 +4,17 @@ import { startupReport } from "../core/startup.mjs?v=3.7.8-lifecycle-phases-1";
 import { compatibilityReport } from "../integrations/compatibility-layer.mjs?v=3.7.8-argon-module-check-2";
 import { schedulerReport } from "../core/scheduler.mjs?v=3.7.8-central-scheduler-1";
 import { FLAGS, MODULE_ID } from "./constants.mjs";
+import { sessionTransferDiagnostics } from "../transfer/session-transfer.mjs";
 import { DowntimeDashboardApp } from "./dashboard-app.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
 import { evidenceKey, milestoneEvidence } from "../campaign/milestone-evidence.mjs";
 import { GMToolsService } from "./gm-tools-service.mjs?v=3.8.0-unresolved-advancement-formulas-1";
-import { isActiveCharacter, milestoneEntries, actorLevel, highestMilestoneProgress, isoWeekKey, levelFromMilestones, monthKey, passiveDowntimeConfig, SessionService, sessionProgress, tierOfPlay } from "./session-service.mjs";
+import { isActiveCharacter, milestoneEntries, actorLevel, highestMilestoneProgress, isoWeekKey, levelFromMilestones, milestoneLevelForActor, monthKey, passiveDowntimeConfig, SessionService, sessionProgress, TIER_CAP_LEVELS, tierCapLevel, tierOfPlay } from "./session-service.mjs";
 import { openVoidTaintConfig } from "../void-taint/config-app.mjs";
 import { applyActorSpellMigration, previewActorSpellMigration } from "../spell-actor-migration.mjs?v=3.5.0-actor-spell-migration-10";
 import { applyWorkingEffectMigration, previewWorkingEffectMigration } from "../effect-pack-migration.mjs?v=3.7.8-working-effects-2";
 import { migrateLegacyWorldActiveEffects, previewLegacyActiveEffects } from "../core/active-effect-migration.mjs?v=3.8.0-legacy-effect-repair-1";
+import { sendServerUpdateWarning } from "../server-update-warning.mjs?v=3.9.0-custom-warning-1";
 import {
   addVoidTaint,
   drawVoidTaintEffect,
@@ -53,6 +55,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       unlockSession: GMToolsApp.#unlockSession,
       resetSession: GMToolsApp.#resetSession,
       repairSafe: GMToolsApp.#repairSafe,
+      sendServerUpdateWarning: GMToolsApp.#sendServerUpdateWarning,
       deleteExpiredEffects: GMToolsApp.#deleteExpiredEffects,
       migrateWorkingEffects: GMToolsApp.#migrateWorkingEffects,
       migrateLegacyActiveEffects: GMToolsApp.#migrateLegacyActiveEffects,
@@ -114,6 +117,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     this._downtimeSignature = actor ? JSON.stringify({ downtime: DowntimeService.get(actor), passiveDowntime: sessionProgress(actor).passiveDowntime ?? {} }) : "";
     this.element.classList.toggle("tovf-gm-character-view", this.tab === "characters");
     this.#numberMilestones();
+    this.element.querySelector('[name="tierCapLevel"]')?.addEventListener("change", () => this.#numberMilestones());
     if (!this._milestoneAuditInitialized) {
       const audit = this.element.querySelector(".tovf-gm-milestone-audit");
       if (audit) {
@@ -254,6 +258,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
         ? new Intl.DateTimeFormat(game.i18n.lang, { dateStyle: "medium", timeStyle: "medium" }).format(new Date(timestamp))
         : game.i18n.localize("DOWNTIME_MANAGER.GMTools.Activity.Unknown");
       technicalDiagnostics = {
+        sessionTransfer: sessionTransferDiagnostics().slice().reverse().map(entry => ({ ...entry, timestamp: formatTechnicalDate(entry.timestamp), context: Object.entries(entry.context ?? {}).map(([key, value]) => `${key}: ${value}`).join(" · ") })),
         startup,
         startupSummary: `${startup.filter(entry => entry.status === "completed").length}/${startup.length}`,
         startupClass: startup.some(entry => entry.statusClass === "error") ? "error" : startup.some(entry => entry.statusClass === "warning") ? "warning" : "ok",
@@ -376,7 +381,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const milestoneMismatches = actors.map(actor => {
       const milestones = Math.max(0, Math.floor(Number(sessionProgress(actor).milestones) || 0));
       const actualLevel = actorLevel(actor);
-      const expectedLevel = levelFromMilestones(milestones);
+      const expectedLevel = milestoneLevelForActor(actor);
       return { uuid: actor.uuid, name: actor.name, img: actor.img, milestones, actualLevel, expectedLevel };
     }).filter(entry => entry.actualLevel !== entry.expectedLevel);
     const undo = GMToolsService.undoData();
@@ -398,7 +403,11 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
         img: selected.actor.img,
         downtime: selected.downtime,
         milestones: selected.progress.milestones,
-        milestoneLevel: levelFromMilestones(selected.progress.milestones),
+        milestoneLevel: milestoneLevelForActor(selected.actor, selected.progress),
+        tierCapOptions: [
+          { value: "", label: uiText("DOWNTIME_MANAGER.GMTools.TierCapNone", "Kein Limit"), selected: !tierCapLevel(selected.progress) },
+          ...TIER_CAP_LEVELS.map((level, index) => ({ value: level, label: `Tier ${["I", "II", "III", "IV"][index]} · Level ${level}`, selected: tierCapLevel(selected.progress) === level }))
+        ],
         milestoneEntries: milestoneEntries(selected.actor).map((entry, index) => ({ ...entry, evidenceKey: evidenceKey(entry), number: index + 1, originalIndex: index })),
         sessionsPlayed: selected.progress.sessionsPlayed,
         lastMilestoneWeek: selected.progress.lastMilestoneWeek ?? "",
@@ -448,6 +457,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       effectPackMigration,
       legacyActiveEffects,
       technicalDiagnostics,
+      canSendServerWarning: isProjectAdministrator(),
       voidTaintEnabled: voidTaintEnabled(),
       voidTaint: this.tab === "voidTaint" ? game.actors.filter(actor => actor.type === "pc").map(actor => ({
         uuid: actor.uuid,
@@ -532,7 +542,10 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const total = this.element.querySelector('[data-milestone-total]');
     if (total) total.textContent = String(rows.length);
     const level = this.element.querySelector('[data-milestone-level]');
-    if (level) level.textContent = String(levelFromMilestones(rows.length));
+    if (level) {
+      const cap = tierCapLevel({ tierCapLevel: this.element.querySelector('[name="tierCapLevel"]')?.value });
+      level.textContent = String(cap ? Math.min(levelFromMilestones(rows.length), cap) : levelFromMilestones(rows.length));
+    }
     if (this.tab === "characters" && this.element?.isConnected && this.element.parentElement) this.setPosition({ height: "auto" });
   }
 
@@ -576,6 +589,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       })),
       sessionsPlayed: root.querySelector('[name="sessionsPlayed"]')?.value,
       lastMilestoneWeek: root.querySelector('[name="lastMilestoneWeek"]')?.value,
+      tierCapLevel: root.querySelector('[name="tierCapLevel"]')?.value,
       active: root.querySelector('[name="characterActive"]')?.checked !== false,
       passiveDowntime: undefined
     };
@@ -717,6 +731,11 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const count = await GMToolsService.repairSafeProblems();
       ui.notifications.info(game.i18n.format("DOWNTIME_MANAGER.GMTools.Notifications.Repaired", { count }));
     });
+  }
+
+  static async #sendServerUpdateWarning(event) {
+    event.preventDefault();
+    await sendServerUpdateWarning();
   }
 
   static async #deleteExpiredEffects(event) {

@@ -1,9 +1,10 @@
 import { MODULE_ID, SETTINGS } from "./constants.mjs";
 import { WORLD_ROLES } from "../core/constants.mjs";
 import { isOperationalGM } from "../core/permissions.mjs?v=3.7.8-permissions-1";
-import { cleanupSessionImport, exportSession, exportSessionResult, importSession, importSessionResult, sessionImportHistory } from "../transfer/session-transfer.mjs?v=3.7.8-standard-effects-2";
+import { cleanupSessionImport, exportSession, exportSessionResult, importSession, importSessionResult, recordSessionTransferDiagnostic, sessionImportHistory } from "../transfer/session-transfer.mjs?v=3.7.8-standard-effects-2";
+import { GMToolsApp } from "./gm-tools-app.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
-import { isActiveCharacter, isoWeekKey, levelFromMilestones, monthKey, passiveDowntimeConfig, playerCharacters, rewardForLevel, sessionRewardDetails, sessionRewards, SessionService, sessionProgress } from "./session-service.mjs";
+import { isActiveCharacter, isoWeekKey, monthKey, passiveDowntimeConfig, playerCharacters, rewardForLevel, rewardLevelForActor, sessionRewardDetails, sessionRewards, SessionService, sessionProgress } from "./session-service.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -34,6 +35,7 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
       workflowCleanupHistory: this.#workflowCleanup,
       clearCleanedImportHistory: this.#clearCleanedImportHistory,
       workflowReset: this.#workflowReset,
+      openTransferDiagnostics: this.#openTransferDiagnostics,
       newSession: this.#newSession
     }
   };
@@ -123,7 +125,7 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
     });
     for (const actor of visibleGuildActors) {
       const progress = sessionProgress(actor);
-      const level = levelFromMilestones(progress.milestones);
+      const level = rewardLevelForActor(actor, progress);
       const reward = rewardForLevel(level);
       const details = await sessionRewardDetails(reward, Number(active.multiplier ?? 1));
       const transferId = actor.getFlag(MODULE_ID, "transfer")?.id
@@ -299,6 +301,7 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #workflowExportSession(event) {
     event.preventDefault();
+    try {
     const state = this.#formState();
     if (!state.actorUuids.length || !state.title) return ui.notifications.warn(game.i18n.localize("DOWNTIME_MANAGER.Session.Errors.Required"));
     const previous = game.settings.get(MODULE_ID, SETTINGS.ACTIVE_SESSION) ?? {};
@@ -326,6 +329,11 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
       exportedAt: Date.now()
     });
     await this.render({ force: true });
+    } catch (error) {
+      await recordSessionTransferDiagnostic("error", "export", error, { sessionId: game.settings.get(MODULE_ID, SETTINGS.ACTIVE_SESSION)?.id });
+      console.error(`${MODULE_ID} | Guided session export failed`, error);
+      ui.notifications.error(error.message);
+    }
   }
 
   static async #workflowImportSession(event) {
@@ -335,9 +343,17 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
       await importSession(file);
       await this.render({ force: true });
     } catch (error) {
+      await recordSessionTransferDiagnostic("error", "import", error);
       console.error(`${MODULE_ID} | Guided session import failed`, error);
       ui.notifications.error(error.message);
     }
+  }
+
+  static #openTransferDiagnostics(event) {
+    event.preventDefault();
+    const app = new GMToolsApp();
+    app.tab = "diagnostics";
+    app.render(true);
   }
 
   static async #workflowExportResult(event) {
@@ -347,6 +363,7 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
       if (result) await cleanupSessionImport();
       await this.render({ force: true });
     } catch (error) {
+      await recordSessionTransferDiagnostic("error", "result-export", error, { sessionId: game.settings.get(MODULE_ID, SETTINGS.ACTIVE_SESSION)?.id });
       console.error(`${MODULE_ID} | Guided session result export failed`, error);
       ui.notifications.error(error.message);
     }
@@ -359,6 +376,7 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
       await importSessionResult(file);
       await this.render({ force: true });
     } catch (error) {
+      await recordSessionTransferDiagnostic("error", "result-import", error);
       console.error(`${MODULE_ID} | Guided session result import failed`, error);
       ui.notifications.error(error.message);
     }

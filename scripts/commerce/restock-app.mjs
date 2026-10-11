@@ -2,7 +2,7 @@ import { MODULE_ID } from "../core/constants.mjs";
 import { subscribeModuleEvent, unsubscribeModuleEvent } from "../core/events.mjs?v=3.7.8-module-events-1";
 import { merchantConfig, merchantStockQuantity } from "./service.mjs?v=3.7.8-runtime-audit-1";
 import { restockMerchant } from "./restock.mjs?v=3.7.8-safe-documents-1";
-import { merchantSpellScrollOffers } from "../spell-scrolls.mjs?v=3.7.8-clearance-label-1";
+import { merchantSpellScrollOffers } from "../spell-scrolls.mjs?v=3.8.5-scroll-activation-1";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const UNITS = ["minutes", "hours", "days", "weeks", "months"];

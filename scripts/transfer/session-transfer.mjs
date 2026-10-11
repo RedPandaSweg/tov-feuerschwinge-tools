@@ -22,6 +22,20 @@ const ROLE_SETTING = "worldRole";
 const WEAPON_SETTING = "weaponDefinitions";
 const TRANSFER_FLAG = "transfer";
 
+export async function recordSessionTransferDiagnostic(level, operation, error, context = {}) {
+  const log = foundry.utils.deepClone(game.settings.get(MODULE_ID, SETTINGS.SESSION_TRANSFER_LOG) ?? { schemaVersion: 1, entries: [] });
+  const entries = Array.isArray(log.entries) ? log.entries : [];
+  entries.push({ timestamp: Date.now(), level, operation, message: String(error?.message ?? error ?? ""), context });
+  log.schemaVersion = 1;
+  log.entries = entries.slice(-50);
+  await game.settings.set(MODULE_ID, SETTINGS.SESSION_TRANSFER_LOG, log);
+}
+
+export function sessionTransferDiagnostics() {
+  const log = game.settings.get(MODULE_ID, SETTINGS.SESSION_TRANSFER_LOG) ?? {};
+  return Array.isArray(log.entries) ? foundry.utils.deepClone(log.entries) : [];
+}
+
 function role() {
   return game.settings.get(MODULE_ID, ROLE_SETTING);
 }
@@ -721,7 +735,11 @@ export async function importSession(file) {
   if (!file) throw new Error(game.i18n.localize("TOVF.Session.Error.FileMissing"));
   const bundle = JSON.parse(await foundry.utils.readTextFromFile(file));
   validatePackage(bundle, SESSION_FORMAT);
-  const importId = foundry.utils.randomID();
+  const history = foundry.utils.deepClone(game.settings.get(MODULE_ID, SETTINGS.SESSION_IMPORT_HISTORY) ?? { schemaVersion: 1, entries: [] });
+  history.entries = Array.isArray(history.entries) ? history.entries : [];
+  const existingImport = bundle.session?.id ? history.entries.find(entry => !entry.cleaned && entry.sessionId === bundle.session.id) : null;
+  const isUpdate = Boolean(existingImport);
+  const importId = existingImport?.importId ?? foundry.utils.randomID();
 
   const accepted = await foundry.applications.api.DialogV2.confirm({
     window: { title: game.i18n.localize("TOVF.Session.ImportConfirmTitle") },
@@ -745,27 +763,30 @@ export async function importSession(file) {
     properties: [],
     options: []
   });
-  const sessionRoot = await foundry.documents.Folder.implementation.create({
+  let sessionRoot = isUpdate ? game.folders.get(existingImport.importedContent?.sessionRootFolderId) : null;
+  sessionRoot ??= await foundry.documents.Folder.implementation.create({
     name: String(bundle.session?.title || game.i18n.localize("DOWNTIME_MANAGER.Session.Untitled")),
     type: "Actor",
     folder: null,
     flags: { [MODULE_ID]: { sessionImport: { id: bundle.session?.id ?? foundry.utils.randomID() } } }
   });
-  const { replacements } = await importMacros(bundle.macros);
+  if (isUpdate && bundle.session?.title && sessionRoot.name !== bundle.session.title) await sessionRoot.update({ name: bundle.session.title });
+  const { replacements } = isUpdate ? { replacements: new Map() } : await importMacros(bundle.macros);
   const hasParticipantAssignments = bundle.actors.some(entry => entry.participantTransferId);
   let folderMapping = new Map();
   let actorFolderIds = [];
   let extrasFolders = new Map();
   let extrasFolderMappings = new Map();
-  if (hasParticipantAssignments) {
+  if (hasParticipantAssignments && !isUpdate) {
     ({ extrasFolders, extrasFolderMappings, createdIds: actorFolderIds } = await createSessionParticipantFolders(bundle, sessionRoot.id));
-  } else {
+  } else if (!isUpdate) {
     ({ mapping: folderMapping, createdIds: actorFolderIds } = await synchronizeActorFolders(bundle.actorFolders, sessionRoot.id));
   }
   actorFolderIds.push(sessionRoot.id);
   const counts = { create: 0, update: 0 };
   const importedRows = [];
-  for (const entry of bundle.actors) {
+  const entriesToImport = isUpdate ? bundle.actors.filter(entry => !game.actors.some(actor => actor.getFlag(MODULE_ID, TRANSFER_FLAG)?.id === entry.transferId)) : bundle.actors;
+  for (const entry of entriesToImport) {
     const targetFolderId = hasParticipantAssignments
       ? (entry.sessionParticipant
           ? sessionRoot.id
@@ -781,9 +802,9 @@ export async function importSession(file) {
     const actorMap = new Map(game.actors.map(a => [a.getFlag(MODULE_ID, TRANSFER_FLAG)?.id, a]));
     await applyUserAssignments(bundle.users, userImport.identityMap, actorMap, { sessionPlayers: true });
   }
-  await remapImportedTokenPresetActors(bundle.actors, importedRows);
-  const importedSceneUuids = await importSessionScenes(bundle.scenes, importId);
-  if (bundle.compendiums) await importCompendiumBundle(bundle.compendiums, null, { confirm: false });
+  await remapImportedTokenPresetActors(entriesToImport, importedRows);
+  const importedSceneUuids = isUpdate ? [] : await importSessionScenes(bundle.scenes, importId);
+  if (bundle.compendiums && !isUpdate) await importCompendiumBundle(bundle.compendiums, null, { confirm: false });
   const importedActorUuids = game.actors
     .filter(actor => bundle.actors.some(entry => entry.transferId === actor.getFlag(MODULE_ID, TRANSFER_FLAG)?.id))
     .map(actor => actor.uuid);
@@ -801,18 +822,19 @@ export async function importSession(file) {
     importIds.add(importId);
     await user.setFlag(MODULE_ID, "sessionImportIds", [...importIds]);
   }
-  const importedContent = { actorUuids: importedActorUuids, actorFolderIds, sessionRootFolderId: sessionRoot.id, userIds: importedUserIds, sceneUuids: importedSceneUuids };
-  const history = foundry.utils.deepClone(game.settings.get(MODULE_ID, SETTINGS.SESSION_IMPORT_HISTORY) ?? { schemaVersion: 1, entries: [] });
+  const importedContent = { actorUuids: [...new Set([...(existingImport?.importedContent?.actorUuids ?? []), ...importedActorUuids])], actorFolderIds: [...new Set([...(existingImport?.importedContent?.actorFolderIds ?? []), ...actorFolderIds])], sessionRootFolderId: sessionRoot.id, userIds: [...new Set([...(existingImport?.importedContent?.userIds ?? []), ...importedUserIds])], sceneUuids: [...new Set([...(existingImport?.importedContent?.sceneUuids ?? []), ...importedSceneUuids])] };
   history.schemaVersion = 1;
   history.entries = Array.isArray(history.entries) ? history.entries : [];
-  history.entries.push({
+  const historyEntry = {
     importId,
     sessionId: bundle.session?.id ?? "",
     title: String(bundle.session?.title || sessionRoot.name),
     sourceWorld: bundle.metadata.sourceWorld,
     importedAt: Date.now(),
     importedContent
-  });
+  };
+  if (existingImport) Object.assign(existingImport, historyEntry, { updatedAt: Date.now() });
+  else history.entries.push(historyEntry);
   await game.settings.set(MODULE_ID, SETTINGS.SESSION_IMPORT_HISTORY, history);
   if (bundle.session?.id) {
     const participantIds = new Set(bundle.session.participantTransferIds ?? []);
@@ -824,7 +846,7 @@ export async function importSession(file) {
       importId,
       title: bundle.session.title,
       summary: bundle.session.summary,
-      actorUuids,
+      actorUuids: [...new Set([...(game.settings.get(MODULE_ID, SETTINGS.ACTIVE_SESSION)?.actorUuids ?? []), ...actorUuids])],
       participantTransferIds: [...participantIds],
       sourceWorld: bundle.metadata.sourceWorld,
       importedContent,
@@ -832,7 +854,8 @@ export async function importSession(file) {
       status: "imported"
     });
   }
-  ui.notifications.info(game.i18n.format("TOVF.Session.ImportComplete", counts));
+  ui.notifications.info(game.i18n.format(isUpdate ? "TOVF.Session.ImportUpdated" : "TOVF.Session.ImportComplete", counts));
+  if (isUpdate) await recordSessionTransferDiagnostic("warning", "import-update", "Existing session content was preserved; only missing participants were added.", { sessionId: bundle.session?.id, addedParticipants: counts.create });
   SettingsConfig.reloadConfirm({ world: true });
 }
 

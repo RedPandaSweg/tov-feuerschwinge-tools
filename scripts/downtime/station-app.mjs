@@ -1,13 +1,13 @@
 import { craftingAccess } from "./crafting-access.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
 import { GoldService } from "./gold-service.mjs";
-import { ProjectService } from "./project-service.mjs?v=3.4.2-roll-result-only-1";
+import { ProjectService } from "./project-service.mjs?v=3.8.5-applied-roll-progress-1";
 import { ResourceService } from "./resource-service.mjs";
 import { RewardService } from "./reward-service.mjs";
 import { StationConfigApp } from "./station-config-app.mjs?v=3.4.2-progress-item-controls-1";
 import { StationEngine } from "./station-engine.mjs";
-import { SharedProjectService } from "./shared-project-service.mjs?v=3.4.2-roll-result-only-1";
-import { sharedProjectAction } from "./shared-project-socket.mjs?v=3.4.2-roll-result-only-1";
+import { SharedProjectService } from "./shared-project-service.mjs?v=3.8.5-applied-roll-progress-1";
+import { sharedProjectAction } from "./shared-project-socket.mjs?v=3.8.5-applied-roll-progress-1";
 import { getSystemAdapter } from "./system-adapter.mjs";
 import {
   actorKnowsSpell,
@@ -19,7 +19,8 @@ import {
   recipeData,
   round,
   spellScrollRecipeData,
-  spellScrollReference
+  spellScrollReference,
+  spellScrollScribingRecipeData
 } from "./utils.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -27,11 +28,16 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 function lastResultView(result, actorValueEnabled, actorValueLabel, showRewardSummary = true) {
   if (!result?.calculation) return null;
   const calculation = result.calculation;
+  const appliedProgress = Number.isFinite(Number(calculation.appliedProgress))
+    ? Number(calculation.appliedProgress)
+    : Number(calculation.progress);
+  const showsAppliedProgress = Number.isFinite(Number(calculation.appliedProgress));
   const parts = [];
   const addPart = (key, value, neutral, label) => {
     const number = Number(value);
     if (!Number.isFinite(number) || number === neutral) return;
     parts.push({
+      key,
       label: label ?? game.i18n.localize(`DOWNTIME_MANAGER.Calculation.${key}`),
       explanation: game.i18n.localize(`DOWNTIME_MANAGER.Calculation.${key}Help`),
       value: number,
@@ -61,8 +67,13 @@ function lastResultView(result, actorValueEnabled, actorValueLabel, showRewardSu
       modifier.label || game.i18n.localize(`DOWNTIME_MANAGER.Calculation.${multiply ? "OtherMultipliers" : "Additional"}`)
     );
   }
-  const additions = parts.filter(part => part.operation === "add");
-  const multipliers = parts.filter(part => part.operation === "multiply");
+  // Base progress and character sources were awarded on investment already.
+  // After a roll, only its increment belongs in this result explanation.
+  const displayParts = showsAppliedProgress
+    ? parts.filter(part => ["RollAddition", "RollMultiplier"].includes(part.key))
+    : parts;
+  const additions = displayParts.filter(part => part.operation === "add");
+  const multipliers = displayParts.filter(part => part.operation === "multiply");
   const additiveFormula = additions.length
     ? additions.map((part, index) => {
       if (!index) return String(part.value);
@@ -77,12 +88,12 @@ function lastResultView(result, actorValueEnabled, actorValueLabel, showRewardSu
     natural: result.natural,
     hasRoll: Number.isFinite(Number(result.total)),
     label: result.label,
-    progress: calculation.progress,
+    progress: appliedProgress,
     rewards: Array.isArray(result.rewards) ? result.rewards : [],
-    formula: calculation.bonusOnly
-      ? `${calculation.rollAddition} + ${calculation.intervalBaseProgress} × (${calculation.rollMultiplier} − 1) = ${calculation.progress}`
+    formula: showsAppliedProgress
+      ? `${calculation.rollAddition} + ${calculation.intervalBaseProgress} × (${calculation.rollMultiplier} − 1) = ${appliedProgress}`
       : `${calculation.downtime} × (${additiveFormula})${multiplierFormula} = ${calculation.progress}`,
-    parts,
+    parts: displayParts,
     actorValueEnabled,
     hasActorValueResult: Number.isFinite(Number(result.actorValueAfter)),
     actorValueBefore: result.actorValueBefore,
@@ -288,10 +299,16 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const actor = getActiveCrafter();
     const station = getStationData(this.stationActor);
     const adapter = getSystemAdapter();
+    const stationDescription = station.description
+      ? await foundry.applications.ux.TextEditor.implementation.enrichHTML(
+        String(station.description),
+        { async: true, secrets: this.stationActor.isOwner, relativeTo: this.stationActor }
+      )
+      : "";
     const base = {
       station,
       stationName: station.displayName || this.stationActor.name,
-      stationDescription: station.description,
+      stationDescription,
       isGM: game.user.isGM,
       disabled: !station.enabled
     };
@@ -317,20 +334,30 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
         sources.set(item.uuid, { uuid: item.uuid, item, personal: true, spellScroll: true });
       }
     }
+    if (station.spellScrollScribing) {
+      for (const item of actor.items) {
+        if (item.type !== "spell" || sources.has(item.uuid)) continue;
+        sources.set(item.uuid, { uuid: item.uuid, item, personal: true, spellScrollScribing: true });
+      }
+    }
 
     const projects = [];
     for (const source of sources.values()) {
       const item = source.item ?? await fromUuid(source.uuid);
       if (!item || item.documentName !== "Item") continue;
       const scrollProject = source.spellScroll ? await spellScrollRecipeData(item) : null;
+      const scribingProject = source.spellScrollScribing ? spellScrollScribingRecipeData(item) : null;
       if (source.spellScroll && !scrollProject) continue;
-      const definition = scrollProject?.definition ?? recipeData(item, { sourceUuid: source.uuid });
+      if (source.spellScrollScribing && !scribingProject) continue;
+      const definition = scrollProject?.definition ?? scribingProject?.definition ?? recipeData(item, { sourceUuid: source.uuid });
       const projectStation = StationEngine.projectConfiguration(station, definition);
       const resultUuid = definition.resultUuid || definition.rewards?.[0]?.uuid || "";
       const resultItem = definition.isCustom && resultUuid
         ? await fromUuid(resultUuid).catch(() => null)
         : item;
-      const knownSpell = actorKnowsSpell(actor, resultItem, definition.spellScroll ? { origin: "wizard" } : {});
+      const knownSpell = definition.spellScrollScribing
+        ? false
+        : actorKnowsSpell(actor, resultItem, definition.spellScroll ? { origin: "wizard" } : {});
       const classification = projectClassification(resultItem);
       const descriptionDocument = scrollProject?.spell ?? item;
       const description = await foundry.applications.ux.TextEditor.implementation.enrichHTML(
@@ -385,7 +412,7 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
       projects.push({
         levelBlocked: levelAccess.blocked, levelMessage: levelAccess.message,
         uuid: source.uuid,
-        name: item.name,
+        name: definition.projectName || item.name,
         img: item.img,
         description,
         goldCost: displayedGoldCost,
@@ -536,7 +563,7 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
       if (!result) return;
       ui.notifications.info(game.i18n.format("DOWNTIME_MANAGER.Notifications.RollResolved", {
         result: result.row.label || result.rolled.total,
-        progress: result.calculation.progress
+        progress: result.calculation.appliedProgress ?? result.calculation.progress
       }));
       if (result.actorValueChange) {
         ui.notifications.info(game.i18n.format(

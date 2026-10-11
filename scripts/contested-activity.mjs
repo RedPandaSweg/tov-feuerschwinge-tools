@@ -1,6 +1,7 @@
 import { MODULE_ID, modulePath } from "./core/constants.mjs";
 
 const ACTIVITY_TYPE = "tovContest";
+let registered = false;
 
 function firstRoll(result) {
   if (Array.isArray(result)) return result[0] ?? null;
@@ -113,12 +114,16 @@ function checkOptions() {
   ];
 }
 
-Hooks.once("init", () => {
-  if (game.system.id !== "black-flag") return;
+export function registerContestedActivity() {
+  if (registered) return { status: "already-installed" };
+  if (game.system.id !== "black-flag") return { status: "inactive", reason: "Black Flag is not active." };
 
-  const DamageActivity = BlackFlag.documents.activity.DamageActivity;
-  const DamageData = DamageActivity.metadata.dataModel;
-  const DamageSheet = CONFIG.Activity.types.damage.sheetClasses.config;
+  const DamageActivity = BlackFlag?.documents?.activity?.DamageActivity;
+  const DamageData = DamageActivity?.metadata?.dataModel;
+  const DamageSheet = CONFIG.Activity?.types?.damage?.sheetClasses?.config;
+  if (!DamageActivity || !DamageData || !DamageSheet) {
+    throw new Error("Black Flag's damage Activity API is unavailable.");
+  }
   const { SchemaField, SetField, StringField } = foundry.data.fields;
 
   class ContestedActivityData extends DamageData {
@@ -255,4 +260,6 @@ Hooks.once("init", () => {
   ContestedActivity.localize();
   BlackFlag.modules[MODULE_ID] ??= {};
   Object.assign(BlackFlag.modules[MODULE_ID], { ContestedActivity, ContestedActivityData, ContestedActivitySheet });
-});
+  registered = true;
+  return { status: "completed" };
+}
