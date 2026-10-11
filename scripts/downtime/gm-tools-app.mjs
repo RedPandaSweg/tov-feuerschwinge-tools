@@ -36,7 +36,6 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       openStation: DowntimeDashboardApp.openStation,
       openProjectLibrary: DowntimeDashboardApp.openProjectLibrary,
       openStationPresets: DowntimeDashboardApp.openStationPresets,
-      openSessions: DowntimeDashboardApp.openSessions,
       removeDashboardProject: DowntimeDashboardApp.removeProject,
       grantSelectedDowntime: DowntimeDashboardApp.grantSelectedDowntime,
       grantAllDowntime: DowntimeDashboardApp.grantAllDowntime,
@@ -51,6 +50,7 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       settlePassiveDowntime: GMToolsApp.#settlePassiveDowntime,
       correctHistoricalSession: GMToolsApp.#correctHistoricalSession,
       saveProject: GMToolsApp.#saveProject,
+      saveCharacterValue: GMToolsApp.#saveCharacterValue,
       removeProject: GMToolsApp.#removeProject,
       unlockSession: GMToolsApp.#unlockSession,
       resetSession: GMToolsApp.#resetSession,
@@ -396,6 +396,8 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
         label: id === "characters" ? uiText("TOVF.Interface.Milestones_a38757", "Meilensteine") : id === "projects" ? uiText("TOVF.Interface.ProjectOverview_b340e1", "Projektübersicht") : id === "downtime" ? "Downtime" : game.i18n.localize(`DOWNTIME_MANAGER.GMTools.Tabs.${id}`)
       })),
       actors: actors.map(actor => ({ uuid: actor.uuid, name: actor.name, img: actor.img, selected: actor.uuid === this.actorUuid })),
+      canManageCharacterValues: isProjectAdministrator(),
+      characterValues: this.tab === "characters" && selected && isProjectAdministrator() ? GMToolsService.characterValues(selected.actor) : [],
       guildOverview,
       selected: selected ? {
         uuid: selected.actor.uuid,
@@ -694,6 +696,24 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     await this.#execute(
       () => GMToolsService.updateProject(this.actorUuid, target.dataset.stateId, values),
       "DOWNTIME_MANAGER.GMTools.Notifications.ProjectSaved"
+    );
+  }
+
+  static async #saveCharacterValue(event, target) {
+    event.preventDefault();
+    const row = target.closest("[data-character-value-row]");
+    if (!row) return;
+    const value = row.querySelector('[name="characterValue"]')?.value;
+    const current = Number(row.dataset.value);
+    const next = Number(value);
+    if (!Number.isFinite(next)) return ui.notifications.error(game.i18n.localize("DOWNTIME_MANAGER.GMTools.CharacterValueErrors.Invalid"));
+    if (!await foundry.applications.api.DialogV2.confirm({
+      window: { title: game.i18n.localize("DOWNTIME_MANAGER.GMTools.ConfirmChange") },
+      content: `<p>${game.i18n.localize("DOWNTIME_MANAGER.GMTools.ConfirmChangeHint")}</p><table><tr><th></th><th>${game.i18n.localize("DOWNTIME_MANAGER.GMTools.Before")}</th><th>${game.i18n.localize("DOWNTIME_MANAGER.GMTools.After")}</th></tr><tr><td>${foundry.utils.escapeHTML(row.dataset.label ?? "")}</td><td>${current}</td><td>${foundry.utils.escapeHTML(String(value))}</td></tr></table>`
+    })) return;
+    await this.#execute(
+      () => GMToolsService.updateCharacterValue(row.dataset.actorUuid, row.dataset.stationUuid, value),
+      "DOWNTIME_MANAGER.GMTools.CharacterValueOverview.Saved"
     );
   }
 

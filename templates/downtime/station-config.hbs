@@ -159,7 +159,8 @@
       <label title="{{localize 'DOWNTIME_MANAGER.Tooltips.ActorValue.Maximum'}}">{{localize "DOWNTIME_MANAGER.Common.Maximum"}} <input type="number" name="actorValue.maximum" value="{{station.actorValue.maximum}}" step="any"></label>
       <label title="{{localize 'DOWNTIME_MANAGER.Tooltips.ActorValue.CompletionChange'}}">{{localize "DOWNTIME_MANAGER.Station.CompletionChange"}} <input type="number" name="actorValue.completionChange" value="{{station.actorValue.completionChange}}" step="any"></label>
     </div>
-    <div class="sc-title-row"><h4 title="{{localize 'DOWNTIME_MANAGER.Tooltips.ActorValue.Tiers'}}">{{localize "DOWNTIME_MANAGER.Station.ValueTiers"}}</h4><span><button type="button" data-action="resetValueTiers" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.ResetValueTiers'}}"><i class="fa-solid fa-rotate-left"></i> {{localize "DOWNTIME_MANAGER.Actions.Reset"}}</button><button type="button" data-action="loadValueTierPreset" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.LoadValueTierPreset'}}"><i class="fa-solid fa-bolt"></i> {{localize "DOWNTIME_MANAGER.Actions.LoadValueTierPreset"}}</button><button type="button" data-action="addTier" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.AddTier'}}"><i class="fa-solid fa-plus"></i></button></span></div>
+    <div class="sc-actor-value-option"><label class="checkbox"><input type="checkbox" name="actorValue.increasePerDowntime" {{checked station.actorValue.increasePerDowntime}}> <strong>{{localize "DOWNTIME_MANAGER.Station.IncreasePerDowntime"}}</strong></label><p class="notes">{{localize "DOWNTIME_MANAGER.Tooltips.ActorValue.IncreasePerDowntime"}}</p></div>
+    <div class="sc-title-row"><h4 title="{{localize 'DOWNTIME_MANAGER.Tooltips.ActorValue.Tiers'}}">{{localize "DOWNTIME_MANAGER.Station.ValueTiers"}}</h4><span class="sc-value-tier-actions"><button type="button" data-action="resetValueTiers" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.ResetValueTiers'}}"><i class="fa-solid fa-rotate-left"></i> {{localize "DOWNTIME_MANAGER.Actions.Reset"}}</button><button type="button" data-action="loadReputationValueTiers" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.LoadReputationValueTiers'}}"><i class="fa-solid fa-bolt"></i> {{localize "DOWNTIME_MANAGER.Actions.LoadReputationValueTiers"}}</button><button type="button" data-action="loadCraftingExperienceTiers" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.LoadCraftingExperienceTiers'}}"><i class="fa-solid fa-hammer"></i> {{localize "DOWNTIME_MANAGER.Actions.LoadCraftingExperienceTiers"}}</button><button type="button" data-action="addTier" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.AddTier'}}"><i class="fa-solid fa-plus"></i></button></span></div>
     <div class="sc-list value-tier-list">
       <div class="sc-grid-row tier-row tier-header">
         <span>{{localize "DOWNTIME_MANAGER.Common.Minimum"}}</span>
@@ -168,7 +169,7 @@
         <span>{{localize "DOWNTIME_MANAGER.RollTable.ProgressMultiplier"}}</span>
         <span>{{localize "DOWNTIME_MANAGER.RollTable.RewardAddition"}}</span>
         <span>{{localize "DOWNTIME_MANAGER.RollTable.RewardMultiplier"}}</span>
-        <span></span>
+        <span>{{localize "DOWNTIME_MANAGER.RollTable.Actions"}}</span>
       </div>
     {{#each station.actorValue.tiers}}
       <div class="sc-grid-row tier-row">
@@ -178,7 +179,7 @@
         <input type="number" name="actorValue.tiers.{{@index}}.multiplier" value="{{multiplier}}" step="any" title="{{localize 'DOWNTIME_MANAGER.RollTable.ProgressMultiplier'}}">
         <input type="number" name="actorValue.tiers.{{@index}}.rewardAddition" value="{{rewardAddition}}" step="any" title="{{localize 'DOWNTIME_MANAGER.Tooltips.RollTable.RewardAddition'}}">
         <input type="number" name="actorValue.tiers.{{@index}}.rewardMultiplier" value="{{rewardMultiplier}}" step="any" title="{{localize 'DOWNTIME_MANAGER.Tooltips.RollTable.RewardMultiplier'}}">
-        <span class="sc-list-controls"><button type="button" data-action="moveTier" data-index="{{@index}}" data-direction="-1" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.MoveUp'}}"><i class="fa-solid fa-arrow-up"></i></button><button type="button" data-action="moveTier" data-index="{{@index}}" data-direction="1" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.MoveDown'}}"><i class="fa-solid fa-arrow-down"></i></button><button type="button" data-action="removeTier" data-index="{{@index}}" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.RemoveRow'}}"><i class="fa-solid fa-trash"></i></button></span>
+        <span class="sc-list-controls sc-tier-row-actions"><button type="button" data-action="moveTier" data-index="{{@index}}" data-direction="-1" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.MoveUp'}}"><i class="fa-solid fa-arrow-up"></i></button><button type="button" data-action="moveTier" data-index="{{@index}}" data-direction="1" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.MoveDown'}}"><i class="fa-solid fa-arrow-down"></i></button><button type="button" class="danger" data-action="removeTier" data-index="{{@index}}" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.RemoveRow'}}"><i class="fa-solid fa-trash"></i></button></span>
       </div>
     {{/each}}</div>
     </div>

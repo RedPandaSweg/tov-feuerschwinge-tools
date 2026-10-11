@@ -66,6 +66,13 @@
                   </tr></template>
           <button type="button" data-action="addMilestoneRow"><i class="fa-solid fa-plus"></i> {{localize "DOWNTIME_MANAGER.Session.MilestoneOrigin.AddRow"}}</button>
         </fieldset>
+        {{#if canManageCharacterValues}}
+        <fieldset class="tovf-gm-character-values">
+          <legend>{{localize "DOWNTIME_MANAGER.GMTools.CharacterValueOverview.Title"}}</legend>
+          <p class="notes">{{localize "DOWNTIME_MANAGER.GMTools.CharacterValueOverview.Hint"}}</p>
+          <div class="tovf-session-history-table tovf-character-values-table"><table><thead><tr><th>{{localize "DOWNTIME_MANAGER.GMTools.CharacterValueOverview.Value"}}</th><th>{{localize "DOWNTIME_MANAGER.GMTools.CharacterValueOverview.Source"}}</th><th>{{localize "DOWNTIME_MANAGER.GMTools.CharacterValueOverview.Scope"}}</th><th></th></tr></thead><tbody>{{#each characterValues}}<tr data-character-value-row data-actor-uuid="{{actorUuid}}" data-station-uuid="{{stationUuid}}" data-value="{{value}}" data-label="{{label}}"><td><strong>{{label}}</strong></td><td>{{sourceName}}</td><td>{{scopeLabel}}</td><td><input type="number" name="characterValue" value="{{value}}" step="any" aria-label="{{label}}"><button type="button" data-action="saveCharacterValue"><i class="fa-solid fa-floppy-disk"></i> {{localize "DOWNTIME_MANAGER.GMTools.CharacterValueOverview.Save"}}</button></td></tr>{{else}}<tr><td colspan="4" class="notes">{{localize "DOWNTIME_MANAGER.GMTools.CharacterValueOverview.Empty"}}</td></tr>{{/each}}</tbody></table></div>
+        </fieldset>
+        {{/if}}
       </div>
       <footer class="form-footer tovf-gm-character-footer"><button type="button" data-action="exportCharacter"><i class="fa-solid fa-download"></i> {{localize "DOWNTIME_MANAGER.GMTools.Export"}}</button><button type="button" data-action="saveCharacter"><i class="fa-solid fa-floppy-disk"></i> {{localize "DOWNTIME_MANAGER.GMTools.SaveCharacter"}}</button></footer>
     </div>
@@ -115,7 +122,7 @@
   {{/if}}
   {{#if (eq tab "projects")}}
 
-  <section class="tovf-gm-tools-section sc-dashboard-body"><div class="tovf-gm-project-header">  <div class="sc-section-actions"><button type="button" data-action="openProjectLibrary">{{localize "DOWNTIME_MANAGER.ProjectLibrary.Title"}}</button><button type="button" data-action="openStationPresets">{{localize "DOWNTIME_MANAGER.StationPresets.Title"}}</button><button type="button" data-action="openSessions">{{localize "DOWNTIME_MANAGER.Session.Title"}}</button></div>{{#with dashboard}}  <div class="sc-dashboard-summary">
+  <section class="tovf-gm-tools-section sc-dashboard-body"><div class="tovf-gm-project-header">  <div class="sc-section-actions"><button type="button" data-action="openProjectLibrary">{{localize "DOWNTIME_MANAGER.ProjectLibrary.Title"}}</button><button type="button" data-action="openStationPresets">{{localize "DOWNTIME_MANAGER.StationPresets.Title"}}</button></div>{{#with dashboard}}  <div class="sc-dashboard-summary">
     <span><strong>{{localize "DOWNTIME_MANAGER.Dashboard.Stations"}}:</strong> {{stations.length}}</span>
     <span><strong>{{localize "DOWNTIME_MANAGER.Dashboard.Active"}}:</strong> {{activeCount}}</span>
     <span><strong>{{localize "DOWNTIME_MANAGER.Dashboard.PendingRolls"}}:</strong> {{rollCount}}</span>

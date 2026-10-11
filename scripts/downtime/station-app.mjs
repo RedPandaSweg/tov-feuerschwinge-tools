@@ -223,6 +223,13 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
     super._onRender(context, options);
     const catalog = this.element.querySelector("[data-project-catalog]");
     if (!catalog) return;
+
+    for (const project of catalog.querySelectorAll('[data-project-entry]:not([data-project-status="active"])')) {
+      const summary = project.querySelector(".sc-project-main")?.textContent?.replace(/\s+/g, " ").trim();
+      const description = project.querySelector(".sc-project-description")?.textContent?.replace(/\s+/g, " ").trim();
+      project.title = [summary, description].filter(Boolean).join("\n");
+    }
+
     const search = catalog.querySelector('[data-project-filter="search"]');
     const type = catalog.querySelector('[data-project-filter="type"]');
     const subtype = catalog.querySelector('[data-project-filter="subtype"]');

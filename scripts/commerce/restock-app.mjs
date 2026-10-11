@@ -1,7 +1,7 @@
 import { MODULE_ID } from "../core/constants.mjs";
 import { subscribeModuleEvent, unsubscribeModuleEvent } from "../core/events.mjs?v=3.7.8-module-events-1";
 import { merchantConfig, merchantStockQuantity } from "./service.mjs?v=3.7.8-runtime-audit-1";
-import { restockMerchant } from "./restock.mjs?v=3.7.8-safe-documents-1";
+import { restockMerchant } from "./restock.mjs?v=3.8.5-restock-consume-next-1";
 import { merchantSpellScrollOffers } from "../spell-scrolls.mjs?v=3.8.5-scroll-activation-1";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -16,7 +16,7 @@ function freshRule() {
 export class RestockConfigApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = { id: "tovf-restock-config", classes: ["tovf-restock-config"], position: { width: 850, height: 720 },
     window: { title: "TOVF.Interface.Restock.Title", icon: "fa-solid fa-truck", resizable: true }, actions: {
-      addRule: this.addRule, removeRule: this.removeRule, save: this.save, run: this.run
+      addRule: this.addRule, removeRule: this.removeRule, save: this.save, deliverRule: this.deliverRule, deliverRuleDirectly: this.deliverRuleDirectly
     } };
   static PARTS = { main: { template: `modules/${MODULE_ID}/templates/restock-config.hbs` } };
   constructor(actor, options = {}) {
@@ -109,5 +109,18 @@ export class RestockConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
   static async addRule() { this._readForm(); this.rules.push(freshRule()); await this.render({ force: true }); }
   static async removeRule(_event, target) { this._readForm(); this.rules = this.rules.filter(rule => rule.id !== target.dataset.ruleId); await this.render({ force: true }); }
   static async save() { await this._persist(); this.rules = foundry.utils.deepClone(merchantConfig(this.actor).restock.rules); ui.notifications.info(game.i18n.localize("TOVF.Interface.Restock.Saved")); await this.render({ force: true }); }
-  static async run() { await this._persist(); await restockMerchant(this.actor, { force: true }); this.rules = foundry.utils.deepClone(merchantConfig(this.actor).restock.rules); ui.notifications.info(game.i18n.localize("TOVF.Interface.Restock.Complete")); await this.render({ force: true }); }
+  static async deliverRule(_event, target) {
+    await this._persist();
+    await restockMerchant(this.actor, { force: true, ruleIds: [target.dataset.ruleId] });
+    this.rules = foundry.utils.deepClone(merchantConfig(this.actor).restock.rules);
+    ui.notifications.info(game.i18n.localize("TOVF.Interface.Restock.Delivered"));
+    await this.render({ force: true });
+  }
+  static async deliverRuleDirectly(_event, target) {
+    await this._persist();
+    await restockMerchant(this.actor, { force: true, ruleIds: [target.dataset.ruleId], recordDelivery: false, advanceSchedule: false });
+    this.rules = foundry.utils.deepClone(merchantConfig(this.actor).restock.rules);
+    ui.notifications.info(game.i18n.localize("TOVF.Interface.Restock.DirectComplete"));
+    await this.render({ force: true });
+  }
 }

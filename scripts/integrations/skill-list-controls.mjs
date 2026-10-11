@@ -134,8 +134,20 @@ function enhanceSkillCheckMessage(message, element) {
 
 function addLuckRemoveControl(root) {
   const luck = root?.querySelector?.('[data-tab="main"] fieldset.luck');
-  const add = luck?.querySelector?.('[data-action="addLuck"]');
-  if (!luck || !add || luck.querySelector('[data-tovf-luck-remove]')) return;
+  if (!luck) return;
+  let add = luck.querySelector('[data-action="addLuck"]');
+  if (!add) {
+    add = document.createElement("button");
+    add.type = "button";
+    add.className = "link-button tovf-luck-add";
+    add.dataset.action = "addLuck";
+    add.dataset.tovfLuckAdd = "true";
+    add.dataset.tooltip = "Luck hinzufügen";
+    add.setAttribute("aria-label", "Luck hinzufügen");
+    add.innerHTML = '<i class="fa-solid fa-plus" aria-hidden="true"></i>';
+    luck.append(add);
+  }
+  if (luck.querySelector('[data-tovf-luck-remove]')) return;
   const remove = document.createElement("button");
   remove.type = "button";
   remove.className = "link-button tovf-luck-remove";
@@ -145,6 +157,14 @@ function addLuckRemoveControl(root) {
   remove.setAttribute("aria-label", "Luck abziehen");
   remove.innerHTML = '<i class="fa-solid fa-minus" aria-hidden="true"></i>';
   add.after(remove);
+}
+
+function extendInventorySortingBar(root) {
+  const table = root?.querySelector?.('[data-tab="inventory"] > blackFlag-inventory > table');
+  const sortingCell = table?.querySelector?.(':scope > thead > tr.filters > th');
+  const columnCount = table?.querySelector?.(':scope > tbody > tr.table-header')?.children.length;
+  if (!sortingCell || !columnCount) return;
+  sortingCell.colSpan = columnCount;
 }
 
 function addRestControls(root) {
@@ -222,6 +242,7 @@ function enhanceSkills(app, element) {
   const root = rootOf(element);
   swapAbilityValueDisplays(root);
   addLuckRemoveControl(root);
+  extendInventorySortingBar(root);
   addRestControls(root);
   addActionColumnHeadings(root);
   const skills = root?.querySelector?.('[data-tab="main"] fieldset.skills');

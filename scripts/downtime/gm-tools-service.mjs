@@ -1,4 +1,5 @@
 import { uiText } from "../core/localization.mjs";
+import { isProjectAdministrator } from "../core/permissions.mjs";
 import {
   DEFAULT_SESSION_PROGRESS,
   FLAGS,
@@ -9,11 +10,18 @@ import { DowntimeService } from "./downtime-service.mjs";
 import { ProjectService } from "./project-service.mjs";
 import { actorLevel, isActiveCharacter, milestoneEntries, playerCharacters, sessionProgress, TIER_CAP_LEVELS } from "./session-service.mjs";
 import { assignMilestoneEvidence, milestoneEvidence } from "../campaign/milestone-evidence.mjs";
-import { round } from "./utils.mjs";
+import { getStationData, round } from "./utils.mjs";
+import { RewardService } from "./reward-service.mjs";
 import { deleteExistingEmbeddedDocuments } from "../core/document-operations.mjs?v=3.7.8-safe-documents-1";
 
 function requireGM() {
   if (!game.user?.isGM) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.GMTools.Errors.GMOnly"));
+}
+
+function requireProjectAdministrator() {
+  if (!isProjectAdministrator()) {
+    throw new Error(game.i18n.localize("DOWNTIME_MANAGER.GMTools.Errors.GMOnly"));
+  }
 }
 
 function finiteNumber(value, label, { minimum = 0, integer = false } = {}) {
@@ -479,6 +487,71 @@ export class GMToolsService {
     };
   }
 
+  static characterValues(actor = null) {
+    requireProjectAdministrator();
+    const categoryStations = new Map();
+    const stationValues = [];
+    for (const stationActor of game.actors) {
+      if (!stationActor.getFlag(MODULE_ID, FLAGS.STATION)) continue;
+      const station = getStationData(stationActor);
+      if (!station.actorValue?.enabled) continue;
+      if (station.actorValue.scope === "category") {
+        const category = String(station.actorValue.category ?? "").trim();
+        if (category && !categoryStations.has(category)) categoryStations.set(category, { stationActor, station });
+      } else {
+        stationValues.push({ stationActor, station });
+      }
+    }
+    const characters = actor ? [actor] : playerCharacters();
+    return characters.flatMap(actor => [
+      ...stationValues,
+      ...categoryStations.values()
+    ].map(({ stationActor, station }) => ({
+      actorUuid: actor.uuid,
+      actorName: actor.name,
+      actorImg: actor.img,
+      stationUuid: stationActor.uuid,
+      scope: station.actorValue.scope === "category" ? "category" : "station",
+      sourceName: station.actorValue.scope === "category"
+        ? String(station.actorValue.category ?? "")
+        : stationActor.name,
+      scopeLabel: game.i18n.localize(`DOWNTIME_MANAGER.GMTools.CharacterValueOverview.Scopes.${station.actorValue.scope === "category" ? "category" : "station"}`),
+      label: station.actorValue.label || station.actorValue.key || game.i18n.localize("DOWNTIME_MANAGER.Station.ActorValue"),
+      value: RewardService.getStationValue(actor, stationActor, station)
+    })));
+  }
+
+  static async updateCharacterValue(actorUuid, stationUuid, value) {
+    requireProjectAdministrator();
+    const actor = await actorFromUuid(actorUuid);
+    if (!playerCharacters().some(entry => entry.uuid === actor.uuid)) {
+      throw new Error(game.i18n.localize("DOWNTIME_MANAGER.GMTools.Errors.ActorMissing"));
+    }
+    const stationActor = await actorFromUuid(stationUuid);
+    if (!stationActor.getFlag(MODULE_ID, FLAGS.STATION)) {
+      throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.NotStation"));
+    }
+    const station = getStationData(stationActor);
+    if (!station.actorValue?.enabled) {
+      throw new Error(game.i18n.localize("DOWNTIME_MANAGER.GMTools.CharacterValueErrors.Missing"));
+    }
+    const next = Number(value);
+    if (!Number.isFinite(next)) {
+      throw new Error(game.i18n.format("DOWNTIME_MANAGER.GMTools.Errors.InvalidNumber", {
+        label: station.actorValue.label || station.actorValue.key || game.i18n.localize("DOWNTIME_MANAGER.Station.ActorValue")
+      }));
+    }
+    const current = RewardService.getStationValue(actor, stationActor, station);
+    if (Math.abs(next - current) < 1e-9) return current;
+    await storeUndo({
+      kind: "actor",
+      tab: "characters",
+      actorUuid: actor.uuid,
+      before: { stationValues: actor.getFlag(MODULE_ID, FLAGS.STATION_VALUES) ?? null }
+    });
+    return RewardService.changeStationValue(actor, stationActor, station, next - current);
+  }
+
   static async updateCharacter(actorUuid, values) {
     requireGM();
     const actor = await actorFromUuid(actorUuid);
@@ -701,6 +774,7 @@ export class GMToolsService {
     requireGM();
     const snapshot = this.undoData();
     if (!snapshot.kind) return false;
+    if (snapshot.before?.stationValues !== undefined) requireProjectAdministrator();
     if (snapshot.kind === "actor") {
       const actor = await actorFromUuid(snapshot.actorUuid);
       if ("downtime" in snapshot.before) {
@@ -718,6 +792,10 @@ export class GMToolsService {
       if ("projects" in snapshot.before) {
         if (snapshot.before.projects == null) await actor.unsetFlag(MODULE_ID, FLAGS.PROJECTS);
         else await actor.setFlag(MODULE_ID, FLAGS.PROJECTS, snapshot.before.projects);
+      }
+      if ("stationValues" in snapshot.before) {
+        if (snapshot.before.stationValues == null) await actor.unsetFlag(MODULE_ID, FLAGS.STATION_VALUES);
+        else await actor.setFlag(MODULE_ID, FLAGS.STATION_VALUES, snapshot.before.stationValues);
       }
     } else if (snapshot.kind === "setting") {
       await game.settings.set(MODULE_ID, snapshot.setting, snapshot.before ?? {});

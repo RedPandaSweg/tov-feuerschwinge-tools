@@ -132,6 +132,18 @@ function cleanRequiredItem(source) {
   return item.uuid || item.name ? item : null;
 }
 
+function cleanPurchaseFilters(source) {
+  const filters = source && typeof source === "object" ? source : {};
+  const cleanValues = (values, valid = null) => [...new Set((Array.isArray(values) ? values : [])
+    .map(value => String(value ?? "").trim()).filter(value => value && (!valid || valid.has(value))))].slice(0, 100);
+  return {
+    types: cleanValues(filters.types, TRADEABLE_TYPES),
+    categories: cleanValues(filters.categories),
+    bases: cleanValues(filters.bases),
+    items: (Array.isArray(filters.items) ? filters.items : []).map(cleanRequiredItem).filter(Boolean).slice(0, 100)
+  };
+}
+
 function serialize(operation) {
   const result = operationQueue.then(operation, operation);
   operationQueue = result.catch(() => {});
@@ -191,6 +203,7 @@ export function merchantConfig(actor) {
     infiniteStock: source.infiniteStock !== false,
     infiniteCurrency: source.infiniteCurrency !== false,
     purchaseOnly: source.purchaseOnly === true,
+    purchaseFilters: cleanPurchaseFilters(source.purchaseFilters),
     keepSoldItems: source.keepSoldItems === true,
     hideNewItems: source.hideNewItems !== false,
     displayQuantity: source.displayQuantity !== false,
@@ -276,6 +289,26 @@ function hasRequiredItem(actor, required) {
     if (required.identifier) return itemIdentifier(item) === required.identifier;
     return !!requiredName && item.name.trim().toLocaleLowerCase() === requiredName;
   });
+}
+
+function matchesConfiguredItem(item, required) {
+  if (!item || !required) return false;
+  const sourceId = String(item.getFlag?.("core", "sourceId") ?? "");
+  if (required.uuid && (item.uuid === required.uuid || sourceId === required.uuid)) return true;
+  if (required.type && item.type !== required.type) return false;
+  if (required.identifier) return itemIdentifier(item) === required.identifier;
+  return !!required.name && item.name.trim().localeCompare(required.name.trim(), undefined, { sensitivity: "base" }) === 0;
+}
+
+export function merchantAcceptsItem(config, item) {
+  const filters = config?.purchaseFilters ?? cleanPurchaseFilters();
+  if (!filters.types.length && !filters.categories.length && !filters.bases.length && !filters.items.length) return true;
+  const category = String(item?.system?.type?.category ?? "").trim();
+  const base = String(item?.system?.type?.base ?? "").trim();
+  return filters.types.includes(item?.type)
+    || filters.categories.includes(category)
+    || filters.bases.includes(base)
+    || filters.items.some(required => matchesConfiguredItem(item, required));
 }
 
 function tokenAxisDistance(leftStart, leftSize, rightStart, rightSize, gridSize) {
@@ -447,6 +480,7 @@ async function merchantSell(payload, userId) {
   if (itemQuantity(item) < quantity) throw new Error(uiText("TOVF.Interface.YouDoNotOwnEnoughOfThis_27deac", "Du besitzt nicht genug davon."));
   const config = merchantConfig(shop);
   if (config.purchaseOnly) throw new Error(uiText("TOVF.Interface.ThisMerchantDoesNotBuyItems_455704", "Dieser Händler kauft keine Gegenstände an."));
+  if (!merchantAcceptsItem(config, item)) throw new Error(uiText("TOVF.Interface.ThisMerchantDoesNotBuyThisItem", "Dieser Händler kauft diesen Gegenstand nicht an."));
   const copper = priceInCopper(item, config.sellModifier) * priceUnits;
   validateCurrencyChange(seller, copper);
   if (!config.infiniteCurrency) validateCurrencyChange(shop, -copper);

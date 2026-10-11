@@ -214,7 +214,11 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
       otherPlayers: players.filter(player => !player.active),
       rewardColumns,
       awardMilestones: active.awardMilestones !== false,
-      multipliers: [1, 1.5, 2].map(value => ({ value, selected: Number(active.multiplier ?? 1) === value })),
+      multipliers: [
+        { value: 1, label: "×1 · bis 4 h" },
+        { value: 1.5, label: "×1,5 · 4 bis 6 h" },
+        { value: 2, label: "×2 · über 6 h" }
+      ].map(entry => ({ ...entry, selected: Number(active.multiplier ?? 1) === entry.value })),
       includeTransferScenes: active.includeTransferScenes === true
     };
   }

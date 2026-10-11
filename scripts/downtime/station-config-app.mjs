@@ -1,4 +1,4 @@
-import { DEFAULT_VALUE_TIERS, FLAGS, MODULE_ID, PROJECT_TEMPLATES, ROLL_TABLE_PRESETS } from "./constants.mjs";
+import { CRAFTING_EXPERIENCE_TIERS, DEFAULT_VALUE_TIERS, FLAGS, MODULE_ID, PROJECT_TEMPLATES, ROLL_TABLE_PRESETS } from "./constants.mjs";
 import { getSystemAdapter } from "./system-adapter.mjs";
 import { createRecipeFromBaseItem } from "./recipe-service.mjs";
 import { StationEngine } from "./station-engine.mjs";
@@ -50,7 +50,8 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
       toggleChecks: StationConfigApp.#toggleChecks,
       resetRollTable: StationConfigApp.#resetRollTable,
       resetValueTiers: StationConfigApp.#resetValueTiers,
-      loadValueTierPreset: StationConfigApp.#loadValueTierPreset,
+      loadReputationValueTiers: StationConfigApp.#loadReputationValueTiers,
+      loadCraftingExperienceTiers: StationConfigApp.#loadCraftingExperienceTiers,
       addCategorySelection: StationConfigApp.#addCategorySelection,
       removeCategorySelection: StationConfigApp.#removeCategorySelection
     }
@@ -320,6 +321,7 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
       defaultValue: numberOr(value("actorValue.defaultValue")),
       minimum: value("actorValue.minimum") === "" ? null : numberOr(value("actorValue.minimum")),
       maximum: value("actorValue.maximum") === "" ? null : numberOr(value("actorValue.maximum")),
+      increasePerDowntime: checked("actorValue.increasePerDowntime"),
       completionChange: numberOr(value("actorValue.completionChange")),
       tiers: StationEngine.normalizeValueTiers(station.actorValue.tiers.map((tier, index) => ({
         id: tier.id ?? foundry.utils.randomID(),
@@ -497,10 +499,18 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
     await this.#persistDraft(station => { station.actorValue.tiers = []; });
   }
 
-  static async #loadValueTierPreset() {
+  static async #loadReputationValueTiers() {
     await this.#persistDraft(station => {
       station.actorValue.tiers = foundry.utils.deepClone(
         DEFAULT_VALUE_TIERS
+      );
+    });
+  }
+
+  static async #loadCraftingExperienceTiers() {
+    await this.#persistDraft(station => {
+      station.actorValue.tiers = foundry.utils.deepClone(
+        CRAFTING_EXPERIENCE_TIERS
       );
     });
   }

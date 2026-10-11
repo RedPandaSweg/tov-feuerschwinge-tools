@@ -157,6 +157,9 @@ export class SharedProjectService {
     const neutralCalculation = StationEngine.calculateProgress({ station, downtime: requested, rollRow: neutralRow, actorValue: RewardService.getStationValue(actor, stationActor, station), actorSources: StationEngine.actorProgressSources(actor, check) });
     state.progress = round(Math.max(0, state.progress + neutralCalculation.progress), 6);
     contribution.progress = round(contribution.progress + neutralCalculation.progress, 6);
+    if (station.actorValue?.increasePerDowntime) {
+      await RewardService.changeStationValue(actor, stationActor, station, requested);
+    }
     const completesBeforeRoll = state.progress >= state.requiredProgress - 1e-9;
     const reachesInterval = state.intervalProgress >= interval - 1e-9;
     state.pendingRoll = !completesBeforeRoll && reachesInterval && station.requiresRoll !== false;

@@ -157,7 +157,13 @@ function encounterStats(combat = game.combat) {
 }
 
 function initiativeTurns(combat = game.combat) {
-  return [...(combat?.turns ?? [])];
+  return [...(combat?.combatants ?? [])].sort((left, right) => {
+    const leftInitiative = left.initiative == null ? -Infinity : Number(left.initiative);
+    const rightInitiative = right.initiative == null ? -Infinity : Number(right.initiative);
+    const leftValue = Number.isFinite(leftInitiative) ? leftInitiative : -Infinity;
+    const rightValue = Number.isFinite(rightInitiative) ? rightInitiative : -Infinity;
+    return rightValue - leftValue || Number(left.sort ?? 0) - Number(right.sort ?? 0);
+  });
 }
 
 function formatElapsed(milliseconds) {

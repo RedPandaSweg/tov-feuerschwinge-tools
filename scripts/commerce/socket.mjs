@@ -1,6 +1,6 @@
 import { uiText } from "../core/localization.mjs";
 import { MODULE_ID } from "../core/constants.mjs";
-import { executeCommerceAction } from "./service.mjs?v=3.7.8-runtime-audit-1";
+import { executeCommerceAction } from "./service.mjs?v=3.8.5-purchase-filters-1";
 
 const SCOPE = "commerce";
 const pending = new Map();

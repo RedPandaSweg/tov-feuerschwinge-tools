@@ -22,6 +22,7 @@ const CRAFTING_EXPERIENCE_CONFIG = Object.freeze({
   defaultValue: 0,
   minimum: 0,
   maximum: null,
+  increasePerDowntime: true,
   completionChange: 0,
   tiers: CRAFTING_EXPERIENCE_TIERS
 });

@@ -2339,6 +2339,7 @@
   color: #ff9b55;
   font-size: 1.2rem;
   line-height: 1;
+  background: rgba(37, 19, 11, .72);
 }
 
 .tovf-challenge-hud-initiative {
@@ -2710,7 +2711,10 @@
   min-height: 44px;
 }
 
-.tovf-challenge-hud-left { min-height: 78px; }
+.tovf-challenge-hud-left {
+  min-height: 78px;
+  align-items: flex-start;
+}
 
 .tovf-challenge-hud-toggle {
   display: flex;
@@ -2762,6 +2766,7 @@
 .tovf-challenge-hud-round {
   width: 3.45rem;
   height: 44px;
+  background: rgba(37, 19, 11, .72);
 }
 
 .tovf-challenge-hud-round strong {
@@ -2798,13 +2803,14 @@
 .tovf-challenge-hud-popover {
   top: 100%;
   z-index: 1001;
+  background: linear-gradient(145deg, rgba(56, 32, 22, .82), rgba(16, 10, 8, .84));
 }
 
 .tovf-challenge-hud-initiative {
   align-items: flex-start;
   width: fit-content;
   max-width: none;
-  padding-left: .6rem;
+  padding-left: .15rem;
   overflow: visible;
 }
 
@@ -3921,6 +3927,17 @@
   white-space: nowrap;
 }
 
+.tovf-character-values-table td:last-child {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+
+.tovf-character-values-table input[type="number"] {
+  width: 6rem;
+  text-align: right;
+}
+
 .tovf-session-recovery {
   margin-top: 1rem;
 }
@@ -4086,6 +4103,10 @@
 
 .tovf-restock-rules article>header button {
   width: auto;
+}
+
+.tovf-restock-rules article>header [data-action="deliverRuleDirectly"] {
+  margin-left: .75rem;
 }
 
 .tovf-restock-source {
@@ -6695,6 +6716,19 @@
   box-shadow: inset 0 0 0 1px rgba(255, 211, 143, .13), 0 2px 4px rgba(0, 0, 0, .28);
 }
 
+/* Keep the inventory sorting bar as one continuous rail across the table. */
+.black-flag.pc.sheet [data-tab="inventory"]>blackFlag-inventory>table>thead {
+  background: linear-gradient(180deg, #5b2c15, #211009);
+  border: 1px solid #a8612f;
+  box-shadow: inset 0 0 0 1px rgba(255, 211, 143, .13), 0 2px 4px rgba(0, 0, 0, .28);
+}
+
+.black-flag.pc.sheet [data-tab="inventory"]>blackFlag-inventory>table>thead>tr.filters {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
 .black-flag.pc.sheet [data-tab="inventory"]>blackFlag-inventory>table>thead>tr.filters>th {
   padding: .42rem .55rem;
   color: #f2d29b;
@@ -8339,6 +8373,50 @@
   width: 32px;
   height: 32px;
   padding: 0;
+}
+
+.tovf-merchant-purchase-items {
+  display: grid;
+  width: 100%;
+}
+
+.tovf-merchant-purchase-items article {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tovf-merchant-purchase-items article>img {
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  max-width: 42px;
+  max-height: 42px;
+  object-fit: cover;
+  border: 0;
+}
+
+.tovf-merchant-purchase-items article>button {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
+.tovf-merchant-purchase-items article>span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tovf-merchant-purchase-items article strong,
+.tovf-merchant-purchase-items article small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tovf-merchant-access-denied {

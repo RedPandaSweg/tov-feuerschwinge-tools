@@ -34,8 +34,8 @@ function nextScheduledRun(rule, now) {
     return scheduledAt + (Math.floor((now - scheduledAt) / intervalMs) + 1) * intervalMs;
   }
 
-  // Calendar months have variable lengths. Advance from the previous target,
-  // never from the delayed execution time, until the next target is future.
+  // Calendar months have variable lengths. Advance from the previous scheduled
+  // target, never from the delayed execution time, until the next target is future.
   while (nextRunAt <= now) nextRunAt = addCalendarInterval(nextRunAt, value, rule.intervalUnit);
   return nextRunAt;
 }
@@ -109,16 +109,18 @@ export async function maintainMerchantStock(actor, now = Date.now()) {
   if (merchantChanged) refreshMerchantShop(actor);
 }
 
-export async function restockMerchant(actor, { force = false, now = Date.now() } = {}) {
+export async function restockMerchant(actor, { force = false, now = Date.now(), ruleIds = null, recordDelivery = true, advanceSchedule = true } = {}) {
   if (!actor || running.has(actor.id)) return false;
   let config = merchantConfig(actor), restock = config.restock;
-  let dueRules = restock.rules.filter(rule => rule.enabled && rule.tableId && (force || ((!rule.startAt || rule.startAt <= now) && (!rule.nextRunAt || rule.nextRunAt <= now))));
+  const selectedRuleIds = ruleIds ? new Set(ruleIds) : null;
+  const isSelected = rule => !selectedRuleIds || selectedRuleIds.has(rule.id);
+  let dueRules = restock.rules.filter(rule => isSelected(rule) && rule.enabled && rule.tableId && (force || ((!rule.startAt || rule.startAt <= now) && (!rule.nextRunAt || rule.nextRunAt <= now))));
   if ((!restock.enabled && !force) || !dueRules.length) return false;
   running.add(actor.id);
   try {
     await maintainMerchantStock(actor, now);
     config = merchantConfig(actor); restock = config.restock;
-    dueRules = restock.rules.filter(rule => rule.enabled && rule.tableId && (force || ((!rule.startAt || rule.startAt <= now) && (!rule.nextRunAt || rule.nextRunAt <= now))));
+    dueRules = restock.rules.filter(rule => isSelected(rule) && rule.enabled && rule.tableId && (force || ((!rule.startAt || rule.startAt <= now) && (!rule.nextRunAt || rule.nextRunAt <= now))));
     for (const item of actor.items) {
       const state = item.getFlag(MODULE_ID, "merchantItem") ?? {};
       if (state.newArrival) await item.setFlag(MODULE_ID, "merchantItem", { ...state, newArrival: false });
@@ -156,10 +158,12 @@ export async function restockMerchant(actor, { force = false, now = Date.now() }
             img: document.img, quantity, spell: false, discountAt, removeAt });
         }
       }
-      rule.lastDelivery = deliveryItems;
-      rule.deliveries = [...(rule.deliveries ?? []), { at: now, items: rule.lastDelivery }].slice(-100);
-      rule.lastRunAt = now;
-      rule.nextRunAt = nextScheduledRun(rule, now);
+      if (recordDelivery) {
+        rule.lastDelivery = deliveryItems;
+        rule.deliveries = [...(rule.deliveries ?? []), { at: now, items: rule.lastDelivery }].slice(-100);
+        rule.lastRunAt = now;
+        if (advanceSchedule) rule.nextRunAt = nextScheduledRun(rule, now);
+      }
     }
     await actor.setFlag(MODULE_ID, "merchant", { ...config, restock: { ...restock, rules: restock.rules } });
     refreshMerchantShop(actor);

@@ -5,10 +5,10 @@ import { deleteExistingEmbeddedDocuments } from "../core/document-operations.mjs
 import { selectCharacters } from "../character-picker.mjs";
 import { getSystemAdapter } from "../downtime/system-adapter.mjs";
 import { formatCopper, itemQuantity, priceInCopper, purse, quantityForPrice, quantityUpdate } from "./currency.mjs?v=3.5.0-item-quantity-1";
-import { broadcastPeerTrade, commerceRequest } from "./socket.mjs?v=3.7.8-runtime-audit-1";
-import { AUCTION_HOUSE_FLAG, commerceState, enableMerchantViewerAccess, isAuctionHouse, merchantAccess, merchantAllowsActor, merchantAvailableToUser, merchantConfig, merchantItemPurchaseAccess, merchantStockQuantity, ownedCharacters, rarityMinimumLevel } from "./service.mjs?v=3.7.8-runtime-audit-1";
+import { broadcastPeerTrade, commerceRequest } from "./socket.mjs?v=3.8.5-purchase-filters-1";
+import { AUCTION_HOUSE_FLAG, commerceState, enableMerchantViewerAccess, isAuctionHouse, merchantAcceptsItem, merchantAccess, merchantAllowsActor, merchantAvailableToUser, merchantConfig, merchantItemPurchaseAccess, merchantStockQuantity, ownedCharacters, rarityMinimumLevel } from "./service.mjs?v=3.8.5-purchase-filters-1";
 import { addItem, cleanTransferredItem } from "./transactions.mjs?v=3.8.5-identifier-fix-1";
-import { RestockConfigApp } from "./restock-app.mjs?v=3.7.8-runtime-audit-1";
+import { RestockConfigApp } from "./restock-app.mjs?v=3.8.5-restock-consume-next-1";
 import {
   addMerchantSpellScrollOffer, createSpellScrollData, merchantSpellScrollOffers,
   resolveSpellScrollOffer, saveMerchantSpellScrollOffers
@@ -390,6 +390,66 @@ async function configureMerchantRequirements(actor) {
   });
 }
 
+function commaValues(value) {
+  return [...new Set(String(value ?? "").split(",").map(entry => entry.trim()).filter(Boolean))];
+}
+
+function knownPurchaseFilterValues() {
+  const categories = new Set(), bases = new Set();
+  for (const base of Object.keys(CONFIG.BlackFlag?.gearBases ?? {})) bases.add(base);
+  const worldItems = game.items.contents ?? [...game.items];
+  const actors = game.actors.contents ?? [...game.actors];
+  const items = [...worldItems, ...actors.flatMap(actor => [...actor.items])];
+  for (const item of items) {
+    const category = String(item.system?.type?.category ?? "").trim();
+    const base = String(item.system?.type?.base ?? "").trim();
+    if (category) categories.add(category);
+    if (base) bases.add(base);
+  }
+  return { categories: [...categories].sort(), bases: [...bases].sort() };
+}
+
+async function configureMerchantPurchaseFilters(actor) {
+  const current = merchantConfig(actor);
+  const esc = foundry.utils.escapeHTML;
+  const filterValues = knownPurchaseFilterValues();
+  let items = foundry.utils.deepClone(current.purchaseFilters.items);
+  const typeOptions = [...TRADEABLE_TYPES].map(type => `<label><input type="checkbox" name="types" value="${type}" ${current.purchaseFilters.types.includes(type) ? "checked" : ""}> ${esc(humanizeIdentifier(type))}</label>`).join("");
+  const datalist = (id, values) => `<datalist id="${id}">${values.map(value => `<option value="${esc(value)}">`).join("")}</datalist>`;
+  const itemMarkup = () => items.length
+    ? items.map((item, index) => `<article><img src="${esc(item.img || "icons/svg/item-bag.svg")}" alt=""><span><strong>${esc(item.name)}</strong><small>${esc(item.type)}</small></span><button type="button" data-remove-purchase-item="${index}" title="${uiText("TOVF.Interface.Remove_f78b63", "Entfernen")}"><i class="fa-solid fa-xmark"></i></button></article>`).join("")
+    : `<span>${uiText("TOVF.Interface.PurchaseSpecificItemsHint", "Optional: einzelne Items hier ablegen.")}</span>`;
+  const content = `<div class="standard-form tovf-merchant-purchase-filters-dialog"><p class="hint">${uiText("TOVF.Interface.PurchaseFiltersDialogHint", "Ein Item darf verkauft werden, wenn es mindestens einen Filter erfüllt. Ohne Filter kauft der Händler alle handelbaren Items an.")}</p><fieldset><legend>${uiText("TOVF.Interface.PurchaseItemTypes", "Item-Typen")}</legend><div class="checkboxes">${typeOptions}</div></fieldset><div class="form-group stacked"><label>${uiText("TOVF.Interface.PurchaseItemCategories", "Kategorien (kommagetrennt)")}</label><input name="categories" type="text" value="${esc(current.purchaseFilters.categories.join(", "))}" list="tovf-purchase-categories">${datalist("tovf-purchase-categories", filterValues.categories)}</div><div class="form-group stacked"><label>${uiText("TOVF.Interface.PurchaseItemBases", "Bases (kommagetrennt)")}</label><input name="bases" type="text" value="${esc(current.purchaseFilters.bases.join(", "))}" list="tovf-purchase-bases">${datalist("tovf-purchase-bases", filterValues.bases)}</div><div class="form-group stacked"><label>${uiText("TOVF.Interface.PurchaseSpecificItems", "Zusätzliche einzelne Items")}</label><div class="tovf-merchant-requirement-drop tovf-merchant-purchase-items" data-purchase-items-drop>${itemMarkup()}</div></div></div>`;
+  return foundry.applications.api.DialogV2.prompt({
+    classes: ["tovf-commerce-dialog", "tovf-merchant-purchase-filters-dialog"],
+    window: { title: uiText("TOVF.Interface.PurchaseFilters", "Ankaufsfilter"), resizable: true }, position: { width: 620 }, content,
+    render: (_event, dialog) => {
+      const drop = dialog.element.querySelector("[data-purchase-items-drop]");
+      const refresh = () => { drop.innerHTML = itemMarkup(); };
+      drop.addEventListener("dragover", event => { event.preventDefault(); drop.classList.add("dragover"); });
+      drop.addEventListener("dragleave", () => drop.classList.remove("dragover"));
+      drop.addEventListener("drop", async event => {
+        event.preventDefault(); drop.classList.remove("dragover");
+        const item = await itemFromDrop(event);
+        if (!item || !TRADEABLE_TYPES.has(item.type)) return ui.notifications.warn(uiText("TOVF.Interface.PleaseDropATradeableItem_c90cfd", "Bitte einen handelbaren Gegenstand ablegen."));
+        const candidate = requiredItemData(item);
+        const duplicate = items.some(entry => entry.type === candidate.type && (candidate.identifier ? entry.identifier === candidate.identifier : entry.uuid === candidate.uuid || entry.name === candidate.name));
+        if (!duplicate) items.push(candidate);
+        refresh();
+      });
+      drop.addEventListener("click", event => {
+        const button = event.target.closest("[data-remove-purchase-item]");
+        if (!button) return;
+        items.splice(Number(button.dataset.removePurchaseItem), 1); refresh();
+      });
+    },
+    ok: { label: uiText("TOVF.Interface.Save_70b73b", "Speichern"), callback: (_event, button) => ({
+      types: [...button.form.querySelectorAll('input[name="types"]:checked')].map(input => input.value),
+      categories: commaValues(button.form.elements.categories.value), bases: commaValues(button.form.elements.bases.value), items
+    }) }, rejectClose: false
+  });
+}
+
 function merchantAccessProblem(merchant) {
   const characters = ownedCharacters(game.user);
   if (!characters.length) return uiText("TOVF.Interface.YouDoNotHaveACharacterWho_1c44a6", "Du hast keinen Charakter, mit dem du auf diesen Händler zugreifen kannst.");
@@ -497,7 +557,7 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
       acceptTrade: this.#acceptTrade, cancelTrade: this.#cancelTrade, configureMerchant: this.#configureMerchant,
       saveMerchantSettings: this.#saveMerchantSettings,
       selectMerchantCharacters: this.#selectMerchantCharacters,
-      configureMerchantRequirements: this.#configureMerchantRequirements,
+      configureMerchantRequirements: this.#configureMerchantRequirements, configureMerchantPurchaseFilters: this.#configureMerchantPurchaseFilters,
       deleteMerchantItem: this.#deleteMerchantItem, clearMerchantItems: this.#clearMerchantItems,
       toggleMerchantItem: this.#toggleMerchantItem, populateFromTable: this.#populateFromTable, configureRestock: this.#configureRestock,
       chooseMerchantImage: this.#chooseMerchantImage, openMerchantItem: this.#openMerchantItem,
@@ -701,7 +761,8 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
       ...inventoryEntries(shop, config.buyModifier, config, { management, discounts: true, buyer: selectedActor }),
       ...spellScrollOfferEntries(shop, config.buyModifier, config, { management, discounts: true, buyer: selectedActor })
     ];
-    const actorAll = inventoryEntries(selectedActor, config.sellModifier, config);
+    const actorAll = inventoryEntries(selectedActor, config.sellModifier, config)
+      .filter(entry => merchantAcceptsItem(config, selectedActor?.items.get(entry.id)));
     const sourceEntries = this.shopPage === "sell" ? actorAll : shopAll;
     const visibleEntries = filtered(sourceEntries, this.category, this.search);
     const state = commerceState();
@@ -817,6 +878,14 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const requirements = await configureMerchantRequirements(actor);
     if (!requirements) return;
     await actor.setFlag(MODULE_ID, "merchant", { ...current, ...requirements, enabled: true });
+    await this.render({ force: true });
+  }
+  static async #configureMerchantPurchaseFilters() {
+    const actor = this._merchant(); if (!actor || !game.user.isGM) return;
+    const current = merchantConfig(actor);
+    const purchaseFilters = await configureMerchantPurchaseFilters(actor);
+    if (!purchaseFilters) return;
+    await actor.setFlag(MODULE_ID, "merchant", { ...current, enabled: true, purchaseFilters });
     await this.render({ force: true });
   }
   static #chooseMerchantImage() {

@@ -172,6 +172,9 @@ export class ProjectService {
       actorSources: StationEngine.actorProgressSources(actor, check)
     });
     state.progress = round(Math.max(0, Number(state.progress) + neutralCalculation.progress), 6);
+    if (station.actorValue?.increasePerDowntime) {
+      await RewardService.changeStationValue(actor, stationActor, station, requested);
+    }
     const completesBeforeRoll = state.progress >= state.requiredProgress - 1e-9;
     const reachesInterval = state.intervalProgress >= interval - 1e-9;
     state.pendingRoll = !completesBeforeRoll && reachesInterval && station.requiresRoll !== false;

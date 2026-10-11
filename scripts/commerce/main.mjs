@@ -1,10 +1,10 @@
 import { MODULE_ID } from "../core/constants.mjs";
 import { registerScheduledTask } from "../core/scheduler.mjs?v=3.7.8-central-scheduler-1";
-import { registerCommerceControls, openCommerce } from "./app.mjs?v=3.7.8-runtime-audit-1";
-import { activateCommerceSocket, commerceRequest } from "./socket.mjs?v=3.7.8-runtime-audit-1";
-import { COMMERCE_RARITY_LEVELS_SETTING, COMMERCE_SETTING, commerceState, commerceSummary, enableMerchantViewerAccess, merchantConfig, settleExpiredAuctions } from "./service.mjs?v=3.7.8-runtime-audit-1";
+import { registerCommerceControls, openCommerce } from "./app.mjs?v=3.8.5-restock-consume-next-1";
+import { activateCommerceSocket, commerceRequest } from "./socket.mjs?v=3.8.5-purchase-filters-1";
+import { COMMERCE_RARITY_LEVELS_SETTING, COMMERCE_SETTING, commerceState, commerceSummary, enableMerchantViewerAccess, merchantConfig, settleExpiredAuctions } from "./service.mjs?v=3.8.5-purchase-filters-1";
 import { migrateItemPilesMerchants } from "./migration.mjs";
-import { runAutomaticRestocks } from "./restock.mjs?v=3.7.8-safe-documents-1";
+import { runAutomaticRestocks } from "./restock.mjs?v=3.8.5-restock-consume-next-1";
 
 let activated = false;
 

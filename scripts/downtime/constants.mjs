@@ -348,6 +348,7 @@ export const DEFAULT_STATION_CONFIG = Object.freeze({
     defaultValue: 0,
     minimum: null,
     maximum: null,
+    increasePerDowntime: false,
     completionChange: 0,
     tiers: []
   }

@@ -2,6 +2,7 @@ import { MODULE_ID } from "../core/constants.mjs";
 
 const DEFINITIONS = Object.freeze({
   core: [
+    ["gearCategories", "./gear-categories.mjs", "installGearCategories"],
     ["characterCreation", "./character-creation-overrides.mjs", "installCharacterCreationOverrides"],
     ["weaponOptionActivities", "./weapon-option-activities.mjs?v=3.2.4-tooltip-links-2", "installWeaponOptionActivities"],
     ["activityChaining", "../activity-chaining.mjs?v=3.3.1-follow-up-filter-2", "installActivityChaining"],
@@ -16,7 +17,7 @@ const DEFINITIONS = Object.freeze({
     ["activeEffectChangesUi", "../active-effect-changes-ui.mjs?v=3.7.8-actor-effect-delete-3", "installActiveEffectChangesUi"],
     ["enchantActivityUi", "./enchant-activity-ui.mjs?v=3.8.5-enchant-library-5", "installEnchantActivityUi"],
     ["spellcastingFilterControls", "./spellcasting-filter-controls.mjs?v=3.8.5-spell-filter-controls-1", "installSpellcastingFilterControls"],
-    ["skillListControls", "./skill-list-controls.mjs?v=3.8.5-skill-chat-cards-2", "installSkillListControls"]
+    ["skillListControls", "./skill-list-controls.mjs?v=3.8.5-sheet-operational-controls-2", "installSkillListControls"]
   ],
   optionalModules: [
     ["argon", "./argon-black-flag-compatibility.mjs?v=3.7.8-argon-module-check-2", "installArgonBlackFlagCompatibility"]
