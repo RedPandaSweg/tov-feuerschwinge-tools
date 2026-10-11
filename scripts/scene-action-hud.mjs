@@ -238,7 +238,8 @@ function horizontalBounds(element) {
 function positionHud(element, requestedLeft = null) {
   fitHudWidth(element);
   const { minimum, maximum } = horizontalBounds(element);
-  const stored = Number(localStorage.getItem(`${POSITION_KEY}.${game.user?.id ?? "user"}`));
+  const storedValue = localStorage.getItem(`${POSITION_KEY}.${game.user?.id ?? "user"}`);
+  const stored = storedValue === null ? null : Number(storedValue);
   const fraction = Number.isFinite(stored) ? Math.clamp(stored, 0, 1) : 1;
   const left = requestedLeft == null ? minimum + (maximum - minimum) * fraction : Math.clamp(requestedLeft, minimum, maximum);
   element.style.left = `${Math.round(left)}px`;
