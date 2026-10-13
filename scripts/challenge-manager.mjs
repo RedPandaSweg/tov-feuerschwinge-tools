@@ -1029,7 +1029,31 @@ async function createPrivateAverageMessage(requestMessage, request, average) {
   });
 }
 
-async function recordRollResult({ messageId, rollMessageId, actorId, userId, total: submittedTotal }) {
+async function createPrivateRollResultMessage(requestMessage, request, actor, total, formula) {
+  const recipients = ChatMessage.getWhisperRecipients("GM").map(user => user.id);
+  const label = requestLabel(request.type, request.key);
+  const dc = Number(request.dc);
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor }),
+    whisper: recipients,
+    content: `
+      <section class="tovf-roll-request-card tovf-private-roll-result">
+        <h3>${Handlebars.escapeExpression(actor.name)}</h3>
+        <p>${Handlebars.escapeExpression(label)}${Number.isFinite(dc) && dc > 0 ? ` · DC ${dc}` : ""}</p>
+        <strong>${Handlebars.escapeExpression(String(total))}</strong>
+        ${formula ? `<small>${Handlebars.escapeExpression(formula)}</small>` : ""}
+      </section>
+    `,
+    flags: {
+      [MODULE_ID]: {
+        challengePrivateResult: { requestMessageId: requestMessage.id, actorId: actor.id }
+      },
+      "dice-so-nice": { skip: true }
+    }
+  });
+}
+
+async function recordRollResult({ messageId, rollMessageId, actorId, userId, total: submittedTotal, formula }) {
   const message = game.messages.get(messageId);
   const rollMessage = rollMessageId ? game.messages.get(rollMessageId) : null;
   const request = message?.getFlag(MODULE_ID, "rollRequest");
@@ -1100,6 +1124,9 @@ async function recordRollResult({ messageId, rollMessageId, actorId, userId, tot
     }
   }
   await message.update({ [`flags.${MODULE_ID}.rollRequest`]: update });
+  if (request.privateRoll) {
+    await createPrivateRollResultMessage(message, request, actor, total, formula);
+  }
   if (privateAverage !== null) {
     await createPrivateAverageMessage(message, request, privateAverage);
   }
@@ -1173,8 +1200,9 @@ function activateRollRequests(message, html) {
       button.disabled = true;
       try {
         const options = { target, event };
+        const privateRollMode = request.privateRoll ? "blind" : undefined;
         const messageOptions = {
-          ...(request.privateRoll ? { rollMode: CONST.DICE_ROLL_MODES.BLIND } : {}),
+          ...(privateRollMode ? { rollMode: privateRollMode, create: false } : {}),
           data: {
             flags: {
               [MODULE_ID]: { challengeRoll: { requestMessageId: message.id, actorId: actor.id } },
@@ -1188,14 +1216,14 @@ function activateRollRequests(message, html) {
           const sides = Number(button.dataset.rollKey);
           if (![4, 6, 8, 10, 12, 20, 100].includes(sides)) return;
           roll = await new Roll(`1d${sides}`).evaluate();
-          const rollMessage = await roll.toMessage({
-            speaker: ChatMessage.getSpeaker({ actor }),
-            flavor: `d${sides}`,
-            flags: messageOptions.data.flags
-          }, {
-            rollMode: messageOptions.rollMode
-          });
-          rollMessageId = rollMessage?.id;
+          if (!request.privateRoll) {
+            const rollMessage = await roll.toMessage({
+              speaker: ChatMessage.getSpeaker({ actor }),
+              flavor: `d${sides}`,
+              flags: messageOptions.data.flags
+            });
+            rollMessageId = rollMessage?.id;
+          }
         } else {
           const rolls = button.dataset.rollType === "skill"
             ? await actor.rollSkill({ skill: button.dataset.rollKey, ...options }, {}, messageOptions)
@@ -1214,7 +1242,8 @@ function activateRollRequests(message, html) {
           messageId: message.id,
           rollMessageId,
           actorId: actor.id,
-          total: Number(roll.total)
+          total: Number(roll.total),
+          formula: roll.formula ?? ""
         });
       } catch (error) {
         pendingClientRolls.delete(pendingKey);

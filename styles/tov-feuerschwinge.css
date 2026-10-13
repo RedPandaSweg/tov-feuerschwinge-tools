@@ -2331,6 +2331,13 @@
   z-index: 10;
 }
 
+/* Overlap the party picker with its small gear trigger so there is no
+   pointer-leave gap while moving down into the picker. */
+.tovf-challenge-hud-party-summary .tovf-challenge-hud-drawer.party .tovf-challenge-hud-popover {
+  top: calc(100% - .25rem);
+  left: -.45rem;
+}
+
 .tovf-challenge-hud-party-summary .tovf-challenge-hud-drawer.party .tovf-challenge-hud-toggle:hover,
 .tovf-challenge-hud-party-summary .tovf-challenge-hud-drawer.party.is-open .tovf-challenge-hud-toggle {
   border: 0;
@@ -3492,6 +3499,30 @@
 .tovf-roll-request-card p {
   margin: .2rem 0;
   color: var(--tovf-color-text-muted, #bfa786);
+}
+
+.tovf-private-roll-result {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .1rem .65rem;
+  align-items: center;
+}
+
+.tovf-private-roll-result h3,
+.tovf-private-roll-result p {
+  grid-column: 1;
+}
+
+.tovf-private-roll-result strong {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  font-size: 1.4rem;
+  color: var(--tovf-color-gold-light, #f0d2a0);
+}
+
+.tovf-private-roll-result small {
+  grid-column: 1 / -1;
+  opacity: .7;
 }
 
 .tovf-roll-request-card .tovf-roll-request-actors {
