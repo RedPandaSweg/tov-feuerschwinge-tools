@@ -6,9 +6,9 @@ import { selectCharacters } from "../character-picker.mjs";
 import { getSystemAdapter } from "../downtime/system-adapter.mjs";
 import { formatCopper, itemQuantity, priceInCopper, purse, quantityForPrice, quantityUpdate } from "./currency.mjs?v=3.5.0-item-quantity-1";
 import { broadcastPeerTrade, commerceRequest } from "./socket.mjs?v=3.8.5-purchase-filters-1";
-import { AUCTION_HOUSE_FLAG, commerceState, enableMerchantViewerAccess, isAuctionHouse, merchantAcceptsItem, merchantAccess, merchantAllowsActor, merchantAvailableToUser, merchantConfig, merchantItemPurchaseAccess, merchantStockQuantity, ownedCharacters, rarityMinimumLevel } from "./service.mjs?v=3.8.5-purchase-filters-1";
+import { AUCTION_HOUSE_FLAG, commerceState, enableMerchantViewerAccess, isAuctionHouse, merchantAcceptsItem, merchantAccess, merchantAllowsActor, merchantConfig, merchantItemPurchaseAccess, merchantStockQuantity, ownedCharacters, rarityMinimumLevel } from "./service.mjs?v=3.8.5-purchase-filters-1";
 import { addItem, cleanTransferredItem } from "./transactions.mjs?v=3.8.5-identifier-fix-1";
-import { RestockConfigApp } from "./restock-app.mjs?v=3.8.5-restock-consume-next-1";
+import { RestockConfigApp } from "./restock-app.mjs?v=3.8.5-manual-new-tags-1";
 import {
   addMerchantSpellScrollOffer, createSpellScrollData, merchantSpellScrollOffers,
   resolveSpellScrollOffer, saveMerchantSpellScrollOffers
@@ -26,6 +26,11 @@ const liveTrades = new Map();
 
 function merchantAccessOptions() {
   return { sceneId: globalThis.canvas?.scene?.id ?? null };
+}
+
+function interactingMerchantActor() {
+  const controlled = canvas?.tokens?.controlled ?? [];
+  return controlled.map(token => token.actor).find(actor => actor?.type === "pc") ?? game.user.character ?? null;
 }
 
 function tradeOwnedSide(trade) {
@@ -280,7 +285,7 @@ async function requirementItemFromDrop(event) {
   return item?.documentName === "Item" ? item : null;
 }
 
-async function openItemPreview(source, viewingActor = null) {
+export async function openItemPreview(source, viewingActor = null) {
   const data = foundry.utils.deepClone(source?.toObject ? source.toObject() : source);
   if (!data) return false;
   try {
@@ -562,7 +567,7 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
       toggleMerchantItem: this.#toggleMerchantItem, populateFromTable: this.#populateFromTable, configureRestock: this.#configureRestock,
       chooseMerchantImage: this.#chooseMerchantImage, openMerchantItem: this.#openMerchantItem,
       configureOfferAccess: this.#configureOfferAccess, setItemDiscount: this.#setItemDiscount, setItemPriceQuantity: this.#setItemPriceQuantity,
-      setStockQuantity: this.#setStockQuantity, openAuctionItem: this.#openAuctionItem
+      setStockQuantity: this.#setStockQuantity, toggleMerchantItemNewArrival: this.#toggleMerchantItemNewArrival, openAuctionItem: this.#openAuctionItem
       , changeAuctionPage: this.#changeAuctionPage, createRequest: this.#createRequest,
       fulfillRequest: this.#fulfillRequest, cancelRequest: this.#cancelRequest, openRequestItem: this.#openRequestItem
       , acceptTradeInvite: this.#acceptTradeInvite, tradeRemoveItem: this.#tradeRemoveItem, tradeSetMoney: this.#tradeSetMoney,
@@ -609,11 +614,17 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
       this.search = event.target.value; void this.render({ force: true });
     }, 180));
     if (this.mode === "merchant" && context.managementPage) {
-      for (const discountButton of this.element.querySelectorAll('[data-action="setItemDiscount"]')) {
-        discountButton.insertAdjacentHTML("beforebegin", `<button type="button" data-action="setStockQuantity" data-item-id="${discountButton.dataset.itemId ?? ""}" data-offer-id="${discountButton.dataset.offerId ?? ""}" title="${uiText("TOVF.Interface.SetAvailableStock_719470", "Verfügbaren Bestand festlegen")}"><i class="fa-solid fa-box"></i></button>`);
-        if (discountButton.dataset.offerId) continue;
-        const item = this._merchant()?.items.get(discountButton.dataset.itemId);
-        discountButton.insertAdjacentHTML("beforebegin", `<button type="button" data-action="setItemPriceQuantity" data-item-id="${discountButton.dataset.itemId}" title="${uiText("TOVF.Interface.SetQuantityPerPriceUnitCurrentlyP1_664375", "Menge pro Preiseinheit festlegen (aktuell {p1})", { p1: (quantityForPrice(item)) })}"><i class="fa-solid fa-boxes-stacked"></i></button>`);
+      for (const accessButton of this.element.querySelectorAll('[data-action="configureOfferAccess"]')) {
+        const actions = accessButton.closest(".tovf-shop-actions");
+        const discountButton = actions.querySelector('[data-action="setItemDiscount"]');
+        const { itemId, offerId } = accessButton.dataset;
+        const offer = offerId ? merchantSpellScrollOffers(this._merchant()).find(entry => entry.id === offerId) : null;
+        const item = offer ? null : this._merchant()?.items.get(itemId);
+        const newArrival = offer?.newArrival ?? item?.getFlag(MODULE_ID, "merchantItem")?.newArrival === true;
+        const data = `data-item-id="${itemId ?? ""}" data-offer-id="${offerId ?? ""}"`;
+        actions.insertAdjacentHTML("afterbegin", `<details class="tovf-merchant-item-drawer"><summary title="${uiText("TOVF.Interface.ManageOffer", "Angebot verwalten")}"><i class="fa-solid fa-sliders"></i></summary><div><button type="button" data-action="configureOfferAccess" ${data}><i class="fa-solid fa-lock"></i> ${uiText("TOVF.Interface.PurchaseRulesAndRelease_33cbb0", "Kaufregeln und Freigabe")}</button><button type="button" data-action="setStockQuantity" ${data}><i class="fa-solid fa-box"></i> ${uiText("TOVF.Interface.SetAvailableStock_719470", "Verfügbaren Bestand festlegen")}</button>${offer ? "" : `<button type="button" data-action="setItemPriceQuantity" ${data}><i class="fa-solid fa-boxes-stacked"></i> ${uiText("TOVF.Interface.SetQuantityPerPriceUnit", "Menge pro Preiseinheit")}</button>`}<button type="button" data-action="setItemDiscount" ${data} data-discount="${accessButton.closest("article")?.querySelector('[data-action="setItemDiscount"]')?.dataset.discount ?? "0"}"><i class="fa-solid fa-tags"></i> ${uiText("TOVF.Interface.SetDiscount_352e23", "Rabatt festlegen")}</button><button type="button" data-action="toggleMerchantItemNewArrival" ${data} data-new-arrival="${newArrival}"><i class="fa-solid fa-tag"></i> ${uiText(newArrival ? "TOVF.Interface.RemoveNewTag" : "TOVF.Interface.SetNewTag", newArrival ? "NEU-Tag entfernen" : "NEU-Tag setzen")}</button></div></details>`);
+        accessButton.remove();
+        discountButton?.remove();
       }
       const content = this.element.querySelector(".tovf-merchant-content");
       const stockTools = content?.querySelector(".tovf-merchant-stock-tools");
@@ -738,24 +749,20 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     });
   }
   _owned() { return ownedCharacters(); }
-  _actor() { return game.actors.get(this.actorId) ?? this._owned()[0] ?? null; }
+  _actor() { return game.actors.get(this.actorId) ?? (this.mode === "merchant" ? null : this._owned()[0] ?? null); }
   _merchant() {
     const selected = game.actors.get(this.merchantId);
-    if (selected && merchantConfig(selected).enabled && merchantAvailableToUser(selected, game.user, merchantAccessOptions())) return selected;
-    return game.actors.find(actor => merchantConfig(actor).enabled && merchantAvailableToUser(actor, game.user, merchantAccessOptions())) ?? null;
+    const interactor = this._actor();
+    const available = actor => merchantConfig(actor).enabled && (game.user.isGM || merchantAllowsActor(actor, interactor, game.user, merchantAccessOptions()));
+    if (selected && available(selected)) return selected;
+    return game.actors.find(available) ?? null;
   }
   _auctionHouse() { return game.actors.get(this.auctionHouseId) ?? game.actors.find(actor => isAuctionHouse(actor)) ?? null; }
   async _prepareContext() {
-    const allCharacters = this._owned();
-    const merchants = game.actors.filter(actor => merchantConfig(actor).enabled && merchantAvailableToUser(actor, game.user, merchantAccessOptions()));
+    const selectedActor = this._actor();
+    const merchants = game.actors.filter(actor => merchantConfig(actor).enabled && (game.user.isGM || merchantAllowsActor(actor, selectedActor, game.user, merchantAccessOptions())));
     const shop = this._merchant(); this.merchantId = shop?.id ?? null;
     const config = merchantConfig(shop);
-    const characters = shop && !game.user.isGM
-      ? allCharacters.filter(actor => merchantAllowsActor(shop, actor, game.user, merchantAccessOptions()))
-      : allCharacters;
-    let selectedActor = game.actors.get(this.actorId);
-    if (!characters.some(actor => actor.id === selectedActor?.id)) selectedActor = characters[0] ?? null;
-    this.actorId = selectedActor?.id ?? null;
     const management = this.shopPage === "management" && game.user.isGM;
     const shopAll = [
       ...inventoryEntries(shop, config.buyModifier, config, { management, discounts: true, buyer: selectedActor }),
@@ -815,8 +822,7 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     return { merchantMode: this.mode === "merchant", auctionMode: this.mode === "auction", tradeMode: this.mode === "trade",
       buyPage: this.shopPage === "buy", sellPage: this.shopPage === "sell", managementPage: management,
-      characters: characters.map(a => ({ id: a.id, name: a.name })), selectedActorId: this.actorId,
-      selectedActor: selectedActor && { id: selectedActor.id, name: selectedActor.name, wallet: wallet(selectedActor) },
+      selectedActor: selectedActor && { id: selectedActor.id, name: selectedActor.name, img: selectedActor.img, wallet: wallet(selectedActor) },
       merchants: merchants.map(a => ({ id: a.id, name: a.name })), selectedMerchantId: this.merchantId,
       selectedMerchant: shop && { id: shop.id, uuid: shop.uuid, name: shop.name, img: shop.img, description: config.description,
         inventoryGroups: groupedInventory(visibleEntries, this.sort), hasInventory: visibleEntries.length > 0, itemCount: shopAll.length },
@@ -927,7 +933,24 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
       offer.hidden = target.dataset.hidden !== "true"; await saveMerchantSpellScrollOffers(actor, offers); await this.render({ force: true }); return;
     }
     const item = this._merchant()?.items.get(target.dataset.itemId); if (!item) return;
-    await item.setFlag(MODULE_ID, "merchantItem", { hidden: target.dataset.hidden !== "true" }); await this.render({ force: true }); }
+    const current = item.getFlag(MODULE_ID, "merchantItem") ?? {};
+    await item.setFlag(MODULE_ID, "merchantItem", { ...current, hidden: target.dataset.hidden !== "true" }); await this.render({ force: true }); }
+  static async #toggleMerchantItemNewArrival(_event, target) {
+    const actor = this._merchant(); if (!actor || !game.user.isGM) return;
+    const newArrival = target.dataset.newArrival !== "true";
+    if (target.dataset.offerId) {
+      const offers = merchantSpellScrollOffers(actor);
+      const offer = offers.find(entry => entry.id === target.dataset.offerId); if (!offer) return;
+      offer.newArrival = newArrival;
+      offer.newArrivalManual = newArrival;
+      await saveMerchantSpellScrollOffers(actor, offers);
+    } else {
+      const item = actor.items.get(target.dataset.itemId); if (!item) return;
+      const current = item.getFlag(MODULE_ID, "merchantItem") ?? {};
+      await item.setFlag(MODULE_ID, "merchantItem", { ...current, newArrival, newArrivalManual: newArrival });
+    }
+    await this.render({ force: true });
+  }
   static async #configureOfferAccess(_event, target) {
     if (!game.user.isGM) return;
     const merchant = this._merchant();
@@ -1165,9 +1188,11 @@ function refreshOpenMerchant(actorId) {
 }
 const promptedTrades = new Set();
 export function openCommerce(options = {}) {
+  if (options.mode === "merchant" || options.merchantId) options = { ...options, actorId: options.actorId ?? interactingMerchantActor()?.id ?? null };
   if (options.merchantId) {
     const merchant = game.actors.get(options.merchantId);
-    if (merchant && !merchantAvailableToUser(merchant, game.user, merchantAccessOptions())) {
+    const interactor = game.actors.get(options.actorId);
+    if (merchant && !game.user.isGM && !merchantAllowsActor(merchant, interactor, game.user, merchantAccessOptions())) {
       void showMerchantAccessDenied(merchant);
       return null;
     }

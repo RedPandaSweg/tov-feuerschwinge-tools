@@ -13,7 +13,10 @@ const DEFINITIONS = Object.freeze({
   ],
   documentUi: [
     ["customBackground", "./custom-background.mjs?v=3.3.1-custom-background-16", "installCustomBackground"],
+    ["characterOptionFilters", "./character-option-filters.mjs?v=3.9.3-character-option-filters-1", "installCharacterOptionFilters"],
+    ["classSelectionLayout", "./class-selection-layout.mjs", "installClassSelectionLayout"],
     ["spellManager", "./spell-manager.mjs", "installSpellManager"],
+    ["multiLevelDown", "./multi-level-down.mjs", "installMultiLevelDown"],
     ["activeEffectChangesUi", "../active-effect-changes-ui.mjs?v=3.7.8-actor-effect-delete-3", "installActiveEffectChangesUi"],
     ["enchantActivityUi", "./enchant-activity-ui.mjs?v=3.8.5-enchant-library-5", "installEnchantActivityUi"],
     ["spellcastingFilterControls", "./spellcasting-filter-controls.mjs?v=3.8.5-spell-filter-controls-1", "installSpellcastingFilterControls"],

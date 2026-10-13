@@ -9,6 +9,8 @@ const SUPPORTED_FEATURE_TYPES = new Set([
 ]);
 
 let featurePools = new Map();
+let feuerschwingeFeatureKeys = new Map();
+let originalFeatureKeysByUuid = new Map();
 
 function packageIdFor(pack) {
   return pack.metadata.packageName ?? pack.metadata.package ?? "";
@@ -25,24 +27,59 @@ function isOriginalContentPack(pack) {
     );
 }
 
+function isFeuerschwingeContentPack(pack) {
+  return pack.documentName === "Item" && packageIdFor(pack) === CONTENT_MODULE_ID;
+}
+
+function normalizedFeatureKey(value) {
+  return String(value ?? "")
+    .trim()
+    .toLocaleLowerCase("en")
+    .replaceAll(/[^a-z0-9]/g, "");
+}
+
+function featureKey(entry) {
+  const identifier = normalizedFeatureKey(foundry.utils.getProperty(entry, "system.identifier.value"));
+  return identifier || normalizedFeatureKey(entry.name);
+}
+
+function isSupportedClassFeature(entry) {
+  return entry.type === "feature"
+    && foundry.utils.getProperty(entry, "system.type.category") === "class"
+    && SUPPORTED_FEATURE_TYPES.has(foundry.utils.getProperty(entry, "system.type.value"));
+}
+
 async function indexFeaturePools() {
   const pools = new Map();
-  const packs = game.packs.filter(isOriginalContentPack);
+  const feuerschwingeKeys = new Map();
+  const originalKeys = new Map();
+  const packs = game.packs.filter(pack => isOriginalContentPack(pack) || isFeuerschwingeContentPack(pack));
   await Promise.all(packs.map(async pack => {
     const index = await pack.getIndex({
-      fields: ["type", "system.type.category", "system.type.value"]
+      fields: ["type", "name", "system.identifier.value", "system.type.category", "system.type.value"]
     });
     for (const entry of index) {
-      if (entry.type !== "feature") continue;
-      if (foundry.utils.getProperty(entry, "system.type.category") !== "class") continue;
+      if (!isSupportedClassFeature(entry)) continue;
       const type = foundry.utils.getProperty(entry, "system.type.value");
+      if (isFeuerschwingeContentPack(pack)) {
+        const key = featureKey(entry);
+        if (!key) continue;
+        const keys = feuerschwingeKeys.get(type) ?? new Set();
+        keys.add(key);
+        feuerschwingeKeys.set(type, keys);
+        continue;
+      }
       if (!SUPPORTED_FEATURE_TYPES.has(type)) continue;
+      const uuid = pack.getUuid(entry._id);
       const uuids = pools.get(type) ?? new Set();
-      uuids.add(pack.getUuid(entry._id));
+      uuids.add(uuid);
       pools.set(type, uuids);
+      originalKeys.set(uuid, featureKey(entry));
     }
   }));
   featurePools = pools;
+  feuerschwingeFeatureKeys = feuerschwingeKeys;
+  originalFeatureKeysByUuid = originalKeys;
 }
 
 function augmentAdvancements(source) {
@@ -54,7 +91,24 @@ function augmentAdvancements(source) {
     if (configuration.restriction?.category !== "class") continue;
     const type = configuration.restriction?.type;
     const additions = featurePools.get(type);
-    if (!additions?.size || !Array.isArray(configuration.pool)) continue;
+    if (!Array.isArray(configuration.pool)) continue;
+
+    const replacementKeys = feuerschwingeFeatureKeys.get(type);
+    if (replacementKeys?.size) {
+      const retained = [];
+      for (const choice of configuration.pool) {
+        const originalKey = originalFeatureKeysByUuid.get(choice.uuid);
+        const isReplacedOriginal = originalKey && replacementKeys.has(originalKey);
+        if (isReplacedOriginal) {
+          changed = true;
+          continue;
+        }
+        retained.push(choice);
+      }
+      configuration.pool = retained;
+    }
+
+    if (!additions?.size) continue;
 
     const existing = new Set(configuration.pool.map(entry => entry.uuid));
     for (const uuid of additions) {

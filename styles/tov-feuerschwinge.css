@@ -894,6 +894,10 @@
   min-width: 0;
 }
 
+.tovf-library-weapon-filters>label>.tovf-library-number-range {
+  flex: 1 1 8rem;
+}
+
 .tovf-library-spell-filters {
   margin-top: .45rem;
   border: 1px solid var(--color-border-light-tertiary);
@@ -2136,6 +2140,204 @@
   position: relative;
 }
 
+.tovf-challenge-hud-party-summary {
+  position: relative;
+}
+
+.tovf-challenge-hud-party-summary-toggle {
+  display: grid;
+  position: relative;
+  place-items: center;
+  width: 2.3rem;
+  height: 50px;
+  padding: 0;
+  border: 1px solid #a45b25;
+  border-radius: 3px;
+  background: rgba(37, 19, 11, .72);
+  color: #f0ca87;
+}
+
+.tovf-challenge-hud-party-summary-toggle::after {
+  position: absolute;
+  top: .3rem;
+  right: .25rem;
+  width: 0;
+  height: 0;
+  content: "";
+  border-top: .22rem solid transparent;
+  border-bottom: .22rem solid transparent;
+  border-left: .28rem solid currentColor;
+  transition: transform 120ms ease;
+}
+
+.tovf-challenge-hud-party-summary.is-open .tovf-challenge-hud-party-summary-toggle::after {
+  transform: rotate(180deg);
+}
+
+.tovf-challenge-hud-party-summary-toggle:hover,
+.tovf-challenge-hud-party-summary.is-open .tovf-challenge-hud-party-summary-toggle {
+  border-color: #ffc165;
+  color: #fff2ca;
+  box-shadow: 0 0 8px rgba(255, 143, 49, .45);
+}
+
+.tovf-challenge-hud-party-summary-cards {
+  display: none;
+  position: absolute;
+  top: 0;
+  right: calc(100% + .3rem);
+  z-index: 1001;
+  width: 14rem;
+  max-height: min(34rem, calc(100vh - 1rem));
+  padding: .35rem;
+  overflow: auto;
+  border: 1px solid #a45b25;
+  border-radius: 4px;
+  background: linear-gradient(145deg, rgba(56, 32, 22, .82), rgba(16, 10, 8, .84));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .8);
+}
+
+.tovf-challenge-hud-party-summary.is-open .tovf-challenge-hud-party-summary-cards {
+  display: grid;
+}
+
+.tovf-challenge-hud-party-summary-cards article {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: .3rem;
+  min-height: 2rem;
+  padding: .2rem;
+  border: 1px solid rgba(173, 96, 43, .55);
+  border-radius: 3px;
+  background: rgba(9, 6, 5, .4);
+  font-size: .68rem;
+}
+
+.tovf-challenge-hud-party-summary-cards img {
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 0;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.tovf-challenge-hud-party-summary-cards strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tovf-challenge-hud-party-summary-cards span {
+  display: inline-flex;
+  align-items: center;
+  gap: .15rem;
+  color: #d5b782;
+  font-variant-numeric: tabular-nums;
+}
+
+.tovf-challenge-hud-party-summary-cards span i {
+  color: #ff9b55;
+}
+
+/* The party overview expands inline with the HUD controls, not as a drawer. */
+.tovf-challenge-hud-party-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: .3rem;
+}
+
+.tovf-challenge-hud-party-summary.is-open {
+  margin-right: .25rem;
+}
+
+.tovf-challenge-hud-party-summary-cards {
+  position: static;
+  width: auto;
+  max-height: none;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.tovf-challenge-hud-party-summary.is-open .tovf-challenge-hud-party-summary-cards {
+  display: flex;
+  gap: .12rem;
+}
+
+.tovf-challenge-hud-party-summary-cards article {
+  display: block;
+  position: relative;
+  width: 50px;
+  height: 50px;
+  min-height: 50px;
+  padding: 0;
+  overflow: hidden;
+  background: rgba(37, 19, 11, .72);
+}
+
+.tovf-challenge-hud-party-summary-cards img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tovf-challenge-hud-party-summary-cards article>div {
+  display: flex;
+  position: absolute;
+  right: auto;
+  bottom: .12rem;
+  left: .12rem;
+  align-items: center;
+  justify-content: flex-end;
+  flex-direction: column;
+  gap: .1rem;
+}
+
+.tovf-challenge-hud-party-summary-cards span {
+  flex-direction: row;
+  gap: .1rem;
+  padding: .08rem .12rem;
+  border-radius: 2px;
+  background: rgba(10, 6, 4, .78);
+  font-size: .58rem;
+  line-height: 1;
+}
+
+.tovf-challenge-hud-party-summary-cards span i {
+  font-size: .62rem;
+}
+
+.tovf-challenge-hud-party-summary .tovf-challenge-hud-drawer.party .tovf-challenge-hud-toggle {
+  position: relative;
+  z-index: 11;
+  width: 1.3rem;
+  height: 1.3rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.tovf-challenge-hud-party-summary .tovf-challenge-hud-drawer.party {
+  position: absolute;
+  bottom: -.3rem;
+  left: -1.45rem;
+  margin: 0;
+  z-index: 10;
+}
+
+.tovf-challenge-hud-party-summary .tovf-challenge-hud-drawer.party .tovf-challenge-hud-toggle:hover,
+.tovf-challenge-hud-party-summary .tovf-challenge-hud-drawer.party.is-open .tovf-challenge-hud-toggle {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .tovf-challenge-hud-toggle {
   display: grid;
   place-items: center;
@@ -2281,6 +2483,34 @@
 .tovf-challenge-hud-doom-actions button:disabled {
   cursor: not-allowed;
   opacity: .45;
+}
+
+/* Doom actions need a little more space than the generic HUD drawer controls. */
+.tovf-challenge-hud-drawer.doom .tovf-challenge-hud-popover {
+  width: 24rem;
+}
+
+.tovf-challenge-hud-doom-actions button {
+  min-height: 2.3rem;
+  font-weight: 700;
+  font-size: .75rem;
+}
+
+.tovf-challenge-hud-doom-actions button>i:first-child {
+  font-size: 1.1rem;
+}
+
+.tovf-challenge-hud-doom-usage {
+  font-size: .75rem;
+}
+
+.tovf-challenge-hud-doom-actions button {
+  grid-template-columns: 1.3rem minmax(0, 1fr) 1.15rem;
+  padding-right: .55rem;
+}
+
+.tovf-challenge-hud-doom-usage.fa-circle-1 {
+  font-size: .9rem;
 }
 
 .tovf-challenge-hud-popover select,
@@ -2708,20 +2938,20 @@
 
 .tovf-challenge-hud-bar {
   align-items: flex-start;
-  min-height: 44px;
+  min-height: 50px;
 }
 
 .tovf-challenge-hud-left {
-  min-height: 78px;
+  min-height: 84px;
   align-items: flex-start;
 }
 
 .tovf-challenge-hud-toggle {
   display: flex;
-  width: 3.7rem;
-  height: 44px;
+  width: 4rem;
+  height: 50px;
   flex-direction: column;
-  gap: .22rem;
+  gap: .42rem;
   padding: .2rem .25rem;
   font-size: .78rem;
   line-height: 1;
@@ -2734,7 +2964,7 @@
 .tovf-challenge-hud-toggle>span {
   overflow: hidden;
   max-width: 100%;
-  font-size: .54rem;
+  font-size: .64rem;
   font-weight: 800;
   letter-spacing: .03em;
   text-overflow: ellipsis;
@@ -2749,14 +2979,14 @@
 }
 
 .tovf-challenge-hud-drawer.doom .tovf-challenge-hud-toggle {
-  width: 5.25rem;
+  width: 5.5rem;
   color: #ff7458;
   text-shadow: 0 0 5px rgba(255, 58, 28, .9), 0 0 12px rgba(187, 18, 8, .7);
 }
 
 .tovf-challenge-hud-drawer.doom .tovf-challenge-hud-toggle>span {
   color: #ff8b6b;
-  font-size: .63rem;
+  font-size: .7rem;
 }
 
 .tovf-challenge-hud-drawer.doom .tovf-challenge-hud-toggle b {
@@ -2764,8 +2994,8 @@
 }
 
 .tovf-challenge-hud-round {
-  width: 3.45rem;
-  height: 44px;
+  width: 3.7rem;
+  height: 50px;
   background: rgba(37, 19, 11, .72);
 }
 
@@ -2785,15 +3015,12 @@
 }
 
 .tovf-challenge-hud-encounter-timer {
-  position: absolute;
-  top: calc(100% + .45rem);
-  left: 50%;
-  width: max-content;
+  position: static;
+  width: auto;
   color: #d5b782;
-  font-size: .62rem;
+  font-size: .7rem;
   font-variant-numeric: tabular-nums;
-  line-height: 1;
-  transform: translateX(-50%);
+  transform: none;
 }
 
 .tovf-challenge-hud-drawer.is-open {
@@ -2870,18 +3097,34 @@
   object-position: center;
 }
 
-.tovf-challenge-hud-combatant.health-visible article::before {
+.tovf-challenge-hud-combatant.player-health-visible article::before {
   position: absolute;
   z-index: 1;
   inset: 0;
-  background: radial-gradient(circle at center, color-mix(in srgb, var(--tovf-health-color) 62%, transparent) 0%, color-mix(in srgb, var(--tovf-health-color) 30%, transparent) 42%, transparent 78%);
+  background: radial-gradient(circle at center, color-mix(in srgb, var(--tovf-health-color) var(--tovf-health-glow), transparent) 0%, color-mix(in srgb, var(--tovf-health-color) calc(var(--tovf-health-glow) * .62), transparent) 60%, transparent 94%);
   content: "";
   pointer-events: none;
+}
+
+.tovf-challenge-hud-combatant.health-bar-visible article {
+  border-left: 3px solid var(--tovf-health-color);
 }
 
 .tovf-challenge-hud-combatant.is-active article {
   border: 2px solid #ffd06e;
   box-shadow: 0 0 7px #ff9d38, 0 0 16px rgba(255, 92, 24, .88), inset 0 0 10px rgba(255, 185, 76, .35);
+}
+
+.tovf-challenge-hud-combatant.is-active.health-bar-visible article {
+  border-left: 3px solid var(--tovf-health-color);
+}
+
+.tovf-challenge-hud-combatant.health-critical-pulse article::before {
+  animation: tovf-challenge-health-critical-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes tovf-challenge-health-critical-pulse {
+  50% { opacity: .3; transform: scale(.92); }
 }
 
 .tovf-challenge-hud-combatant.is-active article::after {
@@ -2950,9 +3193,9 @@
 .tovf-challenge-hud-turn-timer {
   display: block;
   min-height: 1rem;
-  padding-top: .25rem;
+  padding-top: .35rem;
   color: #d5b782;
-  font-size: .64rem;
+  font-size: .74rem;
   font-variant-numeric: tabular-nums;
   line-height: 1;
   text-align: center;
@@ -2964,7 +3207,7 @@
 .is-overdue { color: #ff6b59; font-weight: 800; text-shadow: 0 0 6px rgba(255, 74, 48, .62); animation: tovf-challenge-turn-overdue 1.1s ease-in-out infinite; }
 
 @keyframes tovf-challenge-turn-overdue {
-  50% { color: #ff9c70; transform: scale(1.12); }
+  50% { color: #ff9c70; transform: scale(1.15); }
 }
 
 .tovf-challenge-hud-round {
@@ -2973,7 +3216,7 @@
 
 .tovf-challenge-hud-combat-controls {
   position: absolute;
-  top: calc(100% + 1rem);
+  top: calc(100% + 0.1rem);
   left: 0;
   display: flex;
   width: 100%;
@@ -3165,12 +3408,24 @@
   gap: .6rem;
 }
 
+/* Keep slider rails visually inset and consistently softly rounded. */
+.tovf-challenge-hud-settings-content input[type="range"] {
+  width: calc(100% - .4rem);
+  margin-inline: .2rem;
+  border-radius: 3px;
+}
+
+.tovf-challenge-hud-settings-content input[type="range"]::-webkit-slider-runnable-track,
+.tovf-challenge-hud-settings-content input[type="range"]::-moz-range-track {
+  border-radius: 3px;
+}
+
 .tovf-challenge-card-count output {
   display: grid;
   place-items: center;
   height: 1.75rem;
   border: 1px solid var(--color-border-light-2);
-  border-radius: 4px;
+  border-radius: 3px;
   font-weight: 700;
 }
 
@@ -4106,6 +4361,10 @@
 }
 
 .tovf-restock-rules article>header [data-action="deliverRuleDirectly"] {
+  margin-left: .75rem;
+}
+
+.tovf-restock-rules article>header [data-action="removeRule"] {
   margin-left: .75rem;
 }
 
@@ -7530,8 +7789,8 @@
 
 .tovf-commerce-body {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: .55rem;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
   height: 100%;
   min-height: 0;
 }
@@ -7560,6 +7819,36 @@
 
 .tovf-commerce-character select {
   flex: 1;
+}
+
+.tovf-merchant-interaction-character {
+  justify-content: flex-start;
+  margin: 0;
+  padding: .3rem .45rem;
+  border: 1px solid var(--color-border-highlight);
+  border-radius: 5px;
+  background: rgba(115, 68, 29, .32);
+  box-shadow: inset 0 0 0 1px rgba(255, 214, 142, .1);
+}
+
+.tovf-merchant-interaction-character>strong {
+  white-space: nowrap;
+}
+
+.tovf-merchant-interaction-character {
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.tovf-merchant-interaction-character > img {
+  display: block;
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+  object-position: center 20%;
+  transform: scale(1.5);
+  transform-origin: center 20%;
+  border: 0;
 }
 
 .tovf-commerce-wallet {
@@ -8130,6 +8419,58 @@
   margin: 0;
   padding: .25rem .4rem;
   white-space: nowrap;
+}
+
+.tovf-merchant-item-drawer {
+  position: relative;
+}
+
+.tovf-merchant-item-drawer>summary {
+  display: grid;
+  place-items: center;
+  min-width: 30px;
+  min-height: 30px;
+  padding: .25rem .4rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.tovf-merchant-item-drawer>summary::-webkit-details-marker {
+  display: none;
+}
+
+.tovf-merchant-item-drawer>div {
+  display: none;
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + .3rem);
+  right: 0;
+  width: max-content;
+  min-width: 15rem;
+  padding: .35rem;
+  border: 1px solid var(--color-border-light-2);
+  border-radius: 4px;
+  background: var(--color-bg-option, #251208);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, .55);
+}
+
+.tovf-merchant-item-drawer[open]>div {
+  display: grid;
+  gap: .25rem;
+}
+
+.tovf-merchant-item-drawer>div>button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: .45rem;
+  width: 100%;
+}
+
+.tovf-merchant-folder-visibility-setting {
+  margin-top: .5rem;
+  padding-top: .5rem;
+  border-top: 1px solid var(--color-border-light-2);
 }
 
 .tovf-shop-group article.hidden-item {
@@ -9289,6 +9630,197 @@
   margin-bottom: .75rem;
   padding-bottom: .75rem;
 }
+
+.concept-selection-dialog .tovf-character-option-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: .45rem .65rem;
+  margin: 0 0 .75rem;
+  padding: .55rem;
+  border: 1px solid var(--color-border-light-2);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--color-bg-option, transparent) 35%, transparent);
+}
+.concept-selection-dialog .tovf-character-option-filters > header {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+}
+.concept-selection-dialog .tovf-character-option-filter-field { display: grid; gap: .2rem; min-width: 0; }
+.concept-selection-dialog .tovf-character-option-filter-field > span:first-child { font-size: .85em; font-weight: 600; }
+.concept-selection-dialog .tovf-character-option-filter-chips { display: flex; flex-wrap: wrap; gap: .2rem; }
+.concept-selection-dialog .tovf-character-option-filter-chip { width: auto; min-height: 0; padding: .1rem .35rem; font-size: .8em; }
+.concept-selection-dialog .tovf-character-option-filter-chip::after { margin-left: .35rem; content: "×"; }
+.concept-selection-dialog .tovf-character-option-filter-count { align-self: end; opacity: .8; white-space: nowrap; }
+
+/* Character-option filters use the same warm, framed controls as the rest of
+   the Feuerschwinge character-creation UI. */
+.concept-selection-dialog .tovf-character-option-filters {
+  gap: .6rem .75rem;
+  margin-bottom: .9rem;
+  padding: .7rem;
+  border-color: rgba(193, 111, 47, .78);
+  border-radius: 6px;
+  background: linear-gradient(112deg, rgba(114, 51, 20, .58), rgba(35, 14, 6, .72)), var(--color-bg-option, #251208);
+  box-shadow: inset 0 1px rgba(255, 220, 157, .13), 0 2px 5px rgba(0, 0, 0, .3);
+}
+.concept-selection-dialog .tovf-character-option-filters > header > strong {
+  color: #f4c77d;
+  font-family: "Signika", sans-serif;
+  font-size: .95rem;
+  font-weight: 700;
+  letter-spacing: .035em;
+  text-shadow: 0 1px 2px #130703;
+}
+.concept-selection-dialog .tovf-character-option-filter-field { gap: .28rem; }
+.concept-selection-dialog .tovf-character-option-filter-field > span:first-child {
+  color: #e8bf80;
+  font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .025em;
+  text-transform: uppercase;
+}
+.concept-selection-dialog .tovf-character-option-filter-field input[type="search"] {
+  width: 100%;
+  height: 2rem;
+  padding: .3rem .5rem;
+  border: 1px solid rgba(205, 126, 57, .75);
+  border-radius: 3px;
+  background: rgba(19, 7, 3, .76);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .45);
+  color: #fff0d2;
+}
+.concept-selection-dialog .tovf-character-option-filter-field input[type="search"]::placeholder { color: rgba(238, 202, 151, .6); }
+.concept-selection-dialog .tovf-character-option-filter-field input[type="search"]:hover { border-color: #e5a258; }
+.concept-selection-dialog .tovf-character-option-filter-field input[type="search"]:focus {
+  border-color: #ffd17a;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .45), 0 0 0 1px rgba(255, 187, 92, .28), 0 0 8px rgba(231, 127, 42, .28);
+}
+.concept-selection-dialog .tovf-character-option-filter-chips { gap: .25rem; min-height: .15rem; }
+.concept-selection-dialog .tovf-character-option-filter-chip {
+  min-height: 1.45rem;
+  padding: .12rem .38rem .12rem .48rem;
+  border: 1px solid rgba(220, 150, 72, .75);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(132, 57, 22, .95), rgba(73, 27, 10, .97));
+  color: #ffe0a3;
+  box-shadow: inset 0 1px rgba(255, 226, 170, .14);
+  font-size: .76rem;
+  line-height: 1.1;
+}
+.concept-selection-dialog .tovf-character-option-filter-chip:hover,
+.concept-selection-dialog .tovf-character-option-filter-chip:focus-visible {
+  border-color: #ffe09a;
+  background: linear-gradient(180deg, #a94c20, #742a0d);
+  color: #fff7e2;
+}
+.concept-selection-dialog .tovf-character-option-filter-chip::after { margin-left: .38rem; color: #ffbf7c; content: "\00d7"; }
+.concept-selection-dialog .tovf-character-option-filter-count {
+  align-self: auto;
+  padding: 0;
+  color: #e8c48f;
+  font-size: .8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  text-shadow: 0 1px #130703;
+}
+
+/* Preserve Black Flag's native concept-picker layout.  These rules only give
+   Lineage, Heritage, and Background choices Feuerschwinge colours. */
+.concept-selection-dialog:is(.lineage, .heritage, .background) .window-content {
+  background: radial-gradient(ellipse at 50% -25%, rgba(143, 65, 23, .24), transparent 50%), var(--color-bg, #1b0b05);
+}
+.concept-selection-dialog:is(.lineage, .heritage, .background) .option {
+  border-color: rgba(178, 91, 34, .76);
+  background: linear-gradient(145deg, rgba(91, 40, 16, .62), rgba(30, 10, 4, .72));
+  box-shadow: inset 0 1px rgba(255, 224, 166, .1);
+}
+.concept-selection-dialog:is(.lineage, .heritage, .background) .option:hover {
+  border-color: #f4bf70;
+  box-shadow: inset 0 1px rgba(255, 235, 193, .16), 0 0 8px rgba(230, 122, 37, .25);
+}
+.concept-selection-dialog:is(.lineage, .heritage, .background) .option :is(.document-name, .name) {
+  color: #ffd38b;
+  text-shadow: 0 1px 2px #120502;
+}
+.concept-selection-dialog:is(.lineage, .heritage, .background) .option .description { color: #e4c8a4; }
+.concept-selection-dialog:is(.lineage, .heritage, .background) .option .trait {
+  border-color: rgba(199, 119, 50, .58);
+  background: rgba(30, 10, 4, .38);
+  color: #f0c77e;
+}
+.concept-selection-dialog:is(.lineage, .heritage, .background) .option :is(.journal-link, .content-link) { color: #f5b967; }
+.concept-selection-dialog:is(.lineage, .heritage, .background) .option > [data-action="choose"] {
+  border-color: rgba(196, 106, 41, .94);
+  background: linear-gradient(180deg, rgba(132, 57, 22, .98), rgba(68, 24, 8, .98));
+  color: #ffe0a3;
+}
+.concept-selection-dialog:is(.lineage, .heritage, .background) .option > [data-action="choose"]:not([disabled]):hover,
+.concept-selection-dialog:is(.lineage, .heritage, .background) .option > [data-action="choose"]:not([disabled]):focus-visible {
+  border-color: #ffda89;
+  background: linear-gradient(180deg, #a94d20, #742a0d);
+  color: #fff7df;
+}
+
+/* Application chrome lives outside the dialog root, so match the enclosing
+   Foundry application without altering any of Black Flag's layout rules. */
+.application.tovf-character-concept-dialog .window-header {
+  border-bottom-color: rgba(210, 113, 43, .86);
+  background: linear-gradient(180deg, rgba(125, 49, 16, .98), rgba(64, 22, 8, .98));
+  color: #f6d5a0;
+  box-shadow: inset 0 1px rgba(255, 224, 166, .12);
+}
+.application.tovf-character-concept-dialog .window-header :is(.window-title, .header-button) {
+  color: #f9ddb0;
+  text-shadow: 0 1px 2px #170602;
+}
+.concept-selection-dialog:is(.lineage, .heritage, .background) .window-content {
+  scrollbar-color: #a85225 rgba(25, 8, 3, .72);
+}
+.concept-selection-dialog:is(.lineage, .heritage, .background) .window-content::-webkit-scrollbar { width: .7rem; }
+.concept-selection-dialog:is(.lineage, .heritage, .background) .window-content::-webkit-scrollbar-track {
+  border-left: 1px solid rgba(172, 83, 29, .52);
+  background: rgba(21, 7, 3, .78);
+}
+.concept-selection-dialog:is(.lineage, .heritage, .background) .window-content::-webkit-scrollbar-thumb {
+  border: 2px solid rgba(36, 11, 4, .9);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #bd6a32, #6e290e);
+}
+.concept-selection-dialog:is(.lineage, .heritage, .background) .window-content::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #e08c45, #8d3613); }
+
+/* This is a real child behind the choose control. Black Flag's poster::after
+   remains completely untouched because it draws the original frame. */
+.concept-selection-dialog:is(.lineage, .heritage, .background) .option .poster .tovf-choose-mask {
+  position: absolute;
+  z-index: 3;
+  bottom: 0px;
+  left: 0.3rem;
+  height: 3.15rem;
+  width: 8.7rem;
+  background: linear-gradient(180deg, rgba(85, 30, 9, .78), rgba(34, 9, 3, .94));
+  box-shadow: inset 0 1px rgba(233, 153, 65, .42);
+  pointer-events: none;
+}
+.concept-selection-dialog:is(.lineage, .heritage, .background) .option .poster :is([data-action="choose"], button) {
+  z-index: 4;
+}
+.concept-selection-dialog:is(.lineage, .heritage, .background) .option .poster :is([data-action="choose"], button) {
+  border-color: rgba(224, 153, 74, .95);
+  background: linear-gradient(180deg, #8c3d19, #4f1908);
+  box-shadow: inset 0 1px rgba(255, 228, 170, .18), 0 1px 3px rgba(0, 0, 0, .52);
+  color: #ffe7bd;
+  text-shadow: 0 1px 1px #1c0802;
+}
+.concept-selection-dialog:is(.lineage, .heritage, .background) .option .poster :is([data-action="choose"], button):not([disabled]):hover,
+.concept-selection-dialog:is(.lineage, .heritage, .background) .option .poster :is([data-action="choose"], button):not([disabled]):focus-visible {
+  border-color: #ffe0a0;
+  background: linear-gradient(180deg, #b45624, #6f250b);
+  color: #fff9e9;
+}
+
 
 .tovf-custom-background-dialog {
   max-height: calc(100vh - 48px);
@@ -10928,4 +11460,489 @@
   color: inherit;
   line-height: 1.4;
   overflow-wrap: anywhere;
+}
+
+/* Character progression: bring Black Flag's structural tab into the
+   Feuerschwinge sheet language without changing its advancement content. */
+.black-flag.pc.sheet [data-application-part="progression"] {
+  --tovf-progression-border: rgba(184, 111, 48, .72);
+  --tovf-progression-panel: rgba(31, 15, 8, .72);
+  --tovf-progression-text: #f7ddb1;
+  padding: .35rem;
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] > .leveling fieldset,
+.black-flag.pc.sheet [data-application-part="progression"] > .details fieldset {
+  border: 1px solid var(--tovf-progression-border);
+  border-radius: 5px;
+  background: linear-gradient(145deg, rgba(91, 43, 19, .35), var(--tovf-progression-panel));
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, .28);
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] legend {
+  padding-inline: .4rem;
+  color: #ffd990;
+  font-family: "Oswald", sans-serif;
+  font-size: var(--font-size-14);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .leveling .wrapper {
+  gap: .6rem;
+  align-items: center;
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .leveling .current-level {
+  color: #fff0cb;
+  font-family: "Oswald", sans-serif;
+  font-size: 1.65rem;
+  letter-spacing: .045em;
+  text-shadow: 0 1px 3px #160a04;
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .details {
+  gap: .45rem;
+  margin-block: .55rem;
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .details fieldset {
+  min-width: min(100%, 15rem);
+  padding: .4rem .55rem .5rem;
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .details .icon > img {
+  border: 1px solid rgba(232, 164, 83, .58);
+  border-radius: 3px;
+  background: rgba(0, 0, 0, .24);
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .details :is(button.link-button, a) {
+  color: var(--tovf-progression-text);
+}
+
+/* Black Flag notification badges appear throughout the character sheet and
+   render their tooltips in Foundry's global tooltip layer. */
+.black-flag.sheet .notification-badge {
+  border: 1px solid #d78a3d;
+  background: linear-gradient(145deg, #9d431a, #562008);
+  box-shadow: inset 0 1px rgba(255, 226, 164, .24), 0 1px 3px rgba(0, 0, 0, .55), 0 0 5px rgba(223, 111, 31, .22);
+  color: #fff0c8;
+  font-family: "Signika", sans-serif;
+  font-weight: 800;
+  text-shadow: 0 1px 1px #210903;
+}
+.black-flag.sheet .notification-badge[data-notification-level="info"] {
+  border-color: #d6a35d;
+  background: linear-gradient(145deg, #8a5425, #4c2a10);
+  color: #fff0cb;
+}
+.black-flag.sheet .notification-badge[data-notification-level="warn"] {
+  border-color: #f0a14a;
+  background: linear-gradient(145deg, #b9501c, #6d2609);
+  color: #fff2c9;
+}
+.black-flag.sheet .notification-badge[data-notification-level="error"] {
+  border-color: #f0734f;
+  background: linear-gradient(145deg, #9f2818, #55120c);
+  color: #ffe0cf;
+  box-shadow: inset 0 1px rgba(255, 220, 180, .2), 0 1px 3px rgba(0, 0, 0, .58), 0 0 6px rgba(213, 53, 26, .3);
+}
+.black-flag.sheet .notification-badge > i { color: currentColor; }
+
+:is(#tooltip, .locked-tooltip).notification-tooltip,
+.black-flag-tooltip:is(#tooltip, .locked-tooltip):has(.notification-tooltip),
+.black-flag-tooltip:is(#tooltip, .locked-tooltip).notification-tooltip {
+  min-width: 13rem;
+  padding: .45rem .5rem;
+  border: 1px solid #b96a31;
+  border-radius: 5px;
+  background:
+    radial-gradient(circle at 50% 0, rgba(132, 54, 18, .28), transparent 55%),
+    linear-gradient(180deg, rgba(35, 14, 7, .98), rgba(14, 6, 3, .99));
+  box-shadow: 0 0 0 1px #170702, 0 5px 16px rgba(0, 0, 0, .62), 0 0 12px rgba(221, 104, 29, .2);
+  color: #efd5ad;
+  font-family: "Signika", sans-serif;
+}
+:is(#tooltip, .locked-tooltip).notification-tooltip .notification-list,
+.black-flag-tooltip .notification-tooltip .notification-list,
+.black-flag-tooltip.notification-tooltip .notification-list {
+  gap: .3rem;
+  padding: .15rem;
+}
+:is(#tooltip, .locked-tooltip).notification-tooltip .notification-entry,
+.black-flag-tooltip .notification-tooltip .notification-entry,
+.black-flag-tooltip.notification-tooltip .notification-entry {
+  min-height: 1.45rem;
+  padding: .12rem .2rem;
+  border-radius: 3px;
+  color: #f2d9b3;
+}
+:is(#tooltip, .locked-tooltip).notification-tooltip .notification-entry:hover,
+.black-flag-tooltip .notification-tooltip .notification-entry:hover,
+.black-flag-tooltip.notification-tooltip .notification-entry:hover { background: rgba(137, 57, 20, .25); }
+:is(#tooltip, .locked-tooltip).notification-tooltip .notification-badge,
+.black-flag-tooltip .notification-tooltip .notification-badge,
+.black-flag-tooltip.notification-tooltip .notification-badge {
+  border: 1px solid #df9142;
+  background: linear-gradient(145deg, #a74619, #5d2108);
+  box-shadow: inset 0 1px rgba(255, 225, 164, .22), 0 1px 3px rgba(0, 0, 0, .5);
+  color: #fff0c8;
+  font-weight: 800;
+  text-shadow: 0 1px 1px #210903;
+}
+:is(#tooltip, .locked-tooltip).notification-tooltip .notification-badge[data-notification-level="info"],
+.black-flag-tooltip .notification-tooltip .notification-badge[data-notification-level="info"],
+.black-flag-tooltip.notification-tooltip .notification-badge[data-notification-level="info"] {
+  border-color: #d6a35d;
+  background: linear-gradient(145deg, #8a5425, #4c2a10);
+}
+:is(#tooltip, .locked-tooltip).notification-tooltip .notification-badge[data-notification-level="warn"],
+.black-flag-tooltip .notification-tooltip .notification-badge[data-notification-level="warn"],
+.black-flag-tooltip.notification-tooltip .notification-badge[data-notification-level="warn"] {
+  border-color: #f0a14a;
+  background: linear-gradient(145deg, #b9501c, #6d2609);
+}
+:is(#tooltip, .locked-tooltip).notification-tooltip .notification-badge[data-notification-level="error"],
+.black-flag-tooltip .notification-tooltip .notification-badge[data-notification-level="error"],
+.black-flag-tooltip.notification-tooltip .notification-badge[data-notification-level="error"] {
+  border-color: #f0734f;
+  background: linear-gradient(145deg, #9f2818, #55120c);
+  color: #ffe0cf;
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .levels > .level {
+  margin-block-end: .65rem;
+  border: 1px solid rgba(149, 77, 33, .42);
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(18, 8, 4, .32);
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .levels > .level > h3 {
+  align-items: center;
+  gap: .55rem;
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid rgba(248, 184, 93, .48);
+  border-radius: 0;
+  padding: .38rem .55rem;
+  background: linear-gradient(100deg, rgba(111, 53, 23, .96), rgba(55, 24, 12, .92));
+  box-shadow: inset 0 1px rgba(255, 224, 165, .14), 0 2px 4px rgba(0, 0, 0, .3);
+  color: #fff0cb;
+  font-family: "Oswald", sans-serif;
+  font-size: 1rem;
+  letter-spacing: .025em;
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .levels > .level > h3 > .class {
+  color: #e7b46f;
+  font-family: inherit;
+  font-size: .88em;
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .levels > .level > .advancement-flows {
+  padding: .45rem .55rem;
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .advancement-flows .advancement-entry {
+  margin: 0;
+  padding: .32rem .1rem;
+  border-bottom: 1px solid rgba(176, 100, 45, .22);
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .advancement-flows .advancement-entry:last-child {
+  border-bottom: 0;
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .advancement-flows .advancement-entry > header {
+  gap: .45rem;
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .advancement-flows .advancement-name {
+  color: #f2d09a;
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .advancement-flows .advancement-name .icon {
+  margin: 0;
+  filter: drop-shadow(0 0 2px rgba(245, 161, 68, .35));
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .advancement-flows .advancement-summary {
+  color: #d9c19a;
+  font-size: var(--font-size-12);
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .advancement-flows button:not(.tovf-level-down-button) {
+  border-color: rgba(185, 102, 40, .88);
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(111, 48, 19, .96), rgba(53, 22, 9, .98));
+  color: #ffe0ac;
+  box-shadow: inset 0 1px rgba(255, 230, 174, .13);
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .advancement-flows button:not(.tovf-level-down-button):hover,
+.black-flag.pc.sheet [data-application-part="progression"] .advancement-flows button:not(.tovf-level-down-button):focus-visible {
+  border-color: #ffd07a;
+  background: linear-gradient(180deg, #9b4820, #6a290e);
+  box-shadow: 0 0 7px rgba(255, 156, 64, .38);
+  color: #fff7e2;
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .tovf-level-down-amount {
+  width: 2.65rem;
+  min-width: 0;
+  height: 1.55rem;
+  border: 1px solid rgba(255, 197, 105, .7);
+  border-radius: 3px;
+  background: rgba(12, 5, 2, .7);
+  color: #fff0cb;
+  font-family: inherit;
+  font-size: .9rem;
+  text-align: center;
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .tovf-level-down-button {
+  width: auto;
+  min-height: 0;
+  padding: .18rem .25rem;
+  border: 0;
+  background: transparent;
+  color: #f1bd72;
+  font-size: 1rem;
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .tovf-level-down-button:hover,
+.black-flag.pc.sheet [data-application-part="progression"] .tovf-level-down-button:focus-visible {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #fff2c8;
+  text-shadow: 0 0 6px rgba(255, 167, 75, .55);
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .tovf-level-down-target {
+  margin-inline-start: auto;
+}
+
+.black-flag.pc.sheet [data-application-part="progression"] .controls:has(.tovf-level-down-button) {
+  display: inline-flex;
+  align-items: center;
+  gap: .2rem;
+  align-self: center;
+}
+
+@container sheet (width < 540px) {
+  .black-flag.pc.sheet [data-application-part="progression"] .levels > .level > h3 {
+    flex-wrap: wrap;
+  }
+
+  .black-flag.pc.sheet [data-application-part="progression"] .tovf-level-down-target {
+    width: 100%;
+    margin-inline-start: 0;
+  }
+}
+
+/* Class selection keeps Black Flag's selection data and actions, but presents
+   the full Feuerschwinge class roster as one compact 4 × 4 gallery. */
+.concept-selection-dialog.class {
+  --tovf-class-card-border: rgba(176, 93, 34, .82);
+  --tovf-class-card-gold: #f2c47d;
+}
+
+.concept-selection-dialog.class .window-content {
+  block-size: min(780px, calc(100vh - 8rem));
+  max-block-size: min(780px, calc(100vh - 8rem));
+  inline-size: min(1040px, calc(100vw - 3rem));
+  max-inline-size: min(1040px, calc(100vw - 3rem));
+  min-inline-size: 0;
+  overflow: hidden;
+  padding: .55rem;
+  background: radial-gradient(circle at 50% 0, rgba(121, 55, 19, .32), transparent 48%), #170b06;
+}
+
+.concept-selection-dialog.class .window-content > div {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(4, 11rem);
+  gap: .5rem;
+  align-content: start;
+  block-size: auto;
+  inline-size: 100%;
+}
+
+.concept-selection-dialog.class .window-content > div > .option {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  block-size: 11rem;
+  min-inline-size: 0;
+  max-inline-size: none;
+  overflow: hidden;
+  border: 1px solid var(--tovf-class-card-border);
+  border-radius: 5px;
+  background: linear-gradient(155deg, rgba(91, 42, 17, .92), rgba(28, 12, 6, .96));
+  box-shadow: inset 0 1px rgba(255, 225, 165, .12), 0 3px 8px rgba(0, 0, 0, .42);
+}
+
+.concept-selection-dialog.class .window-content > div > .option:hover {
+  border-color: #ffd17b;
+  box-shadow: inset 0 1px rgba(255, 240, 197, .22), 0 0 10px rgba(238, 135, 45, .35);
+}
+
+.concept-selection-dialog.class .option .summary {
+  display: block;
+  position: relative;
+  min-block-size: 8.85rem;
+  padding: .35rem .35rem 0;
+}
+
+.concept-selection-dialog.class .option .poster {
+  position: absolute;
+  z-index: 1;
+  top: .35rem;
+  right: .35rem;
+  inline-size: 6.5rem;
+  block-size: 5.9rem;
+  margin: 0;
+  overflow: hidden;
+  contain: layout;
+  box-sizing: border-box;
+  padding: .16rem;
+  border: 1px solid rgba(220, 145, 67, .9);
+  border-radius: 3px;
+  background: linear-gradient(145deg, #a15424, #321307);
+  box-shadow: inset 0 0 0 1px rgba(255, 217, 146, .25), 0 2px 5px rgba(0, 0, 0, .5);
+}
+
+.concept-selection-dialog.class .option .poster > img {
+  position: relative;
+  z-index: 1;
+  block-size: 100%;
+  inline-size: 100%;
+  margin: 0;
+  border: 0;
+  object-fit: contain;
+}
+
+.concept-selection-dialog.class .option .poster .banner-mask {
+  display: none;
+}
+
+.concept-selection-dialog.class .option .poster::after {
+  position: absolute;
+  z-index: 2;
+  inset: .16rem;
+  border: 1px solid rgba(255, 221, 157, .42);
+  border-radius: 2px;
+  content: "";
+  pointer-events: none;
+}
+
+.concept-selection-dialog.class .option .tovf-class-name {
+  inline-size: calc(100% - 6.85rem);
+  margin: 0;
+  color: #ffd58d;
+  font-family: 'TOVF Sharp Regular';
+  font-size: .9rem;
+  font-weight: 600;
+  letter-spacing: .025em;
+  text-align: center;
+  text-shadow: 0 1px 3px #090301;
+}
+
+.concept-selection-dialog.class .option .poster .source {
+  z-index: 1;
+  top: .28rem;
+  right: .3rem;
+  padding: .1rem .28rem;
+  border: 1px solid rgba(255, 214, 143, .38);
+  border-radius: 2px;
+  background: rgba(26, 10, 4, .72);
+  color: #f1cd93;
+  font-size: .62rem;
+  line-height: 1.1;
+}
+
+.concept-selection-dialog.class .option .info {
+  display: contents;
+}
+
+.concept-selection-dialog.class .option .info .description {
+  position: absolute;
+  right: .35rem;
+  bottom: 0;
+  left: .35rem;
+  overflow: hidden;
+}
+
+.concept-selection-dialog.class .option .info .description > p {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #e5cda5;
+  font-size: .76rem;
+  line-height: 1.22;
+  text-align: center;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.concept-selection-dialog.class .option .info .journal-link {
+  margin-block: .2rem 0;
+}
+
+.concept-selection-dialog.class .option .info .journal-link p {
+  margin: 0;
+  font-size: .76rem;
+  line-height: 1.1;
+}
+
+.concept-selection-dialog.class .option .info .journal-link .content-link {
+  color: #f3bf70;
+}
+
+.concept-selection-dialog.class .option .info .traits {
+  display: flex;
+  inline-size: calc(100% - 6.85rem);
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: .4rem;
+  margin: .25rem 0 0;
+  padding: .35rem 0 0;
+  list-style: none;
+}
+
+.concept-selection-dialog.class .option .info .trait {
+  max-inline-size: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #f5ca82;
+  font-size: .72rem;
+  font-weight: 600;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.concept-selection-dialog.class .option > [data-action="choose"] {
+  inline-size: auto;
+  min-block-size: 1.65rem;
+  margin: .08rem .28rem .28rem;
+  border-color: rgba(191, 107, 42, .94);
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(126, 54, 20, .98), rgba(66, 25, 9, .98));
+  color: var(--tovf-class-card-gold);
+  font-family: "Signika", Arial, sans-serif;
+  font-size: var(--font-size-12);
+  font-weight: 650;
+  letter-spacing: .025em;
+  line-height: 1.1;
+}
+
+.concept-selection-dialog.class .option > [data-action="choose"]:not([disabled]):hover,
+.concept-selection-dialog.class .option > [data-action="choose"]:not([disabled]):focus-visible {
+  border-color: #ffda89;
+  background: linear-gradient(180deg, #a94d20, #742a0d);
+  box-shadow: 0 0 7px rgba(255, 157, 58, .4);
+  color: #fff7df;
 }

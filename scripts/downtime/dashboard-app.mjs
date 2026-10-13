@@ -1,5 +1,5 @@
 import { FLAGS, MODULE_ID, SETTINGS } from "./constants.mjs";
-import { StationApp } from "./station-app.mjs";
+import { StationApp } from "./station-app.mjs?v=3.9.3-project-order-2";
 import { getStationData, isStation, round } from "./utils.mjs";
 import { SessionApp } from "./session-app.mjs";
 import { DowntimeService } from "./downtime-service.mjs";

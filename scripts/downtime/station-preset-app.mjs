@@ -3,6 +3,7 @@ import { createRecipeDocumentFromTemplate } from "./recipe-service.mjs";
 import { STATION_PRESETS, stationPresetDescriptionKey, stationPresetNameKey } from "./station-presets.mjs";
 import { getSystemAdapter } from "./system-adapter.mjs";
 import { configuredCategories, defaultStationData } from "./utils.mjs";
+import { enableStationViewerAccess } from "./station-access.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -112,6 +113,7 @@ export class StationPresetApp extends HandlebarsApplicationMixin(ApplicationV2) 
         }
       }, { renderSheet: false });
       if (!actor) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.StationPresetCreateFailed"));
+      await enableStationViewerAccess(actor);
       ui.notifications.info(game.i18n.format("DOWNTIME_MANAGER.StationPresets.Imported", { station: actor.name }));
       this.render();
     } catch (error) {

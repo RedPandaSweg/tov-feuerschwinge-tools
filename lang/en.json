@@ -1,4 +1,14 @@
 {
+  "TOVF.SceneLoot.Placed": "{name} is now on the scene. Double-click to pick it up.",
+  "TOVF.SceneLoot.PickedUp": "Picked up {name}.",
+  "TOVF.SceneLoot.Errors.InvalidDrop": "The Item or scene is no longer available.",
+  "TOVF.SceneLoot.Errors.NotOwner": "You can only place Items from a character inventory you own.",
+  "TOVF.SceneLoot.Errors.Unavailable": "This Item is no longer available.",
+  "TOVF.SceneLoot.Errors.Recipient": "You can only pick up this Item for a character you own.",
+  "TOVF.SceneLoot.Errors.NoCharacter": "Select one of your Tokens to pick up this Item.",
+  "TOVF.SceneLoot.Errors.OutOfReach": "The Item can only be picked up from the same or an adjacent grid space.",
+  "TOVF.SceneLoot.Errors.GM": "A game master must be connected to place or pick up scene Items.",
+  "TOVF.SceneLoot.Errors.Timeout": "The game master did not respond to the scene Item request.",
   "TOVF.Dnd5eImporter.Title": "Import D&D5e Content",
   "TOVF.Dnd5eImporter.Open": "Import D&D5e Content",
   "TOVF.Dnd5eImporter.Replace": "Replace earlier D&D imports with the same name",
@@ -588,6 +598,14 @@
         "Type": "Type",
         "Base": "Base"
       },
+      "ItemFilters": {
+        "Title": "Item filters",
+        "Base": "Base",
+        "Price": "Price",
+        "Min": "Min",
+        "Max": "Max",
+        "Gold": "gp"
+      },
       "Sort": {
         "Label": "Sort",
         "Name": "Alphabetical",
@@ -918,6 +936,15 @@
 "Interface": {
   "NewArrival": "New",
   "RestockComplete": "Restock completed.",
+  "DeliverAll": "Deliver all now",
+  "DeliverAllDirectly": "Extra delivery for all",
+  "ManageOffer": "Manage offer",
+  "SetQuantityPerPriceUnit": "Quantity per price unit",
+  "SetNewTag": "Set NEW tag",
+  "RemoveNewTag": "Remove NEW tag",
+  "HideMerchantsFromPlayers": "Hide merchants in this folder from players",
+  "ShowMerchantsToPlayers": "Show merchants in this folder to players",
+  "HideMerchantsFromPlayersHint": "Also applies to subfolders. Merchants remain readable for the shop but do not appear in players' Actor Directory.",
   "Restock": { "Title": "Automatic restocking", "Automatic": "Automation enabled", "Hint": "Each rule uses its own RollTable and schedule. A value of 0 disables discounting or removal.", "Rule": "Restock rule", "Rules": "rules", "Configure": "Configure restocking", "SelectTable": "Select RollTable", "Rolls": "Rolls", "Quantity": "Quantity per result", "Start": "Start date", "Interval": "Delivery interval", "Discount": "Discount after / percent", "Remove": "Remove after", "Next": "Next delivery", "LastDelivery": "Last delivery", "DeliveryHistory": "Delivery history", "Deliveries": "deliveries", "Delivery": "Delivery", "Item": "Item", "Amount": "Amount", "Status": "Status", "InStock": "In stock", "Sold": "Sold", "DeliveredAt": "Delivered at", "DiscountAt": "Discount from", "RemoveAt": "Removal at", "Never": "Never", "NoNewItems": "No new items found.", "NotScheduled": "not scheduled yet", "Empty": "No restock rule configured yet.", "Add": "Add rule", "Run": "Restock now", "Deliver": "Deliver now", "Delivered": "Delivery completed.", "Direct": "Extra delivery", "DirectComplete": "Extra delivery completed.", "Saved": "Restock rules saved.", "Complete": "Restock completed.", "Units": { "minutes": "Minutes", "hours": "Hours", "days": "Days", "weeks": "Weeks", "months": "Months" } },
   "Refresh_87c65f": "Refresh",
   "DataAsOf_ffa317": "· Data as of:",
@@ -1894,7 +1921,7 @@
     "Currency": { "GP": "gp" },
     "Catalog": {
       "Entries": "projects",
-      "Search": "Search projects…",
+      "Search": "Search projects",
       "Status": "Project status",
       "AllStatuses": "All statuses",
       "Active": "Active",

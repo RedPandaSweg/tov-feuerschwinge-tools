@@ -281,13 +281,13 @@ function formatCR(value) {
 }
 
 function healthColor(ratio) {
-  const red = [223, 53, 43];
-  const orange = [237, 123, 50];
-  const font = [213, 183, 130];
+  const red = [181, 75, 69];
+  const orange = [201, 139, 73];
+  const green = [101, 161, 104];
   const amount = Math.clamp(Number(ratio) || 0, 0, 1);
   const [from, to, progress] = amount < 0.5
     ? [red, orange, amount * 2]
-    : [orange, font, (amount - 0.5) * 2];
+    : [orange, green, (amount - 0.5) * 2];
   const rgb = from.map((channel, index) => Math.round(channel + (to[index] - channel) * progress));
   return `rgb(${rgb.join(" ")})`;
 }
@@ -562,6 +562,7 @@ class ChallengeManager extends HandlebarsApplicationMixin(ApplicationV2) {
 
 class ChallengeHud {
   #drawers = { party: false, roll: false, doom: false };
+  #partySummaryOpen = false;
   #hpCombatantId = null;
   #excludedRollActorIds = new Set();
   #carouselCombatId = null;
@@ -569,6 +570,12 @@ class ChallengeHud {
   #carouselOffset = null;
   element = null;
   get rendered() { return this.element?.isConnected === true; }
+
+  collapsePartySummary() {
+    if (!this.#partySummaryOpen) return;
+    this.#partySummaryOpen = false;
+    if (this.rendered) this.render();
+  }
 
   renderLegacy() {
     const isGM = game.user.isGM;
@@ -670,9 +677,12 @@ class ChallengeHud {
       const isNpc = Boolean(actor && !actor.hasPlayerOwner);
       const showHealth = hpRatio !== null && (isGM || isOwned || (isNpc ? showNpcHealth : showOtherPlayerHealth));
       const hpColor = showHealth ? healthColor(hpRatio) : null;
-      const healthState = hpColor ? " health-visible" : "";
+      const healthState = hpColor
+        ? ` health-visible health-bar-visible${isGM ? "" : " player-health-visible"}${!isGM && hpRatio < 0.1 ? " health-critical-pulse" : ""}`
+        : "";
+      const playerGlowStrength = hpRatio === null ? 0 : Math.round(Math.min(78, 42 + (1 - hpRatio) * 72));
       const healthStyle = hpColor
-        ? ` style="--tovf-health-color:${hpColor};--tovf-health-ratio:${hpRatio.toFixed(3)}"`
+        ? ` style="--tovf-health-color:${hpColor};--tovf-health-ratio:${hpRatio.toFixed(3)};--tovf-health-glow:${playerGlowStrength}%"`
         : "";
       const portraitSrc = escape(combatant.token?.texture?.src ?? actor?.img);
       const canRollInitiative = combatant.initiative == null && actor
@@ -694,15 +704,22 @@ class ChallengeHud {
       return `<div class="tovf-challenge-hud-combatant ${isActive ? "is-active" : ""}${defeated ? " is-defeated" : ""}${healthState}"${healthStyle}><article><img class="portrait-backdrop" src="${portraitSrc}" alt=""><img class="portrait-main" src="${portraitSrc}" alt="${escape(combatant.name ?? actor?.name ?? "")}"><span class="tovf-challenge-hud-initiative-value">${escape(initiative)}</span>${gmStats}${initiativeRoll}</article><div class="tovf-challenge-hud-card-footer">${hpControl}${turnTimer}</div></div>`;
     }).join("");
     const drawer = (name, icon, label, content, badge = "", shortLabel = label) => `<section class="tovf-challenge-hud-drawer ${name} ${this.#drawers[name] ? "is-open" : ""}"><button type="button" class="tovf-challenge-hud-toggle" data-hud-action="toggle" data-drawer="${name}" title="${escape(label)}">${icon ? `<i class="fa-solid ${icon}" inert></i>` : ""}<span>${escape(shortLabel)}</span>${badge}</button><div class="tovf-challenge-hud-popover">${content}</div></section>`;
-    const party = `<header>${localize("TOVF.ChallengeManager.Party.Title")}</header><ul>${actors.filter(actor => selected.has(actor.id)).map(actorRow).join("") || `<li class="hint">${localize("TOVF.ChallengeManager.Party.Empty")}</li>`}</ul><details><summary>${localize("TOVF.ChallengeManager.Actors.Title")}</summary><ul>${actors.filter(actor => !selected.has(actor.id)).map(actorRow).join("") || `<li class="hint">${localize("TOVF.ChallengeManager.Actors.AllSelected")}</li>`}</ul></details>`;
+    const party = `<header>${localize("TOVF.ChallengeManager.Actors.Title")}</header><ul>${actors.map(actorRow).join("") || `<li class="hint">${localize("TOVF.ChallengeManager.Party.Empty")}</li>`}</ul>`;
+    const partyMembers = actors.filter(actor => selected.has(actor.id));
+    const partySummary = `<section class="tovf-challenge-hud-party-summary ${this.#partySummaryOpen ? "is-open" : ""}"><button type="button" class="tovf-challenge-hud-party-summary-toggle" data-hud-action="togglePartySummary" title="${escape(localize("TOVF.ChallengeManager.Party.Title"))}" aria-label="${escape(localize("TOVF.ChallengeManager.Party.Title"))}" aria-expanded="${this.#partySummaryOpen}"><i class="fa-solid fa-users-viewfinder" inert></i></button><div class="tovf-challenge-hud-party-summary-cards">${partyMembers.map(actor => {
+      const passivePerception = actor.system.proficiencies?.skills?.perception?.passive ?? actor.system.attributes?.perception ?? "-";
+      const passiveInsight = actor.system.proficiencies?.skills?.insight?.passive ?? actor.system.attributes?.insight ?? "-";
+      return `<article title="${escape(actor.name)}"><img src="${escape(actor.img)}" alt=""><div><span title="Passive Perception"><i class="fa-solid fa-eye" inert></i>${escape(passivePerception)}</span><span title="Passive Insight"><i class="fa-solid fa-brain" inert></i>${escape(passiveInsight)}</span></div></article>`;
+    }).join("")}</div>${this.#partySummaryOpen ? drawer("party", "fa-gear", localize("TOVF.ChallengeManager.Party.Title"), party, "", "") : ""}</section>`;
     const roll = `<header>${localize("TOVF.ChallengeManager.Roll.Title")}</header>${rollActorSelection}<div class="tovf-challenge-hud-roll-selects"><select data-hud-roll-type><option value="skill">${localize("TOVF.ChallengeManager.Roll.Skill")}</option><option value="save">${localize("TOVF.ChallengeManager.Roll.Save")}</option><option value="die">${localize("TOVF.ChallengeManager.Roll.Die")}</option></select><select data-hud-roll-key data-kind="skill">${Object.entries(CONFIG.BlackFlag.skills.localized ?? {}).map(([value, label]) => `<option value="${escape(value)}">${escape(label)}</option>`).join("")}</select><select data-hud-roll-key data-kind="save" hidden>${Object.entries(CONFIG.BlackFlag.abilities.localized ?? {}).map(([value, label]) => `<option value="${escape(value)}">${escape(label)}</option>`).join("")}</select><select data-hud-roll-key data-kind="die" hidden>${[4, 6, 8, 10, 12, 20, 100].map(value => `<option value="${value}">d${value}</option>`).join("")}</select></div><div class="tovf-challenge-hud-roll-options"><label><input type="checkbox" data-hud-average> ${localize("TOVF.ChallengeManager.Roll.ShowAverageShort")}</label><label><input type="checkbox" data-hud-private> ${localize("TOVF.ChallengeManager.Roll.Private")}</label><label data-hud-dc>${localize("TOVF.ChallengeManager.Roll.DCShort")} <input type="number" min="0" max="99" data-hud-roll-dc></label></div><button type="button" data-hud-action="request"><i class="fa-solid fa-message-arrow-up-right" inert></i>${localize("TOVF.ChallengeManager.Roll.Post")}</button>`;
     const rules = `<header>${localize("TOVF.ChallengeManager.Rules.Title")}</header>${RULES_LINKS.map(link => `<button type="button" data-hud-action="openRulesJournal" data-journal-uuid="${escape(link.uuid)}"><i class="fa-solid ${link.icon}" inert></i>${localize(link.label)}</button>`).join("")}`;
     const doomAction = ({ id, icon, oncePerEncounter = false }) => {
       const used = oncePerEncounter && usedDoomActions()[id];
       const label = localize(`TOVF.ChallengeManager.Doom.${id}`);
       const title = localize(`TOVF.ChallengeManager.Doom.${id}Hint`);
-      const useIcon = oncePerEncounter ? "fa-repeat-1" : "fa-repeat";
-      return `<button type="button" data-hud-action="doom" data-doom-id="${id}" data-doom-label="${escape(label)}" data-doom-chat="true" data-doom-icon="${icon}" data-doom-once="${oncePerEncounter}" title="${escape(title)}" ${used ? "disabled" : ""}><i class="fa-solid ${icon}" inert></i><span>${label}</span><i class="tovf-challenge-hud-doom-usage fa-solid ${useIcon}" inert></i></button>`;
+      const useIcon = oncePerEncounter ? "fa-circle-1" : "fa-repeat";
+      const usageIconStyle = oncePerEncounter ? "fa-sharp fa-regular" : "fa-solid";
+      return `<button type="button" data-hud-action="doom" data-doom-id="${id}" data-doom-label="${escape(label)}" data-doom-chat="true" data-doom-icon="${icon}" data-doom-once="${oncePerEncounter}" title="${escape(title)}" ${used ? "disabled" : ""}><i class="fa-solid ${icon}" inert></i><span>${label}</span><i class="tovf-challenge-hud-doom-usage ${usageIconStyle} ${useIcon}" inert></i></button>`;
     };
     const doomActions = [
       doomAction({ id: "Advantage", icon: "fa-thumbs-up" }),
@@ -715,7 +732,7 @@ class ChallengeHud {
     const doom = `<header class="tovf-challenge-hud-doom-header"><span>${localize("TOVF.ChallengeManager.Doom.Bank")}</span><div class="tovf-challenge-hud-doom-meta"><button type="button" data-hud-action="recalculateDoom" title="${escape(localize("TOVF.ChallengeManager.Doom.Recalculate"))}" aria-label="${escape(localize("TOVF.ChallengeManager.Doom.Recalculate"))}"><i class="fa-solid fa-arrows-rotate" inert></i></button><small>${localize("TOVF.ChallengeManager.Encounter.MaxCR")}: ${escape(formatCR(maxCR))} <i>|</i> ${localize("TOVF.ChallengeManager.Encounter.Adversaries")}: ${activeAdversaryCount}/${adversaryCount}</small></div></header><div class="tovf-challenge-hud-doom-count"><button type="button" data-hud-action="doom" data-amount="-1">&minus;</button><input type="number" min="0" value="${game.settings.get(MODULE_ID, SETTINGS.doom)}" data-hud-doom><button type="button" data-hud-action="doom" data-amount="1">+</button></div><div class="tovf-challenge-hud-doom-actions">${doomActions}</div><label><input type="checkbox" data-hud-doom-announce ${game.settings.get(MODULE_ID, SETTINGS.announceDoom) ? "checked" : ""}> ${localize("TOVF.ChallengeManager.Doom.AnnounceCurrent")}</label>`;
     const rulesDrawer = drawer("rules", "fa-book-open", localize("TOVF.ChallengeManager.Rules.Title"), rules, "", localize("TOVF.ChallengeManager.Rules.Short"));
     const controls = isGM
-      ? `${drawer("party", "fa-users", localize("TOVF.ChallengeManager.Party.Title"), party)}${drawer("roll", "fa-dice-d20", localize("TOVF.ChallengeManager.Roll.Title"), roll, "", localize("TOVF.ChallengeManager.Roll.Short"))}${rulesDrawer}${drawer("doom", "", localize("TOVF.ChallengeManager.Doom.Bank"), doom, `<b>${game.settings.get(MODULE_ID, SETTINGS.doom)}</b>`)}`
+      ? `${partySummary}${drawer("roll", "fa-dice-d20", localize("TOVF.ChallengeManager.Roll.Title"), roll, "", localize("TOVF.ChallengeManager.Roll.Short"))}${rulesDrawer}${drawer("doom", "", localize("TOVF.ChallengeManager.Doom.Bank"), doom, `<b>${game.settings.get(MODULE_ID, SETTINGS.doom)}</b>`)}`
       : hasCombatants && showInitiativeCarousel ? rulesDrawer : "";
     this.element ??= document.body.appendChild(document.createElement("section"));
     this.element.id = "tovf-challenge-hud";
@@ -775,6 +792,7 @@ class ChallengeHud {
     if (!button) return;
     const action = button.dataset.hudAction;
     if (action === "toggle") { this.#drawers[button.dataset.drawer] = !this.#drawers[button.dataset.drawer]; this.render(); return; }
+    if (action === "togglePartySummary") { this.#partySummaryOpen = !this.#partySummaryOpen; this.render(); return; }
     if (action === "openRulesJournal") {
       const document = await fromUuid(button.dataset.journalUuid).catch(() => null);
       if (!document) return ui.notifications.warn(localize("TOVF.ChallengeManager.Rules.Missing"));
@@ -1385,6 +1403,7 @@ export function registerChallengeManager() {
   Hooks.on("combatStart", combat => {
     pendingDoomCombatId = combat.id;
     initializedDoomCombatId = null;
+    panel?.collapsePartySummary();
     void updateCombatTiming(combat, { encounterStarted: true, turnChanged: true });
     if (game.settings.get(MODULE_ID, AUTO_OPEN_SETTING)
       || (!game.user.isGM && game.settings.get(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_SETTING))) void openPanel();

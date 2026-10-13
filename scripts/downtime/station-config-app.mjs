@@ -1,7 +1,8 @@
-import { CRAFTING_EXPERIENCE_TIERS, DEFAULT_VALUE_TIERS, FLAGS, MODULE_ID, PROJECT_TEMPLATES, ROLL_TABLE_PRESETS } from "./constants.mjs";
+import { CRAFTING_EXPERIENCE_TIERS, DEFAULT_VALUE_TIERS, FLAGS, ITEM_RARITY_COLORS, ITEM_RARITY_ORDER, MODULE_ID, PROJECT_TEMPLATES, ROLL_TABLE_PRESETS } from "./constants.mjs";
 import { getSystemAdapter } from "./system-adapter.mjs";
 import { createRecipeFromBaseItem } from "./recipe-service.mjs";
 import { StationEngine } from "./station-engine.mjs";
+import { enableStationViewerAccess } from "./station-access.mjs";
 import {
   addCategorySelection,
   categorySelectionView,
@@ -23,6 +24,13 @@ function numberOr(value, fallback = 0) {
   return Number.isFinite(number) ? number : fallback;
 }
 
+function rarityColor(item) {
+  const rawRarity = item?.system?.rarity;
+  const normalized = String(rawRarity?.value ?? rawRarity ?? "").toLocaleLowerCase().replace(/[^a-z0-9]+/g, "");
+  const key = { veryrare: "very-rare" }[normalized] ?? normalized;
+  return { color: ITEM_RARITY_COLORS[key] ?? "", order: ITEM_RARITY_ORDER[key] ?? ITEM_RARITY_ORDER.mundane };
+}
+
 export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
     id: "downtime-manager-station-config-{id}",
@@ -37,6 +45,7 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
       removeStationTool: StationConfigApp.#removeStationTool,
       removeProgressItem: StationConfigApp.#removeProgressItem,
       saveProgressItem: StationConfigApp.#saveProgressItem,
+      openRecipe: StationConfigApp.#openRecipe,
       removeRecipe: StationConfigApp.#removeRecipe,
       removeStation: StationConfigApp.#removeStation,
       addModifier: StationConfigApp.#addModifier,
@@ -70,6 +79,7 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
     const station = getStationData(this.actor);
     station.actorValue.tiers = StationEngine.normalizeValueTiers(station.actorValue.tiers);
     const categoryPicker = categorySelectionView(station.categories);
+    const adapter = getSystemAdapter();
     const recipes = [];
     for (const uuid of station.recipes) {
       const item = await fromUuid(uuid);
@@ -78,19 +88,20 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
       const result = data?.rewards?.[0]?.uuid
         ? await fromUuid(data.rewards[0].uuid)
         : null;
+      const rarity = rarityColor(result ?? item);
       recipes.push({
         uuid,
-        name: item?.name ?? uuid,
+        name: data?.projectName || item?.name || uuid,
         img: result?.img ?? item?.img ?? "icons/svg/item-bag.svg",
-        kind: game.i18n.localize(custom
-          ? "DOWNTIME_MANAGER.Station.ProjectItem"
-          : item?.type === "spell"
-            ? "DOWNTIME_MANAGER.Station.SpellRecipe"
-            : "DOWNTIME_MANAGER.Station.StandardItem")
+        rarityColor: rarity.color,
+        rarityOrder: rarity.order,
+        goldCost: numberOr(data?.goldCost),
+        showGoldCost: adapter.capabilities.currency && numberOr(data?.goldCost) > 0,
+        repeatable: Boolean(data?.repeatable)
       });
     }
+    recipes.sort((a, b) => a.rarityOrder - b.rarityOrder || a.name.localeCompare(b.name, game.i18n.lang));
     const selected = new Set(station.allowedChecks.map(StationEngine.checkId));
-    const adapter = getSystemAdapter();
     const checks = adapter.getCheckDefinitions().map(check => ({
       ...check,
       id: StationEngine.checkId(check),
@@ -344,6 +355,7 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
     const station = this.#readStation();
     mutator(station);
     await this.actor.setFlag(MODULE_ID, FLAGS.STATION, station);
+    await enableStationViewerAccess(this.actor);
     this.render();
   }
 
@@ -417,6 +429,12 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
     await this.#persistDraft(station => {
       station.recipes = station.recipes.filter(uuid => uuid !== target.dataset.uuid);
     });
+  }
+
+  static async #openRecipe(event, target) {
+    event.preventDefault();
+    const item = await fromUuid(target.dataset.uuid).catch(() => null);
+    item?.sheet?.render(true);
   }
 
   static async #removeStationTool() {
@@ -574,6 +592,7 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
       return ui.notifications.error(game.i18n.localize("DOWNTIME_MANAGER.Errors.InvalidValueTiers"));
     }
     await this.actor.setFlag(MODULE_ID, FLAGS.STATION, station);
+    await enableStationViewerAccess(this.actor);
     ui.notifications.info(game.i18n.localize("DOWNTIME_MANAGER.Notifications.StationSaved"));
     this.render();
   }

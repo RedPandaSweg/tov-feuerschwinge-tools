@@ -1,4 +1,5 @@
 import { craftingAccess } from "./crafting-access.mjs";
+import { ITEM_RARITY_COLORS, ITEM_RARITY_ORDER } from "./constants.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
 import { GoldService } from "./gold-service.mjs";
 import { ProjectService } from "./project-service.mjs?v=3.8.5-applied-roll-progress-1";
@@ -127,13 +128,76 @@ function configuredLabel(key, fallback) {
   return fallback;
 }
 
+function rarityLabel(item) {
+  const rawRarity = item?.system?.rarity;
+  const rarity = String(rawRarity?.value ?? rawRarity ?? "").trim();
+  if (!rarity) {
+    return {
+      id: "",
+      label: "",
+      rarityClass: "mundane",
+      rarityColor: "",
+      rarityOrder: ITEM_RARITY_ORDER.mundane
+    };
+  }
+  const configured = CONFIG.BlackFlag?.rarities?.localized ?? CONFIG.BlackFlag?.rarities ?? {};
+  const entry = configured[rarity];
+  const localization = entry?.label ?? entry?.localization ?? entry;
+  const localized = typeof localization === "string" ? game.i18n.localize(localization) : "";
+  const normalized = rarity.toLocaleLowerCase().replace(/[^a-z0-9]+/g, "");
+  const rarityClass = {
+    mundane: "mundane",
+    common: "common",
+    uncommon: "uncommon",
+    rare: "rare",
+    veryrare: "very-rare",
+    legendary: "legendary",
+    artifact: "artifact",
+    fabled: "fabled"
+  }[normalized] ?? "";
+  return {
+    id: rarity,
+    label: localized && localized !== localization ? localized : humanize(rarity),
+    rarityClass,
+    rarityColor: ITEM_RARITY_COLORS[rarityClass] ?? "",
+    rarityOrder: ITEM_RARITY_ORDER[rarityClass] ?? ITEM_RARITY_ORDER.mundane
+  };
+}
+
+async function craftQuantity(name, img, repeatable) {
+  if (!repeatable) return 1;
+  return foundry.applications.api.DialogV2.prompt({
+    classes: ["downtime-manager", "sc-crafting-quantity-dialog"],
+    window: { title: game.i18n.localize("DOWNTIME_MANAGER.Actions.Start") },
+    position: { width: 280, height: "auto" },
+    content: `<div class="standard-form"><header class="sc-crafting-quantity-header"><img src="${foundry.utils.escapeHTML(img || "icons/svg/item-bag.svg")}" alt=""><strong>${foundry.utils.escapeHTML(name)}</strong></header><div class="form-group"><label>${game.i18n.localize("DOWNTIME_MANAGER.Project.Quantity")}:</label><div class="form-fields"><input type="number" name="quantity" value="1" min="1" step="1" autofocus></div></div></div>`,
+    ok: {
+      label: game.i18n.localize("DOWNTIME_MANAGER.Actions.Start"),
+      callback: (_event, button) => button.form?.elements.quantity?.value ?? 1
+    },
+    render: (_event, dialog) => {
+      const row = dialog.element.querySelector(".form-group");
+      const footer = dialog.element.querySelector(".form-footer");
+      const button = footer?.querySelector('button[data-action="ok"]');
+      if (row && button) row.append(button);
+      footer?.remove();
+    },
+    rejectClose: false
+  });
+}
+
 function projectClassification(item) {
   if (!item || item.documentName !== "Item") {
     return {
       type: "project",
       typeLabel: game.i18n.localize("DOWNTIME_MANAGER.Catalog.OtherProjects"),
       subtype: "",
-      subtypeLabel: ""
+      subtypeLabel: "",
+      rarity: "",
+      rarityLabel: "",
+      rarityClass: "",
+      rarityColor: "",
+      rarityOrder: ITEM_RARITY_ORDER.mundane
     };
   }
   const type = String(item.type || "other");
@@ -147,13 +211,19 @@ function projectClassification(item) {
     foundry.utils.getProperty(item, "system.type.value")
   ].map(value => String(value ?? "").trim()).filter(Boolean);
   const subtype = subtypeValues[0] || "";
+  const rarity = rarityLabel(item);
   return {
     type,
     typeLabel,
     subtype,
     subtypeLabel: KNOWN_ITEM_SUBTYPES.has(subtype)
       ? game.i18n.localize(`DOWNTIME_MANAGER.Catalog.Subtypes.${subtype}`)
-      : humanize(subtype)
+      : humanize(subtype),
+    rarity: rarity.id,
+    rarityLabel: rarity.label,
+    rarityClass: rarity.rarityClass,
+    rarityColor: rarity.rarityColor,
+    rarityOrder: rarity.rarityOrder
   };
 }
 
@@ -170,6 +240,8 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
       useProgressItem: StationApp.#useProgressItem,
       roll: StationApp.#roll,
       completionRoll: StationApp.#completionRoll,
+      openProject: StationApp.#openProject,
+      craftProject: StationApp.#craftProject,
       configure: StationApp.#configure,
       sharedStart: StationApp.#sharedStart,
       sharedJoin: StationApp.#sharedJoin,
@@ -224,12 +296,6 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const catalog = this.element.querySelector("[data-project-catalog]");
     if (!catalog) return;
 
-    for (const project of catalog.querySelectorAll('[data-project-entry]:not([data-project-status="active"])')) {
-      const summary = project.querySelector(".sc-project-main")?.textContent?.replace(/\s+/g, " ").trim();
-      const description = project.querySelector(".sc-project-description")?.textContent?.replace(/\s+/g, " ").trim();
-      project.title = [summary, description].filter(Boolean).join("\n");
-    }
-
     const search = catalog.querySelector('[data-project-filter="search"]');
     const type = catalog.querySelector('[data-project-filter="type"]');
     const subtype = catalog.querySelector('[data-project-filter="subtype"]');
@@ -273,6 +339,9 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
           project.dataset.projectStatus === this._catalogState.status;
         project.hidden = !(matchesSearch && matchesType && matchesSubtype && matchesStatus);
         if (!project.hidden) visible++;
+      }
+      for (const group of catalog.querySelectorAll("[data-project-type-group]")) {
+        group.hidden = !group.querySelector("[data-project-entry]:not([hidden])");
       }
       catalog.querySelector("[data-project-empty]").hidden = visible > 0;
     };
@@ -480,15 +549,34 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
         canCompletionRoll: !levelAccess.blocked && station.enabled && Boolean(active && state.awaitingCompletionCheck && checks.length && DowntimeService.get(actor) + 1e-9 >= (state.completionCheckFailed ? Number(definition.completionCheck?.retryDowntime ?? 1) : 0))
       });
     }
-    projects.sort((a, b) => Number(b.projectStatus === "active") - Number(a.projectStatus === "active") || a.name.localeCompare(b.name));
+    projects.sort((a, b) => a.classification.rarityOrder - b.classification.rarityOrder || a.name.localeCompare(b.name, game.i18n.lang));
     const projectTypes = [...new Map(projects.map(project => [
       project.classification.type,
       project.classification.typeLabel
     ]))].map(([value, label]) => ({ value, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
+    const projectGroups = Array.from(projects.reduce((groups, project) => {
+      const key = project.classification.type;
+      const group = groups.get(key) ?? {
+        key,
+        label: project.classification.typeLabel,
+        projects: []
+      };
+      group.projects.push(project);
+      groups.set(key, group);
+      return groups;
+    }, new Map()).values())
+      .map(group => ({
+        ...group,
+        projects: group.projects.sort((a, b) =>
+          a.classification.rarityOrder - b.classification.rarityOrder ||
+          a.name.localeCompare(b.name, game.i18n.lang))
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label, game.i18n.lang));
     return {
       ...base,
       actorName: actor.name,
+      actorImg: actor.img,
       downtime: DowntimeService.get(actor),
       gold: round(GoldService.getGold(actor), 2),
       showGold: adapter.capabilities.currency,
@@ -496,12 +584,50 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
       actorValueLabel: station.actorValue.label || station.actorValue.key,
       actorValueEnabled: Boolean(station.actorValue.enabled),
       projectTypes,
+      projectGroups,
       projects
     };
   }
 
   static #configure() {
     if (game.user.isGM) new StationConfigApp(this.stationActor).render(true);
+  }
+
+  static async #openProject(event, target) {
+    event.preventDefault();
+    const item = await globalThis.fromUuid?.(target.dataset.uuid).catch(() => null);
+    if (!item) return;
+    const { openItemPreview } = await import("../commerce/app.mjs?v=3.8.5-merchant-interactor-avatar-1");
+    const opened = await openItemPreview(item, getActiveCrafter());
+    if (!opened) ui.notifications.warn(game.i18n.localize("DOWNTIME_MANAGER.Errors.ActorMissing"));
+  }
+
+  static async #craftProject(event, target) {
+    event.preventDefault();
+    const actor = getActiveCrafter();
+    if (!actor) return ui.notifications.error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ActorMissing"));
+    const card = target.closest("[data-project-entry]");
+    const quantity = await craftQuantity(
+      card?.dataset.projectName ?? "",
+      card?.querySelector("img")?.src,
+      target.dataset.repeatable === "true"
+    );
+    if (quantity === null || quantity === undefined) return;
+    try {
+      if (target.dataset.collaborative === "true") {
+        await sharedProjectAction("start", {
+          stationUuid: this.stationActor.uuid,
+          projectUuid: target.dataset.uuid,
+          leaderUuid: actor.uuid,
+          batches: quantity
+        });
+        ui.notifications.info(game.i18n.localize("DOWNTIME_MANAGER.Notifications.SharedProjectStarted"));
+      } else {
+        await ProjectService.start(actor, this.stationActor, target.dataset.uuid, quantity);
+        ui.notifications.info(game.i18n.localize("DOWNTIME_MANAGER.Notifications.ProjectStarted"));
+      }
+      this.render();
+    } catch (error) { ui.notifications.error(error.message); }
   }
 
   static async #start(event, target) {

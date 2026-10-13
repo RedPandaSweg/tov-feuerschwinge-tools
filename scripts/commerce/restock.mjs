@@ -123,11 +123,11 @@ export async function restockMerchant(actor, { force = false, now = Date.now(), 
     dueRules = restock.rules.filter(rule => isSelected(rule) && rule.enabled && rule.tableId && (force || ((!rule.startAt || rule.startAt <= now) && (!rule.nextRunAt || rule.nextRunAt <= now))));
     for (const item of actor.items) {
       const state = item.getFlag(MODULE_ID, "merchantItem") ?? {};
-      if (state.newArrival) await item.setFlag(MODULE_ID, "merchantItem", { ...state, newArrival: false });
+      if (state.newArrival && !state.newArrivalManual) await item.setFlag(MODULE_ID, "merchantItem", { ...state, newArrival: false });
     }
     const offers = merchantSpellScrollOffers(actor);
-    if (offers.some(offer => offer.newArrival)) {
-      for (const offer of offers) offer.newArrival = false;
+    if (offers.some(offer => offer.newArrival && !offer.newArrivalManual)) {
+      for (const offer of offers) if (!offer.newArrivalManual) offer.newArrival = false;
       await saveMerchantSpellScrollOffers(actor, offers);
     }
     for (const rule of dueRules) {
@@ -142,7 +142,7 @@ export async function restockMerchant(actor, { force = false, now = Date.now(), 
           const offer = await addMerchantSpellScrollOffer(actor, document, quantity);
           const current = merchantSpellScrollOffers(actor);
           const stored = current.find(entry => entry.id === offer.id);
-          Object.assign(stored, { newArrival: true, arrivedAt: now, discountAt, removeAt, automaticDiscountPercent: rule.discountPercent });
+          Object.assign(stored, { newArrival: true, newArrivalManual: false, arrivedAt: now, discountAt, removeAt, automaticDiscountPercent: rule.discountPercent });
           await saveMerchantSpellScrollOffers(actor, current);
           deliveryItems.push({ uuid: document.uuid, stockId: offer.id, name: `Spell Scroll: ${document.name}`,
             img: document.img, quantity, spell: true, discountAt, removeAt });
@@ -153,7 +153,7 @@ export async function restockMerchant(actor, { force = false, now = Date.now(), 
           itemData.flags[MODULE_ID].merchantItem = { sourceUuid: document.uuid };
           const item = await addItem(actor, itemData, quantity, { stackWeapons: true, merchantStock: true });
           const state = item.getFlag(MODULE_ID, "merchantItem") ?? {};
-          await item.setFlag(MODULE_ID, "merchantItem", { ...state, newArrival: true, arrivedAt: now, discountAt, removeAt, automaticDiscountPercent: rule.discountPercent });
+          await item.setFlag(MODULE_ID, "merchantItem", { ...state, newArrival: true, newArrivalManual: false, arrivedAt: now, discountAt, removeAt, automaticDiscountPercent: rule.discountPercent });
           deliveryItems.push({ uuid: document.uuid, stockId: item.id, name: document.name,
             img: document.img, quantity, spell: false, discountAt, removeAt });
         }

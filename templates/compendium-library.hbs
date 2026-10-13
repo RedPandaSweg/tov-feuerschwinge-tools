@@ -135,6 +135,13 @@
       </select>
     </nav>
     {{/if}}
+    {{#if showItemFilters}}
+    <nav class="tovf-library-filters secondary tovf-library-weapon-filters" aria-label="{{localize 'TOVF.Library.ItemFilters.Title'}}">
+      <strong class="filter-label">{{localize "TOVF.Library.ItemFilters.Title"}}</strong>
+      {{#if itemBases}}<label><span>{{localize "TOVF.Library.ItemFilters.Base"}}</span><select data-library-filter="itemBase"><option value="">{{localize "TOVF.Library.All"}}</option>{{#each itemBases}}<option value="{{value}}" {{#if (eq value ../selectedItemBase)}}selected{{/if}}>{{label}} ({{count}})</option>{{/each}}</select></label>{{/if}}
+      <label><span>{{localize "TOVF.Library.ItemFilters.Price"}}</span><span class="tovf-library-number-range"><input type="number" min="0" step="0.01" value="{{itemPriceMin}}" placeholder="{{localize 'TOVF.Library.ItemFilters.Min'}}" data-library-item-price="min"><input type="number" min="0" step="0.01" value="{{itemPriceMax}}" placeholder="{{localize 'TOVF.Library.ItemFilters.Max'}}" data-library-item-price="max"></span><small>{{localize "TOVF.Library.ItemFilters.Gold"}}</small></label>
+    </nav>
+    {{/if}}
     {{#if showWeaponFilters}}
     <nav class="tovf-library-filters secondary tovf-library-weapon-filters" aria-label="Weapon filters">
       <strong class="filter-label">Waffenfilter</strong>

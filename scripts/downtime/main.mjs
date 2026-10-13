@@ -10,7 +10,7 @@ import {
   MODULE_ID,
   SETTINGS
 } from "./constants.mjs";
-import { StationApp } from "./station-app.mjs?v=3.8.5-applied-roll-progress-1";
+import { StationApp } from "./station-app.mjs?v=3.9.3-project-order-2";
 import { StationConfigApp } from "./station-config-app.mjs?v=3.4.2-progress-item-controls-1";
 import { ModuleItemSettingsApp } from "./module-item-settings-app.mjs";
 import { PlayerActorFolderSettingsApp } from "./player-actor-folder-settings-app.mjs";
@@ -41,6 +41,7 @@ import { canSynchronizeCompendiumItem, synchronizeCompendiumItem } from "../item
 import { RaffleApp, configureRaffle } from "./raffle-app.mjs?v=3.8.5-raffle-packages-3";
 import { isRaffle } from "./raffle-service.mjs?v=3.8.5-raffle-packages-2";
 import { registerRaffleSocket } from "./raffle-socket.mjs?v=3.8.5-raffle-packages-2";
+import { enableStationViewerAccess, reconcileStationViewerAccess } from "./station-access.mjs";
 
 function documentFromApp(app, documentName) {
   const document =
@@ -91,6 +92,7 @@ async function configureStation(actor, app = null) {
   if (game.user.isGM) {
     if (!isStation(actor)) {
       await actor.setFlag(MODULE_ID, FLAGS.STATION, defaultStationData());
+      await enableStationViewerAccess(actor);
       app?.render?.();
     }
     new StationConfigApp(actor).render(true);
@@ -150,7 +152,7 @@ function registerTokenDoubleClick() {
     const auctionHouse = this.actor?.getFlag?.(MODULE_ID, "auctionHouse")?.enabled === true;
     if (merchant || auctionHouse) {
       event?.stopPropagation?.();
-      void import("../commerce/app.mjs?v=3.7.8-runtime-audit-1").then(({ openCommerce }) => openCommerce({
+      void import("../commerce/app.mjs?v=3.8.5-merchant-interactor-avatar-1").then(({ openCommerce }) => openCommerce({
         mode: merchant ? "merchant" : "auction",
         merchantId: merchant ? this.actor.id : null,
         auctionHouseId: auctionHouse ? this.actor.id : null
@@ -355,6 +357,7 @@ export async function activateDowntime() {
         [`flags.${MODULE_ID}.preset.version`]: 2
       });
     }
+    void reconcileStationViewerAccess();
   }
   getSystemAdapter().registerHooks({
     redeemDowntimeItem: (item, options) => DowntimeItemService.redeem(item, options)
@@ -427,7 +430,7 @@ function actorHeaderControls(app, controls) {
       if (action === "station") return configureStation(actor, app);
       if (action === "openStation") return openStation(actor);
       if (action === "raffle") return isRaffle(actor) ? openRaffle(actor) : configureRaffle(actor);
-      const commerce = await import("../commerce/app.mjs?v=3.7.8-runtime-audit-1");
+      const commerce = await import("../commerce/app.mjs?v=3.8.5-merchant-interactor-avatar-1");
       if (action === "merchant") return merchant ? commerce.openCommerce({ mode: "merchant", merchantId: actor.id, shopPage: "management" }) : commerce.configureMerchantActor(actor, app);
       if (action === "auction") return auctionHouse ? commerce.openCommerce({ mode: "auction", auctionHouseId: actor.id }) : commerce.configureAuctionHouseActor(actor, app);
     }

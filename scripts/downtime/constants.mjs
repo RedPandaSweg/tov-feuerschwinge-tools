@@ -7,6 +7,27 @@ export const DOWNTIME_REWARD_ITEM_UUIDS = Object.freeze({
   TEN: "Compendium.tov-feuerschwinge.items.Item.J0ruc5gn7FPcbiVu"
 });
 
+export const ITEM_RARITY_COLORS = Object.freeze({
+  common: "#E5E7EB",
+  uncommon: "#1caa50",
+  rare: "#4084d8",
+  "very-rare": "#C084FC",
+  legendary: "#F59E0B",
+  artifact: "#EF4444",
+  fabled: "#2DD4BF"
+});
+
+export const ITEM_RARITY_ORDER = Object.freeze({
+  mundane: 0,
+  common: 1,
+  uncommon: 2,
+  rare: 3,
+  "very-rare": 4,
+  legendary: 5,
+  artifact: 6,
+  fabled: 7
+});
+
 export const DEFAULT_MILESTONE_LEVEL_BANDS = Object.freeze([
   { minLevel: 1, maxLevel: 2, sessions: 1 },
   { minLevel: 3, maxLevel: 4, sessions: 2 },

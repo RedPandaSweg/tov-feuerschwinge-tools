@@ -1,4 +1,14 @@
 {
+  "TOVF.SceneLoot.Placed": "{name} liegt jetzt auf der Szene. Doppelklick zum Aufnehmen.",
+  "TOVF.SceneLoot.PickedUp": "{name} wurde aufgenommen.",
+  "TOVF.SceneLoot.Errors.InvalidDrop": "Das Item oder die Szene ist nicht mehr verfügbar.",
+  "TOVF.SceneLoot.Errors.NotOwner": "Du kannst nur Items aus einem eigenen Charakterinventar ablegen.",
+  "TOVF.SceneLoot.Errors.Unavailable": "Dieses Item ist nicht mehr verfügbar.",
+  "TOVF.SceneLoot.Errors.Recipient": "Du kannst dieses Item nur in einen eigenen Charakter aufnehmen.",
+  "TOVF.SceneLoot.Errors.NoCharacter": "Wähle einen eigenen Token aus, um das Item aufzunehmen.",
+  "TOVF.SceneLoot.Errors.OutOfReach": "Das Item kann nur vom gleichen oder einem angrenzenden Feld aufgenommen werden.",
+  "TOVF.SceneLoot.Errors.GM": "Zum Ablegen oder Aufnehmen von Szenen-Items muss eine Spielleitung verbunden sein.",
+  "TOVF.SceneLoot.Errors.Timeout": "Die Spielleitung hat nicht auf die Szenen-Item-Anfrage reagiert.",
   "TOVF.Dnd5eImporter.Title": "D&D5e-Inhalte importieren",
   "TOVF.Dnd5eImporter.Open": "D&D5e-Inhalte importieren",
   "TOVF.Dnd5eImporter.Replace": "Frühere D&D-Importe mit gleichem Namen ersetzen",
@@ -587,6 +597,14 @@
         "Type": "Type",
         "Base": "Base"
       },
+      "ItemFilters": {
+        "Title": "Item-Filter",
+        "Base": "Base",
+        "Price": "Preis",
+        "Min": "Min",
+        "Max": "Max",
+        "Gold": "GP"
+      },
       "Sort": {
         "Label": "Sortierung",
         "Name": "Alphabetisch",
@@ -917,6 +935,15 @@
 "Interface": {
   "NewArrival": "Neu",
   "RestockComplete": "Nachlieferung abgeschlossen.",
+  "DeliverAll": "Alle jetzt ausliefern",
+  "DeliverAllDirectly": "Alle extra ausliefern",
+  "ManageOffer": "Angebot verwalten",
+  "SetQuantityPerPriceUnit": "Menge pro Preiseinheit",
+  "SetNewTag": "NEU-Tag setzen",
+  "RemoveNewTag": "NEU-Tag entfernen",
+  "HideMerchantsFromPlayers": "Händler in diesem Ordner für Spieler ausblenden",
+  "ShowMerchantsToPlayers": "Händler in diesem Ordner für Spieler einblenden",
+  "HideMerchantsFromPlayersHint": "Gilt auch für Unterordner. Händler bleiben für den Shop lesbar, erscheinen aber nicht in der Actor-Seitenleiste der Spieler.",
   "Restock": { "Title": "Automatische Nachlieferungen", "Automatic": "Automatik aktiv", "Hint": "Jede Regel verwendet eine eigene RollTable und einen eigenen Zeitplan. Der Wert 0 deaktiviert Rabatt beziehungsweise Entfernung.", "Rule": "Nachlieferungsregel", "Rules": "Regeln", "Configure": "Nachlieferungen konfigurieren", "SelectTable": "RollTable wählen", "Rolls": "Würfe", "Quantity": "Menge je Ergebnis", "Start": "Startdatum", "Interval": "Lieferintervall", "Discount": "Rabatt nach / Prozent", "Remove": "Entfernen nach", "Next": "Nächste Lieferung", "LastDelivery": "Letzte Lieferung", "DeliveryHistory": "Lieferhistorie", "Deliveries": "Lieferungen", "Delivery": "Lieferung", "Item": "Item", "Amount": "Menge", "Status": "Status", "InStock": "Im Bestand", "Sold": "Verkauft", "DeliveredAt": "Geliefert am", "DiscountAt": "Rabatt ab", "RemoveAt": "Entfernung am", "Never": "Nie", "NoNewItems": "Keine neuen Items gefunden.", "NotScheduled": "noch nicht geplant", "Empty": "Noch keine Nachlieferungsregel eingerichtet.", "Add": "Regel hinzufügen", "Run": "Jetzt nachliefern", "Deliver": "Jetzt ausliefern", "Delivered": "Lieferung ausgeführt.", "Direct": "Extra Lieferung", "DirectComplete": "Extra-Lieferung abgeschlossen.", "Saved": "Nachlieferungsregeln gespeichert.", "Complete": "Nachlieferung abgeschlossen.", "Units": { "minutes": "Minuten", "hours": "Stunden", "days": "Tage", "weeks": "Wochen", "months": "Monate" } },
   "Refresh_87c65f": "Aktualisieren",
   "DataAsOf_ffa317": "· Datenstand:",
@@ -1895,7 +1922,7 @@
                                           },
                              "Catalog": {
                                             "Entries": "Projekte",
-                                            "Search": "Projekte durchsuchen …",
+                                            "Search": "Projekte durchsuchen",
                                             "Status": "Projektstatus",
                                             "AllStatuses": "Alle Status",
                                             "Active": "Aktiv",
@@ -2491,7 +2518,7 @@
                                                           "SleightOfHand":  "Sleight of Hand",
                                                           "Stealth":  "Stealth",
                                                           "Survival":  "Survival"
-                                                      }
-                                        }
-                         }
+    }
+  }
+}
 }

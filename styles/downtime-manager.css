@@ -7,7 +7,16 @@
 .downtime-manager img { width: 42px; height: 42px; object-fit: cover; border: 0; }
 .downtime-manager .grow { flex: 1; }
 .downtime-manager .disabled { opacity: .55; }
-.downtime-manager .sc-summary { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: .75rem; }
+.downtime-manager .sc-summary { position: sticky; top: -1rem; z-index: 4; display: flex; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 3rem; margin: -1rem -1rem .75rem; padding: .45rem 1rem; overflow-x: auto; background: var(--color-bg, var(--color-cool-5-90, #20252b)); border-bottom: 1px solid var(--color-border-light-2); }
+.downtime-manager .sc-crafter-identity, .downtime-manager .sc-resource-summary, .downtime-manager .sc-actor-value-summary { display: flex; flex: 0 0 auto; align-items: center; gap: .4rem; white-space: nowrap; }
+.downtime-manager .sc-crafter-identity { min-width: 0; }
+.downtime-manager .sc-crafter-identity > img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; }
+.downtime-manager .sc-crafter-identity > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.downtime-manager .sc-resource-summary > i { color: var(--color-text-highlight, var(--color-text-primary)); }
+.downtime-manager .sc-gold-summary > i { color: #f5c542; }
+.downtime-manager .sc-resource-summary > span, .downtime-manager .sc-actor-value-summary > span { opacity: .82; }
+.downtime-manager .sc-resource-summary strong { font-size: 1.15rem; line-height: 1; }
+.downtime-manager .sc-actor-value-summary > strong { font-size: 1.05rem; }
 .downtime-manager .sc-formula { padding: .65rem; border: 1px solid var(--color-border-light-2); border-radius: 6px; margin-bottom: 1rem; }
 .downtime-manager .sc-project input { width: 70px; }
 .downtime-manager progress { width: 100%; }
@@ -118,37 +127,67 @@
 .downtime-manager .tool-drop-zone:hover { border-color: var(--color-border-highlight, var(--color-border-light-1)); background: color-mix(in srgb, var(--color-bg-option, transparent) 55%, transparent); }
 .downtime-manager .sc-project { display: grid; grid-template-columns: minmax(0, 1fr); gap: .7rem; align-items: stretch; }
 .downtime-manager .sc-project-catalog { display: grid; gap: .65rem; }
-.downtime-manager .sc-project-catalog > .sc-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: .55rem; align-items: start; }
-.downtime-manager .sc-project-catalog > .sc-list > .sc-project[data-project-status="active"] { grid-column: 1 / -1; }
-.downtime-manager .sc-project-catalog > .sc-list > .sc-project:not([data-project-status="active"]) { min-width: 0; gap: .5rem; }
-.downtime-manager .sc-project-catalog > .sc-list > .sc-project:not([data-project-status="active"]) > .sc-project-main { grid-template-columns: 42px minmax(0, 1fr) auto; gap: .45rem; align-items: center; padding: .45rem; border: 1px solid var(--color-border-light-primary); border-radius: 6px; background: rgba(0, 0, 0, .12); }
-.downtime-manager .sc-project-catalog > .sc-list > .sc-project:not([data-project-status="active"]) > .sc-project-main:hover { border-color: var(--color-border-highlight-alt); background: rgba(0, 0, 0, .2); }
-.downtime-manager .sc-project-catalog > .sc-list > .sc-project:not([data-project-status="active"]) > .sc-project-main > img { width: 42px; height: 42px; }
-.downtime-manager .sc-project-catalog > .sc-list > .sc-project:not([data-project-status="active"]) .sc-project-heading { gap: .1rem; }
-.downtime-manager .sc-project-catalog > .sc-list > .sc-project:not([data-project-status="active"]) .sc-project-heading > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.downtime-manager .sc-project-catalog > .sc-list > .sc-project:not([data-project-status="active"]) .sc-project-cost { margin: 0; font-size: .75rem; white-space: nowrap; }
-.downtime-manager .sc-project-catalog > .sc-list > .sc-project:not([data-project-status="active"]) .sc-project-classification { display: none; }
+.downtime-manager .sc-project-catalog > .sc-list { display: grid; gap: .8rem; }
+.downtime-manager .sc-project-type-group { display: grid; gap: .45rem; margin: 0; padding-top: .65rem; border-top: 1px solid color-mix(in srgb, var(--color-border-light-2) 70%, transparent); }
+.downtime-manager .sc-project-type-group:first-child { padding-top: 0; border-top: 0; }
+.downtime-manager .sc-project-type-group > h4 { margin: 0; font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; opacity: .8; }
+.downtime-manager .sc-project-type-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: .55rem; align-items: start; }
+.downtime-manager .sc-project-type-list > .sc-project[data-project-status="active"] { grid-column: 1 / -1; }
+.downtime-manager .sc-project-card { position: relative; min-width: 0; }
+.downtime-manager .sc-project-card > button:first-child { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: .45rem; align-items: center; width: 100%; min-height: 58px; margin: 0; padding: .45rem 2.1rem .45rem .45rem; border: 1px solid var(--color-border-light-primary); border-radius: 6px; background: rgba(0, 0, 0, .12); text-align: left; }
+.downtime-manager .sc-project-card > button:first-child:hover { border-color: var(--color-border-highlight-alt); background: rgba(0, 0, 0, .2); }
+.downtime-manager .sc-project-card > button:first-child > img { width: 42px; height: 42px; }
+.downtime-manager .sc-project-craft { position: absolute; right: .25rem; bottom: .25rem; width: 1.5rem; height: 1.5rem; margin: 0; padding: 0; }
+.downtime-manager.sc-crafting-quantity-dialog .window-content { padding: .7rem; }
+.downtime-manager.sc-crafting-quantity-dialog form.dialog-form { display: flex; flex-flow: row wrap; align-items: center; justify-content: center; column-gap: .45rem; row-gap: 0; }
+.downtime-manager.sc-crafting-quantity-dialog .dialog-content { display: contents; }
+.downtime-manager .sc-crafting-quantity-header { display: grid; grid-template-columns: 42px auto; align-items: center; justify-content: center; gap: .55rem; width: fit-content; margin-bottom: 0; }
+.downtime-manager .sc-crafting-quantity-header > img { width: 42px; height: 42px; border: 1px solid var(--color-border-light-primary); border-radius: 5px; object-fit: cover; }
+.downtime-manager .sc-crafting-quantity-header > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.downtime-manager.sc-crafting-quantity-dialog .sc-crafting-quantity-header { flex: 0 0 100%; }
+.downtime-manager.sc-crafting-quantity-dialog .form-group { display: flex !important; flex-flow: row nowrap !important; align-items: center; justify-content: center; gap: .45rem; width: auto !important; margin: 0; }
+.downtime-manager.sc-crafting-quantity-dialog .form-group > label { flex: 0 0 auto; width: auto !important; margin: 0; }
+.downtime-manager.sc-crafting-quantity-dialog .form-fields { display: block !important; flex: 0 0 auto; width: auto !important; }
+.downtime-manager.sc-crafting-quantity-dialog input[name="quantity"] { width: 58px; text-align: center; }
+.downtime-manager.sc-crafting-quantity-dialog .form-group > button { flex: 0 0 auto; align-self: flex-end; width: auto; min-width: 0; margin: 0; white-space: nowrap; }
+.downtime-manager .sc-project-card .sc-project-heading { gap: .4rem; }
+.downtime-manager .sc-project-card .sc-project-heading > strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.downtime-manager .sc-project-card .sc-project-cost { margin: 0; font-size: .75rem; white-space: nowrap; }
 .downtime-manager .sc-project-catalog-heading { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; }
 .downtime-manager .sc-project-catalog-heading h3 { margin: 0; }
-.downtime-manager .sc-project-filters { display: grid; grid-template-columns: minmax(180px, 1.5fr) repeat(3, minmax(125px, 1fr)); gap: .45rem; position: sticky; top: -1rem; z-index: 2; padding: .55rem; border: 1px solid var(--color-border-light-2); border-radius: 7px; background: var(--color-bg, var(--color-cool-5-90, #20252b)); }
+.downtime-manager .sc-project-filters { display: grid; grid-template-columns: minmax(180px, 1.5fr) repeat(3, minmax(125px, 1fr)); gap: .45rem; padding: .55rem; border: 1px solid var(--color-border-light-2); border-radius: 7px; background: var(--color-bg, var(--color-cool-5-90, #20252b)); }
 .downtime-manager .sc-project-filters select,
 .downtime-manager .sc-project-filters input { width: 100%; min-width: 0; }
 .downtime-manager .sc-project-search { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .4rem; }
 .downtime-manager details.sc-project > summary { list-style: none; cursor: pointer; }
 .downtime-manager details.sc-project > summary::-webkit-details-marker { display: none; }
-.downtime-manager details.sc-project > summary::after { content: "\f078"; font: var(--fa-font-solid); align-self: center; opacity: .65; transition: transform .15s ease; }
+.downtime-manager details.sc-project > summary::after { content: "\f078"; position: absolute; right: .45rem; bottom: .4rem; font: var(--fa-font-solid); opacity: .65; transition: transform .15s ease; }
 .downtime-manager details.sc-project[open] > summary::after { transform: rotate(180deg); }
 .downtime-manager .sc-project-details { display: grid; gap: .7rem; }
-.downtime-manager .sc-project-classification { display: block; margin-top: .2rem; font-size: .78rem; opacity: .7; }
+.downtime-manager .sc-project-name { color: var(--sc-project-rarity-color, inherit); }
+.downtime-manager .sc-project { position: relative; }
+.downtime-manager .sc-project-repeat { position: absolute; z-index: 1; top: .45rem; right: .4rem; color: var(--color-text-highlight, var(--color-text-primary)); opacity: .75; }
+.downtime-manager .sc-project-card .sc-project-repeat { pointer-events: none; }
+.downtime-manager .sc-project-tooltip { display: none; position: absolute; z-index: 10; top: calc(100% + .35rem); left: 0; width: min(360px, calc(100vw - 3rem)); padding: .65rem; border: 1px solid var(--color-border-highlight-alt, var(--color-border-light-2)); border-radius: 7px; background: var(--color-bg, var(--color-cool-5-90, #20252b)); box-shadow: 0 4px 14px rgba(0, 0, 0, .45); }
+.downtime-manager .sc-project:not([data-project-status="active"]):hover > .sc-project-tooltip,
+.downtime-manager .sc-project:not([data-project-status="active"]):focus-within > .sc-project-tooltip { display: grid; gap: .5rem; }
+.downtime-manager .sc-project-tooltip > header { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: .5rem; align-items: center; }
+.downtime-manager .sc-project-tooltip > header > img { width: 42px; height: 42px; border-radius: 5px; object-fit: cover; }
+.downtime-manager .sc-project-tooltip > header > span { min-width: 0; }
+.downtime-manager .sc-project-tooltip-description { max-height: 13rem; overflow: auto; font-size: .82rem; line-height: 1.35; }
+.downtime-manager .sc-project-tooltip-description > :first-child { margin-top: 0; }
+.downtime-manager .sc-project-tooltip-description > :last-child { margin-bottom: 0; }
+.downtime-manager .sc-project-tooltip footer { padding-top: .4rem; border-top: 1px solid color-mix(in srgb, var(--color-border-light-2) 70%, transparent); font-size: .8rem; }
 .downtime-manager .sc-project-compact-progress { display: grid; grid-template-columns: minmax(100px, 1fr) auto; align-items: center; gap: .45rem; margin-top: .35rem; }
 .downtime-manager .sc-project-compact-progress progress { height: .55rem; }
 .downtime-manager .sc-project-filter-empty { padding: 1rem; text-align: center; }
-.downtime-manager .sc-project-main { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: .75rem; align-items: start; width: 100%; }
+.downtime-manager .sc-project-main { position: relative; display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: .75rem; align-items: start; width: 100%; }
 .downtime-manager details.sc-project > .sc-project-main { grid-template-columns: 54px minmax(0, 1fr) auto; }
 .downtime-manager .sc-project-main > img { width: 54px; height: 54px; border-radius: 6px; }
 .downtime-manager .sc-project-content { min-width: 0; width: 100%; }
 .downtime-manager .sc-project-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: .2rem; }
-.downtime-manager .sc-project-heading .sc-project-cost { margin-left: auto; }
+.downtime-manager .sc-project-heading .sc-project-cost { flex-basis: 100%; margin-left: 0; }
+.downtime-manager .sc-project-cost > .fa-coins { color: #f5c542; }
 .downtime-manager .sc-project-description > :first-child { margin-top: .25rem; }
 .downtime-manager .sc-project-description > :last-child { margin-bottom: 0; }
 .downtime-manager .sc-project-description { width: 100%; }
@@ -164,7 +203,7 @@
 .downtime-manager .sc-project-progress { flex: 1 1 260px; min-width: 180px; text-align: center; }
 .downtime-manager .sc-project-progress progress { display: block; width: 100%; margin: .2rem 0; }
 .downtime-manager .sc-project-progress small { display: block; text-align: center; }
-.downtime-manager .sc-project-state { flex: 1 1 auto; }
+.downtime-manager .sc-project-state { flex: 0 0 auto; }
 .downtime-manager .sc-project-progress-actions > button { flex: 0 0 auto; width: auto; min-height: 32px; }
 .downtime-manager .sc-project-progress-actions > select { flex: 0 1 190px; }
 .downtime-manager .sc-project .sc-downtime-input { flex: 0 0 76px; width: 76px; text-align: center; }
@@ -178,6 +217,9 @@
 .downtime-manager .sc-calculation-parts dd { margin: 0; opacity: .8; }
 .downtime-manager .sc-quantity-control { display: grid; justify-items: center; gap: .2rem; font-size: .8rem; font-weight: 600; }
 .downtime-manager .sc-project .sc-quantity-control input { width: 52px; text-align: center; }
+.downtime-manager .sc-project-start-actions { display: flex; flex: 0 0 100%; align-items: center; justify-content: center; gap: .45rem; }
+.downtime-manager .sc-project-start-actions .sc-quantity-control { display: flex; align-items: center; gap: .3rem; white-space: nowrap; }
+.downtime-manager .sc-project-start-actions .sc-quantity-control input { width: 44px; height: 32px; }
 .downtime-manager .sc-deactivate-project { opacity: .7; }
 .downtime-manager .sc-deactivate-project:hover { opacity: 1; }
 .downtime-manager .sc-project.completed { opacity: .7; }
@@ -403,6 +445,25 @@
 .downtime-manager.station-config .sc-project-create-actions { justify-content: space-between; flex-wrap: wrap; }
 .downtime-manager.station-config .sc-template-picker { display: flex; align-items: stretch; gap: .35rem; }
 .downtime-manager.station-config .sc-template-picker select { min-width: 150px; }
+.downtime-manager.station-config .sc-spell-scroll-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .45rem .75rem; margin: .45rem 0; }
+.downtime-manager.station-config .sc-spell-scroll-options .sc-checkbox-control { min-width: 0; white-space: normal; }
+.downtime-manager.station-config .sc-station-project-table { margin-top: .55rem; overflow-x: auto; }
+.downtime-manager.station-config .sc-station-project-table table { width: 100%; margin: 0; }
+.downtime-manager.station-config .sc-station-project-table td { vertical-align: middle; }
+.downtime-manager.station-config .sc-station-project-table td:first-child { display: flex; align-items: center; gap: .5rem; }
+.downtime-manager.station-config .sc-station-project-table td:last-child { width: 1%; text-align: right; }
+.downtime-manager.station-config .sc-station-project-table img { width: 32px; height: 32px; object-fit: cover; }
+.downtime-manager.station-config .sc-station-project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: .55rem; margin-top: .55rem; }
+.downtime-manager.station-config .sc-station-project-grid > article { position: relative; min-width: 0; }
+.downtime-manager.station-config .sc-station-project-card { display: grid; grid-template-columns: 42px minmax(0, 1fr); align-items: center; gap: .45rem; width: 100%; min-height: 58px; margin: 0; padding: .45rem 2rem .45rem .45rem; border: 1px solid var(--color-border-light-primary); border-radius: 6px; background: rgba(0, 0, 0, .12); text-align: left; }
+.downtime-manager.station-config .sc-station-project-card:hover { border-color: var(--color-border-highlight-alt); background: rgba(0, 0, 0, .2); }
+.downtime-manager.station-config .sc-station-project-card > img { width: 42px; height: 42px; object-fit: cover; }
+.downtime-manager.station-config .sc-station-project-card > span { display: grid; min-width: 0; gap: .12rem; }
+.downtime-manager.station-config .sc-station-project-card strong { overflow: hidden; color: var(--sc-project-rarity-color, inherit); text-overflow: ellipsis; white-space: nowrap; }
+.downtime-manager.station-config .sc-station-project-card small { font-size: .75rem; }
+.downtime-manager.station-config .sc-station-project-card small .fa-coins { color: #f5c542; }
+.downtime-manager.station-config .sc-station-project-repeat { position: absolute; z-index: 1; top: .45rem; right: .4rem; color: var(--color-text-highlight, var(--color-text-primary)); opacity: .75; pointer-events: none; }
+.downtime-manager.station-config .sc-station-project-remove { position: absolute; right: .25rem; bottom: .25rem; width: 1.5rem; height: 1.5rem; margin: 0; padding: 0; }
 .downtime-manager.downtime-help .window-content { padding: 0; }
 .downtime-manager .sc-help-body { padding: 1rem 1.2rem 1.4rem; }
 .downtime-manager .sc-help-header { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 1rem; margin-bottom: 1rem; }
