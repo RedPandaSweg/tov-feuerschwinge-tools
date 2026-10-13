@@ -1174,12 +1174,11 @@ function activateRollRequests(message, html) {
       try {
         const options = { target, event };
         const messageOptions = {
-          ...(request.privateRoll ? { rollMode: CONST.DICE_ROLL_MODES.PRIVATE } : {}),
+          ...(request.privateRoll ? { rollMode: CONST.DICE_ROLL_MODES.BLIND } : {}),
           data: {
             flags: {
-              [MODULE_ID]: {
-                challengeRoll: { requestMessageId: message.id, actorId: actor.id }
-              }
+              [MODULE_ID]: { challengeRoll: { requestMessageId: message.id, actorId: actor.id } },
+              ...(request.privateRoll ? { "dice-so-nice": { skip: true } } : {})
             }
           }
         };
