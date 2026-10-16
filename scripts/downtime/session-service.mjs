@@ -96,6 +96,17 @@ export function levelFromMilestones(milestones) {
   return level;
 }
 
+/** Return the minimum milestone total required to have reached a level. */
+export function milestonesForLevel(level) {
+  const target = Math.max(1, Math.min(20, Math.floor(Number(level) || 1)));
+  const bands = milestoneLevelBands();
+  let milestones = 0;
+  for (let current = 1; current < target; current++) {
+    milestones += bands.find(band => current >= band.minLevel && current <= band.maxLevel)?.sessions ?? 1;
+  }
+  return milestones;
+}
+
 export function tierOfPlay(level) {
   const value = Math.max(1, Math.min(20, Math.floor(Number(level) || 1)));
   if (value <= 4) return 1;
@@ -182,7 +193,7 @@ export function rewardForLevel(level) {
   return config.levels.find(row => row.level === Number(level)) ?? config.levels[0];
 }
 
-function selectedReward(reward, columns) {
+export function selectedReward(reward, columns) {
   if (!Array.isArray(columns)) return reward;
   const selected = new Set(columns.map(Number));
   return { ...reward, items: (reward.items ?? []).map((item, index) => ({ ...item, columnIndex: index })).filter(item => selected.has(item.columnIndex)) };

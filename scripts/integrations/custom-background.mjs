@@ -1,4 +1,9 @@
 import { uiText } from "../core/localization.mjs";
+import {
+  deduplicatePreferredContent,
+  normalizedDocumentName,
+  packageIdFor
+} from "../core/compendium-deduplication.mjs";
 const DEFAULT_IMAGE = "icons/sundries/books/book-red-exclamation.webp";
 const GOLD_UUID = "Compendium.black-flag.currencies.Item.eWMYzM5UVZUDIqtg";
 let currentTalents = [];
@@ -31,6 +36,7 @@ async function talentOptions(actor) {
     choices.push({
       key: item.uuid, label: item.name, img: item.img,
       description: item.system.description?.value ?? "", source: "World",
+      sourceId: "world",
       restriction: item.system.restriction
     });
   }
@@ -43,12 +49,18 @@ async function talentOptions(actor) {
         img: item.img,
         description: foundry.utils.getProperty(item, "system.description.value") ?? "",
         source: pack.metadata.label,
+        sourceId: packageIdFor(pack),
         restriction: foundry.utils.getProperty(item, "system.restriction")
       });
     }
   }
-  return choices
-    .filter(talent => !exceedsLevel(talent.restriction, actor))
+  return deduplicatePreferredContent(
+    choices.filter(talent => !exceedsLevel(talent.restriction, actor)),
+    {
+      identity: talent => `talent|${normalizedDocumentName(talent.label)}`,
+      source: talent => talent.sourceId
+    }
+  )
     .sort((a, b) => a.label.localeCompare(b.label, game.i18n.lang));
 }
 

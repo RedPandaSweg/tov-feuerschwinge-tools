@@ -33,16 +33,17 @@ const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   settingsCategories: "./settings-categories.mjs",
   help: "./help-config.mjs",
   activityChaining: "./activity-chaining.mjs?v=3.3.1-follow-up-filter-2",
-  compatibility: "./integrations/compatibility-layer.mjs?v=3.9.2-gear-gemstone-1",
+  compatibility: "./integrations/compatibility-layer.mjs?v=3.9.3-unbound-item-guard-1",
   compendiumUsability: "./compendium-usability.mjs",
   chatImagePopouts: "./chat-image-popout.mjs",
   chatMessageDeletion: "./chat-message-deletion.mjs",
   chatTimestamps: "./chat-timestamps.mjs",
   effectGroups: "./effect-groups.mjs?v=3.7.8-safe-documents-1",
-  tokenPresets: "./token-presets.mjs?v=3.8.5-biography-preset-link-1",
+  tokenHudMenu: "./token-hud-menu.mjs?v=3.10.1-native-token-hud-palette-6",
+  tokenPresets: "./token-presets.mjs?v=3.10.1-native-token-hud-palette-3",
   tokenLightAura: "./token-light-aura.mjs",
   simpleTileTriggers: "./simple-tile-triggers.mjs?v=3.8.5-scene-hud-3",
-  sceneItemLoot: "./scene-item-loot.mjs?v=3.9.3-scene-item-loot-1",
+  sceneItemLoot: "./scene-item-loot.mjs?v=3.9.3-scene-item-loot-17",
   sceneActionHud: "./scene-action-hud.mjs?v=3.8.5-scene-hud-9",
   serverUpdateWarning: "./server-update-warning.mjs?v=3.9.0-custom-warning-1",
   commerce: "./commerce/main.mjs?v=3.8.5-merchant-interactor-avatar-1",
@@ -54,7 +55,8 @@ const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   selectedTokenEffectsHud: "./selected-token-effects-hud.mjs?v=3.7.8-selected-token-effects-2",
   macroActivity: "./macro-activity.mjs",
   weaponCustomization: "./weapon-customization.mjs",
-  weaponEnchantment: "./weapon-enchantment.mjs"
+  weaponEnchantment: "./weapon-enchantment.mjs",
+  mounting: "./mounting.mjs?v=3.10.1-native-token-hud-palette-4"
 });
 const DND5E_FEATURE_MODULES = Object.freeze({
   dnd5eBundleExporter: "./import/dnd5e-bundle-exporter.mjs?v=3.8.0-content-bundle-2"
@@ -187,11 +189,13 @@ function initSteps() {
     step("spellNameMarkers", "spellNameMarkers", "installSpellNameMarkers"),
     step("concentration", "concentration", "installConcentration"),
     step("effectGroups", "effectGroups", "installEffectGroups"),
+    step("tokenHudMenu", "tokenHudMenu", "registerTokenHudMenu"),
     step("tokenPresets", "tokenPresets", "registerTokenPresets"),
     step("playerUnpause", "playerUnpause", "registerPlayerUnpause"),
     step("compendiumLibrary", "compendiumLibrary", "registerCompendiumLibrary"),
     step("dnd5eItemImporter", "dnd5eItemImporter", "registerDnd5eItemImporter"),
     step("weaponCustomization", "weaponCustomization", "registerWeaponCustomization"),
+    step("mounting", "mounting", "registerMounting"),
     step("contestedActivity", "contestedActivity", "registerContestedActivity"),
     step("challengeManager", "challengeManager", "registerChallengeManager"),
     step("featurePool", "featurePool", "registerFeaturePoolIntegration"),
@@ -224,7 +228,8 @@ function readyEarlySteps() {
     step("actorDirectoryActivityActivation", "actorDirectoryActivity", "activateActorDirectoryActivity"),
     step("tokenPresetSocket", "tokenPresets", "activateTokenPresetSocket"),
     step("tokenLightAuraSocket", "tokenLightAura", "activateTokenLightAuraSocket"),
-    step("selectedTokenEffectsHud", "selectedTokenEffectsHud", "activateSelectedTokenEffectsHud")
+    step("selectedTokenEffectsHud", "selectedTokenEffectsHud", "activateSelectedTokenEffectsHud"),
+    step("mountingActivation", "mounting", "activateMounting")
   ]);
 }
 
@@ -283,7 +288,8 @@ async function activateModule() {
     activityChaining: features.get("activityChaining")?.activityChainingApi,
     effectGroups: features.get("effectGroups")?.effectGroupsApi,
     characterCreationOverrides: features.get("characterCreation")?.characterCreationOverridesApi,
-    weaponOptionActivities: features.get("weaponOptions")?.weaponOptionActivitiesApi
+    weaponOptionActivities: features.get("weaponOptions")?.weaponOptionActivitiesApi,
+    mounting: features.get("mounting")?.mountingApi
   }));
 
   const runMigrations = featureExport("migrations", "runMigrations");

@@ -160,14 +160,21 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const sessionParticipants = (active.actorUuids ?? []).map(uuid => game.actors.get(String(uuid).split(".").at(-1)))
       .filter(Boolean)
       .map(actor => {
+        const transferId = actor.getFlag(MODULE_ID, "transfer")?.id ?? `world:${game.world.id}:Actor:${actor.id}`;
+        const incidental = (active.incidentalGains ?? []).find(entry => entry.transferId === transferId);
         const owners = game.users.filter(user => !user.isGM && (
           String(user.character?.id ?? user.character ?? "") === actor.id
           || actor.testUserPermission(user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER)
         ));
         return {
           uuid: actor.uuid,
+          transferId,
           name: actor.name,
           img: actor.img,
+          hasIncidentalBudget: Boolean(incidental),
+          incidentalBudget: (Number(incidental?.budget) || 0).toLocaleString(game.i18n.lang, { maximumFractionDigits: 2 }),
+          regularGold: (Number(incidental?.regularGold) || 0).toLocaleString(game.i18n.lang, { maximumFractionDigits: 2 }),
+          deceased: (active.deceasedTransferIds ?? []).includes(transferId),
           players: owners.map(user => user.name).join(", ") || game.i18n.localize("DOWNTIME_MANAGER.Common.None"),
           online: owners.some(user => user.active)
         };
@@ -363,7 +370,10 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #workflowExportResult(event) {
     event.preventDefault();
     try {
-      const result = await exportSessionResult();
+      const active = game.settings.get(MODULE_ID, SETTINGS.ACTIVE_SESSION) ?? {};
+      const deceasedTransferIds = Array.from(this.element.querySelectorAll('[name="deceasedCharacters"]:checked'), input => input.value);
+      await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, { ...active, deceasedTransferIds });
+      const result = await exportSessionResult({ deceasedTransferIds });
       if (result) await cleanupSessionImport();
       await this.render({ force: true });
     } catch (error) {

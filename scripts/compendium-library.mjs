@@ -1,4 +1,9 @@
 import { CONTENT_MODULE_ID, MODULE_ID, modulePath } from "./core/constants.mjs";
+import {
+  deduplicatePreferredContent,
+  normalizedDocumentName,
+  packageIdFor
+} from "./core/compendium-deduplication.mjs";
 import { canonicalSpellName, spellMarkerState } from "./spell-name-markers.mjs?v=3.5.0-spell-markers-1";
 
 const CHARACTER_TYPES = new Set(["background", "class", "heritage", "lineage", "subclass", "talent"]);
@@ -597,10 +602,6 @@ function classificationFor(pack, entry, category) {
   return { subcategory: pack.documentName, detail: "" };
 }
 
-function packageIdFor(pack) {
-  return pack.metadata.packageName ?? pack.metadata.package ?? "";
-}
-
 function entrySourceId(entry, packageId) {
   const sourceBook = String(foundry.utils.getProperty(entry, "system.description.source.book") ?? "").trim();
   if (sourceBook === KCTG_5E_SOURCE_BOOK) return KCTG_5E_SOURCE_ID;
@@ -633,7 +634,7 @@ function shortSourceLabel(packageId, label) {
 }
 
 function normalizedName(value) {
-  return String(value ?? "").trim().toLocaleLowerCase(game.i18n.lang);
+  return normalizedDocumentName(value);
 }
 
 function spellCircle(entry) {
@@ -646,12 +647,6 @@ function displayKey(entry) {
   const base = `${entry.documentType}|${entry.itemType}|${normalizedName(name)}`;
   if (entry.itemType !== "spell") return base;
   return `${base}|${entry.spellCircle ?? ""}`;
-}
-
-function sourcePriority(entry) {
-  if (entry.source === CONTENT_MODULE_ID) return 0;
-  if (entry.source === game.system.id) return 1;
-  return 2;
 }
 
 function safeImage(path, documentType) {
@@ -669,24 +664,17 @@ function safeImage(path, documentType) {
 }
 
 function deduplicateEntries(entries) {
-  const groups = new Map();
-  for (const entry of entries) {
-    const key = displayKey(entry);
-    const group = groups.get(key) ?? [];
-    group.push(entry);
-    groups.set(key, group);
-  }
-  return [...groups.values()].map(group => {
-    group.sort((a, b) => sourcePriority(a) - sourcePriority(b));
-    const preferred = group[0];
-    return {
+  return deduplicatePreferredContent(entries, {
+    identity: displayKey,
+    source: entry => entry.source,
+    merge: (preferred, group) => ({
       ...preferred,
       spellConcentration: group.some(entry => entry.spellConcentration),
       spellRitual: group.some(entry => entry.spellRitual),
       duplicateCount: group.length,
       hasDuplicates: group.length > 1,
       sourceSummary: [...new Set(group.map(entry => entry.sourceLabel))].join(", ")
-    };
+    })
   });
 }
 

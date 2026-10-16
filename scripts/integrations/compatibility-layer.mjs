@@ -3,7 +3,7 @@ import { MODULE_ID } from "../core/constants.mjs";
 const DEFINITIONS = Object.freeze({
   core: [
     ["gearCategories", "./gear-categories.mjs", "installGearCategories"],
-    ["characterCreation", "./character-creation-overrides.mjs", "installCharacterCreationOverrides"],
+    ["characterCreation", "./character-creation-overrides.mjs?v=3.9.3-subclass-deduplication-1", "installCharacterCreationOverrides"],
     ["weaponOptionActivities", "./weapon-option-activities.mjs?v=3.2.4-tooltip-links-2", "installWeaponOptionActivities"],
     ["activityChaining", "../activity-chaining.mjs?v=3.3.1-follow-up-filter-2", "installActivityChaining"],
     ["toolAbility", "./tool-ability.mjs", "installToolAbilitySelection"],
@@ -12,9 +12,10 @@ const DEFINITIONS = Object.freeze({
     ["theurgeSpellcasting", "./theurge-spellcasting.mjs?v=3.7.7-theurge-replacement-2", "installTheurgeSpellcasting"]
   ],
   documentUi: [
-    ["customBackground", "./custom-background.mjs?v=3.3.1-custom-background-16", "installCustomBackground"],
+    ["customBackground", "./custom-background.mjs?v=3.8.5-custom-background-17", "installCustomBackground"],
     ["characterOptionFilters", "./character-option-filters.mjs?v=3.9.3-character-option-filters-1", "installCharacterOptionFilters"],
     ["classSelectionLayout", "./class-selection-layout.mjs", "installClassSelectionLayout"],
+    ["featureSelectionLayout", "./feature-selection-layout.mjs", "installFeatureSelectionLayout"],
     ["spellManager", "./spell-manager.mjs", "installSpellManager"],
     ["multiLevelDown", "./multi-level-down.mjs", "installMultiLevelDown"],
     ["activeEffectChangesUi", "../active-effect-changes-ui.mjs?v=3.7.8-actor-effect-delete-3", "installActiveEffectChangesUi"],
@@ -23,7 +24,7 @@ const DEFINITIONS = Object.freeze({
     ["skillListControls", "./skill-list-controls.mjs?v=3.8.5-sheet-operational-controls-2", "installSkillListControls"]
   ],
   optionalModules: [
-    ["argon", "./argon-black-flag-compatibility.mjs?v=3.7.8-argon-module-check-2", "installArgonBlackFlagCompatibility"]
+    ["argon", "./argon-black-flag-compatibility.mjs?v=3.9.3-unbound-item-guard-1", "installArgonBlackFlagCompatibility"]
   ],
   ready: [
     ["summon", "../summon-compat.mjs?v=3.6.2-character-summon-folder-1", "activateSummonCompatibility"]

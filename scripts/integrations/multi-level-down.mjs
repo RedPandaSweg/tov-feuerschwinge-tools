@@ -1,6 +1,8 @@
 import { uiText } from "../core/localization.mjs";
 
 const boundRoots = new WeakSet();
+const progressionScrollState = new WeakMap();
+const progressionSheets = new Set();
 
 function rootOf(element) {
   return element instanceof HTMLElement ? element : element?.[0] ?? null;
@@ -8,6 +10,46 @@ function rootOf(element) {
 
 function isEditMode(app) {
   return app?.isEditable && app._mode === app.constructor?.MODES?.EDIT;
+}
+
+function progressionPart(root) {
+  if (root?.matches?.('[data-application-part="progression"]')) return root;
+  return root?.querySelector?.('[data-application-part="progression"]') ?? null;
+}
+
+function scrollContainerFor(part, root) {
+  for (let node = part; node instanceof HTMLElement; node = node.parentElement) {
+    const overflowY = getComputedStyle(node).overflowY;
+    if (["auto", "scroll"].includes(overflowY) && node.scrollHeight > node.clientHeight) return node;
+    if (node === root) break;
+  }
+  return null;
+}
+
+function captureProgressionScroll(app) {
+  const root = rootOf(app?.element);
+  const part = progressionPart(root);
+  const container = part && scrollContainerFor(part, root);
+  if (container) progressionScrollState.set(app, { top: container.scrollTop });
+}
+
+function bindProgressionScroll(app, root) {
+  const part = progressionPart(root);
+  if (!part) return;
+  progressionSheets.add(app);
+  const state = progressionScrollState.get(app);
+  const container = scrollContainerFor(part, root);
+  if (container && state) {
+    requestAnimationFrame(() => { container.scrollTop = state.top; });
+  }
+  if (root.dataset.tovfProgressionScrollBound) return;
+  root.dataset.tovfProgressionScrollBound = "true";
+  root.addEventListener("scroll", event => {
+    const currentPart = progressionPart(root);
+    const target = event.target;
+    if (!currentPart || !(target instanceof HTMLElement) || !target.contains(currentPart)) return;
+    progressionScrollState.set(app, { top: target.scrollTop });
+  }, true);
 }
 
 function waitForProgressionQueue(sheet, actor, expectedLevel) {
@@ -112,6 +154,7 @@ function bindLevelDownControl(app, element) {
   if (app?.document?.documentName !== "Actor" || app.document.type !== "pc") return;
   const root = rootOf(element);
   if (!root) return;
+  bindProgressionScroll(app, root);
   installLevelDownControls(app, root);
   if (boundRoots.has(root)) return;
   boundRoots.add(root);
@@ -134,5 +177,11 @@ export function installMultiLevelDown() {
   }
   Hooks.on("renderApplicationV2", bindLevelDownControl);
   Hooks.on("renderActorSheet", bindLevelDownControl);
+  Hooks.on("preUpdateActor", actor => {
+    for (const sheet of progressionSheets) {
+      if (sheet.document === actor) captureProgressionScroll(sheet);
+    }
+  });
+  Hooks.on("closeApplication", app => progressionSheets.delete(app));
   return { status: "completed" };
 }

@@ -1,7 +1,13 @@
 import { CONTENT_MODULE_ID, MODULE_ID } from "../core/constants.mjs";
+import {
+  deduplicatePreferredContent,
+  normalizedDocumentName,
+  packageIdFor
+} from "../core/compendium-deduplication.mjs";
 
 const ITEM_PACK = `${CONTENT_MODULE_ID}.items`;
 const CLASS_PACK = `${CONTENT_MODULE_ID}.classes`;
+const SUBCLASS_PACK = `${CONTENT_MODULE_ID}.subclasses`;
 
 let installed = false;
 let synchronization = null;
@@ -65,6 +71,26 @@ async function prioritizeClasses() {
     prioritized += 1;
   }
 
+  return { prioritized, conflicts };
+}
+
+function prioritizeSubclasses() {
+  let prioritized = 0;
+  let conflicts = 0;
+  for (const [identifier, registration] of Object.entries(CONFIG.BlackFlag.registration.list("subclass") ?? {})) {
+    const matches = registration.sources.filter(uuid => uuid.startsWith(`Compendium.${CONTENT_MODULE_ID}.`));
+    if (!matches.length) continue;
+    if (matches.length !== 1) {
+      conflicts += 1;
+      console.warn(
+        `${MODULE_ID} | Cannot prioritize subclass "${identifier}": ${matches.length} Feuerschwinge entries found.`,
+        matches
+      );
+      continue;
+    }
+    registration.sources = moveToEnd(registration.sources, matches[0]);
+    prioritized += 1;
+  }
   return { prioritized, conflicts };
 }
 
@@ -179,10 +205,10 @@ async function prioritizeWeapons() {
 
 async function synchronizeCharacterCreationOverrides() {
   if (synchronization) return synchronization;
-  synchronization = Promise.all([prioritizeClasses(), prioritizeWeapons()])
-    .then(([classes, weapons]) => {
-      console.info(`${MODULE_ID} | Character Creation overrides synchronized.`, { classes, weapons });
-      return { classes, weapons };
+  synchronization = Promise.all([prioritizeClasses(), prioritizeWeapons(), prioritizeSubclasses()])
+    .then(([classes, weapons, subclasses]) => {
+      console.info(`${MODULE_ID} | Character Creation overrides synchronized.`, { classes, weapons, subclasses });
+      return { classes, weapons, subclasses };
     })
     .catch(error => {
       console.error(`${MODULE_ID} | Character Creation override synchronization failed.`, error);
@@ -191,6 +217,24 @@ async function synchronizeCharacterCreationOverrides() {
       synchronization = null;
     });
   return synchronization;
+}
+
+function installSubclassChoiceDeduplication() {
+  const prototype = BlackFlag?.applications?.actor?.ConceptSelectionDialog?.prototype;
+  const original = prototype?._prepareContext;
+  if (typeof original !== "function" || original.__tovfSubclassDeduplication) return;
+
+  async function prepareContext(options) {
+    const context = await original.call(this, options);
+    if (this.type !== "subclass" || !Array.isArray(context.choices)) return context;
+    context.choices = deduplicatePreferredContent(context.choices, {
+      identity: choice => `subclass|${normalizedDocumentName(choice.document?.name)}`,
+      source: choice => packageIdFor(game.packs.get(choice.document?.pack))
+    });
+    return context;
+  }
+  Object.defineProperty(prepareContext, "__tovfSubclassDeduplication", { value: true });
+  prototype._prepareContext = prepareContext;
 }
 
 function installEquipmentUuidResolver() {
@@ -253,6 +297,9 @@ export function installCharacterCreationOverrides() {
   if (typeof BlackFlag?.applications?.advancement?.EquipmentDialog?.prototype?._prepareEquipmentEntry !== "function") {
     missing.push("EquipmentDialog._prepareEquipmentEntry");
   }
+  if (typeof BlackFlag?.applications?.actor?.ConceptSelectionDialog?.prototype?._prepareContext !== "function") {
+    missing.push("ConceptSelectionDialog._prepareContext");
+  }
   if (missing.length) {
     return { status: "incompatible", reason: `Missing Black Flag APIs: ${missing.join(", ")}.` };
   }
@@ -260,17 +307,18 @@ export function installCharacterCreationOverrides() {
 
   installEquipmentUuidResolver();
   installEquipmentDialogGuard();
+  installSubclassChoiceDeduplication();
   if (CONFIG.BlackFlag.registration.ready) void synchronizeCharacterCreationOverrides();
   else Hooks.once("blackFlag.registrationComplete", synchronizeCharacterCreationOverrides);
 
   Hooks.on("createItem", item => {
-    if (item.pack === ITEM_PACK || item.pack === CLASS_PACK) void synchronizeCharacterCreationOverrides();
+    if ([ITEM_PACK, CLASS_PACK, SUBCLASS_PACK].includes(item.pack)) void synchronizeCharacterCreationOverrides();
   });
   Hooks.on("updateItem", item => {
-    if (item.pack === ITEM_PACK || item.pack === CLASS_PACK) void synchronizeCharacterCreationOverrides();
+    if ([ITEM_PACK, CLASS_PACK, SUBCLASS_PACK].includes(item.pack)) void synchronizeCharacterCreationOverrides();
   });
   Hooks.on("deleteItem", item => {
-    if (item.pack === ITEM_PACK || item.pack === CLASS_PACK) void synchronizeCharacterCreationOverrides();
+    if ([ITEM_PACK, CLASS_PACK, SUBCLASS_PACK].includes(item.pack)) void synchronizeCharacterCreationOverrides();
   });
   return { status: "completed" };
 }

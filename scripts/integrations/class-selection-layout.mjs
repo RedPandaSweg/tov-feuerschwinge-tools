@@ -33,13 +33,25 @@ function repositionName(option) {
   summary.prepend(name);
 }
 
+function layoutSubclass(option) {
+  const info = option.querySelector(".summary > .info");
+  const name = option.querySelector(".summary > .poster > .document-name");
+  if (!info || !name || info.querySelector(".tovf-subclass-name")) return;
+  name.classList.add("tovf-subclass-name");
+  info.prepend(name);
+}
+
 function styleClassSelection(app, element) {
-  if (app?.options?.details?.type !== "class") return;
+  const type = app?.options?.details?.type;
+  if (!['class', 'subclass'].includes(type)) return;
   const root = rootOf(element);
+  root?.closest(".application")?.classList.add("tovf-character-concept-dialog");
   root?.querySelectorAll(".option").forEach(option => {
-    repositionName(option);
-    option.querySelectorAll(".info .trait").forEach(compactTrait);
-    compactDescription(option);
+    if (type === "class") {
+      repositionName(option);
+      option.querySelectorAll(".info .trait").forEach(compactTrait);
+      compactDescription(option);
+    } else layoutSubclass(option);
   });
 }
 

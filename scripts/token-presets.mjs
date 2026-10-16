@@ -296,21 +296,10 @@ function addBiographyPresetLink(app, element) {
 }
 
 export function registerTokenPresets() {
-  Hooks.on("renderTokenHUD", (app, html) => {
-    const token = app.object?.document;
+  Hooks.on(`${MODULE_ID}.tokenHudMenu`, (token, addAction) => {
     const actor = presetActor(token);
     if (!token || !actor?.isOwner) return;
-    const right = html.querySelector?.(".col.right") ?? html[0]?.querySelector?.(".col.right");
-    if (!right || right.querySelector('[data-tovf-token-presets]')) return;
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "control-icon";
-    button.dataset.tovfTokenPresets = "true";
-    button.dataset.tooltip = "";
-    button.setAttribute("aria-label", "Token-Presets");
-    button.innerHTML = '<i class="fa-solid fa-images" inert></i>';
-    button.addEventListener("click", event => { event.preventDefault(); new TokenPresetApp(token).render({ force: true }); });
-    right.prepend(button);
+    addAction({ icon: "fa-images", label: "Token-Presets", callback: async () => new TokenPresetApp(token).render({ force: true }) });
   });
   Hooks.on("renderApplicationV2", addBiographyPresetLink);
   Hooks.on("renderActorSheet", addBiographyPresetLink);

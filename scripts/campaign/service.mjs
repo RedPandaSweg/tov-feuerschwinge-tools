@@ -3,7 +3,7 @@ import { canModifyWorldSettings, isAssistantGM, isProjectAdministrator } from ".
 import { MODULE_ID, FLAGS } from "../downtime/constants.mjs";
 import { compareSnapshots, validateSnapshot, sessionDate, effectiveSessionStatus } from "./data.mjs";
 import { defaultRules, validateRules, settlementPreview, ruleForDate } from "./rules.mjs";
-import { milestoneEntries, sessionProgress, rewardForLevel, rewardLevelForActor, sessionRewardDetails, isoWeekKey, SessionService } from "../downtime/session-service.mjs";
+import { highestMilestoneProgress, milestoneEntries, milestonesForLevel, sessionProgress, rewardForLevel, rewardLevelForActor, sessionRewardDetails, isoWeekKey, SessionService } from "../downtime/session-service.mjs";
 import { GoldService } from "../downtime/gold-service.mjs";
 import { RewardService } from "../downtime/reward-service.mjs";
 import { getSystemAdapter } from "../downtime/system-adapter.mjs";
@@ -59,14 +59,18 @@ export async function redemptionPreview(state, user, claimId, actorUuid) {
   if (!actor || actor.documentName !== "Actor" || !charactersForPerson(state, claim.personId).some(a => a.uuid === actor.uuid)) throw new Error(uiText("TOVF.Interface.SelectACharacterBelongingToThePerson_54499e", "Bitte einen Charakter der Person wählen, der dieses Guthaben gehört."));
   const progress = sessionProgress(actor);
   const level = rewardLevelForActor(actor, progress);
+  const guildLevel = highestMilestoneProgress().level;
+  const milestoneLimit = milestonesForLevel(guildLevel);
+  if (progress.milestones >= milestoneLimit) throw new Error(uiText("TOVF.Interface.CharacterReachedGuildRewardLimit", "Dieser Charakter hat bereits das Level des h\u00f6chsten Gildencharakters erreicht und kann keine weitere Belohnung erhalten."));
   let reward = clone(claim.reward);
   if (reward.mode === "session") {
     const configured = rewardForLevel(level);
     await RewardService.validateItems(configured.items);
     const details = await sessionRewardDetails(configured, 1);
-    reward = { mode: "session", milestones: 1, items: details.items };
+    reward = { mode: "session", milestones: Math.min(1, milestoneLimit - progress.milestones), items: details.items };
     return { actor, level, milestonesBefore: progress.milestones, gold: details.gold, reward, claim, separateGold: false };
   }
+  reward.milestones = Math.min(Math.max(0, Number(reward.milestones) || 0), milestoneLimit - progress.milestones);
   if (reward.goldMode === "level") await RewardService.validateItems(rewardForLevel(level).items);
   const gold = reward.goldMode === "fixed" ? reward.gold * reward.goldFactor : reward.goldMode === "level"
     ? (await sessionRewardDetails(rewardForLevel(level), 1)).gold * reward.goldFactor : 0;

@@ -571,10 +571,10 @@ class ChallengeHud {
   element = null;
   get rendered() { return this.element?.isConnected === true; }
 
-  collapsePartySummary() {
+  collapsePartySummary({ render = true } = {}) {
     if (!this.#partySummaryOpen) return;
     this.#partySummaryOpen = false;
-    if (this.rendered) this.render();
+    if (render && this.rendered) this.render();
   }
 
   renderLegacy() {
@@ -701,7 +701,7 @@ class ChallengeHud {
       const turnElapsed = isActive && turnStartedAt ? formatElapsed(Date.now() - turnStartedAt) : "";
       const timerState = isActive && turnStartedAt ? ` ${turnTimerState(Date.now() - turnStartedAt)}` : "";
       const turnTimer = showTurnTimer ? `<small class="tovf-challenge-hud-turn-timer${timerState}" data-turn-timer ${isActive && turnStartedAt ? `data-start-at="${turnStartedAt}"` : ""}>${turnElapsed}</small>` : "";
-      return `<div class="tovf-challenge-hud-combatant ${isActive ? "is-active" : ""}${defeated ? " is-defeated" : ""}${healthState}"${healthStyle}><article><img class="portrait-backdrop" src="${portraitSrc}" alt=""><img class="portrait-main" src="${portraitSrc}" alt="${escape(combatant.name ?? actor?.name ?? "")}"><span class="tovf-challenge-hud-initiative-value">${escape(initiative)}</span>${gmStats}${initiativeRoll}</article><div class="tovf-challenge-hud-card-footer">${hpControl}${turnTimer}</div></div>`;
+      return `<div class="tovf-challenge-hud-combatant ${isActive ? "is-active" : ""}${defeated ? " is-defeated" : ""}${healthState}"${healthStyle}><article data-hud-action="openActorSheet" data-actor-id="${actor?.id ?? ""}" role="button" tabindex="0"><img class="portrait-backdrop" src="${portraitSrc}" alt=""><img class="portrait-main" src="${portraitSrc}" alt="${escape(combatant.name ?? actor?.name ?? "")}"><span class="tovf-challenge-hud-initiative-value">${escape(initiative)}</span>${gmStats}${initiativeRoll}</article><div class="tovf-challenge-hud-card-footer">${hpControl}${turnTimer}</div></div>`;
     }).join("");
     const drawer = (name, icon, label, content, badge = "", shortLabel = label) => `<section class="tovf-challenge-hud-drawer ${name} ${this.#drawers[name] ? "is-open" : ""}"><button type="button" class="tovf-challenge-hud-toggle" data-hud-action="toggle" data-drawer="${name}" title="${escape(label)}">${icon ? `<i class="fa-solid ${icon}" inert></i>` : ""}<span>${escape(shortLabel)}</span>${badge}</button><div class="tovf-challenge-hud-popover">${content}</div></section>`;
     const party = `<header>${localize("TOVF.ChallengeManager.Actors.Title")}</header><ul>${actors.map(actorRow).join("") || `<li class="hint">${localize("TOVF.ChallengeManager.Party.Empty")}</li>`}</ul>`;
@@ -709,7 +709,7 @@ class ChallengeHud {
     const partySummary = `<section class="tovf-challenge-hud-party-summary ${this.#partySummaryOpen ? "is-open" : ""}"><button type="button" class="tovf-challenge-hud-party-summary-toggle" data-hud-action="togglePartySummary" title="${escape(localize("TOVF.ChallengeManager.Party.Title"))}" aria-label="${escape(localize("TOVF.ChallengeManager.Party.Title"))}" aria-expanded="${this.#partySummaryOpen}"><i class="fa-solid fa-users-viewfinder" inert></i></button><div class="tovf-challenge-hud-party-summary-cards">${partyMembers.map(actor => {
       const passivePerception = actor.system.proficiencies?.skills?.perception?.passive ?? actor.system.attributes?.perception ?? "-";
       const passiveInsight = actor.system.proficiencies?.skills?.insight?.passive ?? actor.system.attributes?.insight ?? "-";
-      return `<article title="${escape(actor.name)}"><img src="${escape(actor.img)}" alt=""><div><span title="Passive Perception"><i class="fa-solid fa-eye" inert></i>${escape(passivePerception)}</span><span title="Passive Insight"><i class="fa-solid fa-brain" inert></i>${escape(passiveInsight)}</span></div></article>`;
+      return `<article data-hud-action="openActorSheet" data-actor-id="${actor.id}" role="button" tabindex="0" title="${escape(actor.name)}"><img src="${escape(actor.img)}" alt=""><div><span title="Passive Perception"><i class="fa-solid fa-eye" inert></i>${escape(passivePerception)}</span><span title="Passive Insight"><i class="fa-solid fa-brain" inert></i>${escape(passiveInsight)}</span></div></article>`;
     }).join("")}</div>${this.#partySummaryOpen ? drawer("party", "fa-gear", localize("TOVF.ChallengeManager.Party.Title"), party, "", "") : ""}</section>`;
     const roll = `<header>${localize("TOVF.ChallengeManager.Roll.Title")}</header>${rollActorSelection}<div class="tovf-challenge-hud-roll-selects"><select data-hud-roll-type><option value="skill">${localize("TOVF.ChallengeManager.Roll.Skill")}</option><option value="save">${localize("TOVF.ChallengeManager.Roll.Save")}</option><option value="die">${localize("TOVF.ChallengeManager.Roll.Die")}</option></select><select data-hud-roll-key data-kind="skill">${Object.entries(CONFIG.BlackFlag.skills.localized ?? {}).map(([value, label]) => `<option value="${escape(value)}">${escape(label)}</option>`).join("")}</select><select data-hud-roll-key data-kind="save" hidden>${Object.entries(CONFIG.BlackFlag.abilities.localized ?? {}).map(([value, label]) => `<option value="${escape(value)}">${escape(label)}</option>`).join("")}</select><select data-hud-roll-key data-kind="die" hidden>${[4, 6, 8, 10, 12, 20, 100].map(value => `<option value="${value}">d${value}</option>`).join("")}</select></div><div class="tovf-challenge-hud-roll-options"><label><input type="checkbox" data-hud-average> ${localize("TOVF.ChallengeManager.Roll.ShowAverageShort")}</label><label><input type="checkbox" data-hud-private> ${localize("TOVF.ChallengeManager.Roll.Private")}</label><label data-hud-dc>${localize("TOVF.ChallengeManager.Roll.DCShort")} <input type="number" min="0" max="99" data-hud-roll-dc></label></div><button type="button" data-hud-action="request"><i class="fa-solid fa-message-arrow-up-right" inert></i>${localize("TOVF.ChallengeManager.Roll.Post")}</button>`;
     const rules = `<header>${localize("TOVF.ChallengeManager.Rules.Title")}</header>${RULES_LINKS.map(link => `<button type="button" data-hud-action="openRulesJournal" data-journal-uuid="${escape(link.uuid)}"><i class="fa-solid ${link.icon}" inert></i>${localize(link.label)}</button>`).join("")}`;
@@ -768,6 +768,13 @@ class ChallengeHud {
     this.element.style.top = `${Math.ceil(navigationTop)}px`;
     this.element.onclick = event => void this.#onClick(event);
     this.element.onchange = event => void this.#onChange(event);
+    this.element.onkeydown = event => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      const card = event.target.closest('[data-hud-action="openActorSheet"]');
+      if (!card || event.target !== card) return;
+      event.preventDefault();
+      card.click();
+    };
     for (const image of this.element.querySelectorAll(".tovf-challenge-hud-combatant .portrait-main")) {
       const classify = () => {
         const longest = Math.max(image.naturalWidth, image.naturalHeight);
@@ -788,9 +795,13 @@ class ChallengeHud {
   }
 
   async #onClick(event) {
-    const button = event.target.closest("button[data-hud-action]");
+    const button = event.target.closest("[data-hud-action]");
     if (!button) return;
     const action = button.dataset.hudAction;
+    if (action === "openActorSheet") {
+      game.actors.get(button.dataset.actorId)?.sheet?.render(true);
+      return;
+    }
     if (action === "toggle") { this.#drawers[button.dataset.drawer] = !this.#drawers[button.dataset.drawer]; this.render(); return; }
     if (action === "togglePartySummary") { this.#partySummaryOpen = !this.#partySummaryOpen; this.render(); return; }
     if (action === "openRulesJournal") {
@@ -1372,7 +1383,11 @@ export function registerChallengeManager() {
     if (activeGM()?.id === game.user.id) void synchronizePartyWithActiveSession();
     void refreshPanel();
   });
-  for (const hook of ["createCombat", "updateCombat", "updateCombatant", "deleteCombatant"]) {
+  Hooks.on("createCombat", () => {
+    panel?.collapsePartySummary({ render: false });
+    void refreshPanel();
+  });
+  for (const hook of ["updateCombat", "updateCombatant", "deleteCombatant"]) {
     Hooks.on(hook, () => void refreshPanel());
   }
   Hooks.on("updateActor", (actor, changes) => {

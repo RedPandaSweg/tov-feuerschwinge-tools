@@ -38,6 +38,27 @@ function suppressMissingSystemAdapterWarning(CoreHud) {
   return true;
 }
 
+function guardUnboundItemCountCheck(CoreHud) {
+  const prototype = CoreHud?.prototype;
+  if (!prototype || typeof prototype._checkItemCount !== "function") return false;
+  if (prototype.__tovfUnboundItemCountGuard) return true;
+
+  const original = prototype._checkItemCount;
+  Object.defineProperty(prototype, "_checkItemCount", {
+    value(...args) {
+      // Argon 5.0.1 compares a World Item's null parent with its null bound
+      // actor, then dereferences the actor. Ignore item-count refreshes until a
+      // token actor is actually bound to the HUD.
+      if (!this._actor) return;
+      return original.apply(this, args);
+    },
+    configurable: true,
+    writable: true
+  });
+  Object.defineProperty(prototype, "__tovfUnboundItemCountGuard", { value: true });
+  return true;
+}
+
 /** Register Feuerschwinge as the Black Flag system adapter for Argon Core. */
 export function installArgonBlackFlagCompatibility() {
   if (installed) return { status: "already-installed" };
@@ -71,6 +92,11 @@ export function installArgonBlackFlagCompatibility() {
       .catch(error => console.warn(`${MODULE_ID} | Could not suppress Argon's external adapter warning.`, error));
   }
   Hooks.once("argonInit", CoreHud => suppressMissingSystemAdapterWarning(CoreHud));
+
+  const itemCountGuarded = guardUnboundItemCountCheck(CONFIG.ARGON?.CORE?.CoreHud);
+  if (!itemCountGuarded) {
+    Hooks.once("argonInit", CoreHud => guardUnboundItemCountCheck(CoreHud));
+  }
 
   initConfig();
   console.log(`${MODULE_ID} | Installed the Feuerschwinge Black Flag adapter for Argon Core.`);

@@ -5,6 +5,7 @@ import {
   WORLD_ROLES
 } from "../core/constants.mjs";
 import { SETTINGS } from "../downtime/constants.mjs";
+import { rewardForLevel, rewardLevelForActor, selectedReward, sessionRewardDetails } from "../downtime/session-service.mjs";
 import { deleteExistingDocument, deleteExistingEmbeddedDocuments } from "../core/document-operations.mjs?v=3.7.8-safe-documents-1";
 import { migrateActiveEffectSource, migrateNestedActiveEffectSources } from "../core/active-effect-migration.mjs?v=3.7.8-standard-effects-2";
 import { createSessionUserBundle, importUserBundle, applyUserAssignments, remapUserOwnership, knownUserMapping } from "./user-transfer.mjs";
@@ -483,6 +484,7 @@ function baseMetadata() {
   return {
     exportedAt: new Date().toISOString(),
     sourceWorld: game.world.id,
+    sourceWorldName: game.world.title,
     system: game.system.id,
     systemVersion: game.system.version,
     foundryVersion: game.version,
@@ -582,6 +584,18 @@ export async function exportSession(actorIds, {
   const actorFolders = exportActorFolders(folderIds);
   const scenes = includeTransferScenes ? exportConfiguredScenes() : [];
   const compendiums = compendiumFolderId ? await createCompendiumBundle(compendiumFolderId) : null;
+  const rewardColumns = Array.isArray(session?.rewardColumns) ? session.rewardColumns.map(Number) : null;
+  const incidentalGains = [];
+  for (const actor of chosenActors) {
+    const reward = selectedReward(rewardForLevel(rewardLevelForActor(actor)), rewardColumns);
+    const regularGold = (await sessionRewardDetails(reward, 1)).gold;
+    incidentalGains.push({
+      transferId: actorTransferId(actor),
+      actorName: actor.name,
+      regularGold,
+      budget: Math.round(regularGold * 10) / 100
+    });
+  }
   const bundle = {
     format: SESSION_FORMAT,
     formatVersion: TRANSFER_FORMAT_VERSION,
@@ -597,7 +611,8 @@ export async function exportSession(actorIds, {
       id: String(session.id ?? foundry.utils.randomID()),
       title: String(session.title ?? ""),
       summary: String(session.summary ?? ""),
-      participantTransferIds: chosenActors.map(actorTransferId)
+      participantTransferIds: chosenActors.map(actorTransferId),
+      incidentalGains
     } : null
   };
   foundry.utils.saveDataToFile(
@@ -745,8 +760,8 @@ export async function importSession(file) {
     window: { title: game.i18n.localize("TOVF.Session.ImportConfirmTitle") },
     content: `<p>${game.i18n.format("TOVF.Session.ImportPreview", {
       count: bundle.actors.length,
-      source: foundry.utils.escapeHTML(bundle.metadata.sourceWorld)
-    })}</p>`,
+      source: foundry.utils.escapeHTML(bundle.metadata.sourceWorldName ?? bundle.metadata.sourceWorld)
+    })}</p>${bundle.session?.incidentalGains?.length ? `<h3>${game.i18n.localize("TOVF.Session.Incidental.Title")}</h3><ul>${bundle.session.incidentalGains.map(entry => `<li><strong>${foundry.utils.escapeHTML(entry.actorName)}</strong>: ${new Intl.NumberFormat(game.i18n.lang, { maximumFractionDigits: 2 }).format(Number(entry.budget) || 0)} ${game.i18n.localize("DOWNTIME_MANAGER.Currency.GP")}</li>`).join("")}</ul><details><summary>${game.i18n.localize("TOVF.Session.Incidental.ShowRules")}</summary><p>${game.i18n.localize("TOVF.Session.Incidental.Rules")}</p><p><strong>${game.i18n.localize("TOVF.Session.Incidental.Exception")}</strong></p></details>` : ""}`,
     yes: { label: game.i18n.localize("TOVF.Session.ImportAction") },
     no: { label: game.i18n.localize("Cancel") }
   });
@@ -829,7 +844,7 @@ export async function importSession(file) {
     importId,
     sessionId: bundle.session?.id ?? "",
     title: String(bundle.session?.title || sessionRoot.name),
-    sourceWorld: bundle.metadata.sourceWorld,
+    sourceWorld: bundle.metadata.sourceWorldName ?? bundle.metadata.sourceWorld,
     importedAt: Date.now(),
     importedContent
   };
@@ -848,7 +863,8 @@ export async function importSession(file) {
       summary: bundle.session.summary,
       actorUuids: [...new Set([...(game.settings.get(MODULE_ID, SETTINGS.ACTIVE_SESSION)?.actorUuids ?? []), ...actorUuids])],
       participantTransferIds: [...participantIds],
-      sourceWorld: bundle.metadata.sourceWorld,
+      sourceWorld: bundle.metadata.sourceWorldName ?? bundle.metadata.sourceWorld,
+      incidentalGains: foundry.utils.deepClone(bundle.session.incidentalGains ?? []),
       importedContent,
       startedAt: Date.now(),
       status: "imported"
@@ -994,7 +1010,7 @@ function managedSessionActors() {
   });
 }
 
-export async function exportSessionResult() {
+export async function exportSessionResult({ deceasedTransferIds = null } = {}) {
   assertGm();
   if (role() !== WORLD_ROLES.SESSION) throw new Error(game.i18n.localize("TOVF.Session.Error.SessionOnly"));
   const active = game.settings.get(MODULE_ID, SETTINGS.ACTIVE_SESSION) ?? {};
@@ -1011,6 +1027,9 @@ export async function exportSessionResult() {
       data: normalizeLegacyActiveEffects(actor.toObject())
     };
   });
+  const participantIds = new Set(entries.map(entry => entry.transferId));
+  const deceased = [...new Set(deceasedTransferIds ?? active.deceasedTransferIds ?? [])]
+    .filter(transferId => participantIds.has(transferId));
   const bundle = {
     format: RESULT_FORMAT,
     formatVersion: TRANSFER_FORMAT_VERSION,
@@ -1021,7 +1040,8 @@ export async function exportSessionResult() {
       id: active.id,
       title: active.title ?? "",
       summary: active.summary ?? "",
-      participantTransferIds: entries.map(entry => entry.transferId)
+      participantTransferIds: entries.map(entry => entry.transferId),
+      deceasedTransferIds: deceased
     } : null
   };
   foundry.utils.saveDataToFile(
@@ -1030,7 +1050,7 @@ export async function exportSessionResult() {
     `RESULT_tov-feuerschwinge-${filenamePart(active.title || game.world.title)}-${bundle.metadata.exportedAt.slice(0, 10)}.json`
   );
   ui.notifications.info(game.i18n.format("TOVF.Session.ResultExportComplete", { count: actors.length }));
-  if (active.id) await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, { ...active, status: "played" });
+  if (active.id) await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, { ...active, deceasedTransferIds: deceased, status: "played" });
   return bundle;
 }
 
@@ -1083,6 +1103,7 @@ export async function importSessionResult(file) {
     summary: bundle.session?.summary ?? sameActiveSession.summary ?? "",
     actorUuids: importedRows.map(row => row.actor.uuid),
     participantTransferIds: importedRows.map(row => row.transferId),
+    deceasedTransferIds: foundry.utils.deepClone(bundle.session?.deceasedTransferIds ?? []),
     status: "returned",
     returnedAt: Date.now()
   });
