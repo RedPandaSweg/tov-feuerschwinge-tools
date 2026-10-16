@@ -2,6 +2,7 @@ import { MODULE_ID } from "../core/constants.mjs";
 
 const DEFINITIONS = Object.freeze({
   core: [
+    ["preparedSpellTurnActivities", "./prepared-spell-turn-activities.mjs", "installPreparedSpellTurnActivities"],
     ["gearCategories", "./gear-categories.mjs", "installGearCategories"],
     ["characterCreation", "./character-creation-overrides.mjs?v=3.9.3-subclass-deduplication-1", "installCharacterCreationOverrides"],
     ["weaponOptionActivities", "./weapon-option-activities.mjs?v=3.2.4-tooltip-links-2", "installWeaponOptionActivities"],

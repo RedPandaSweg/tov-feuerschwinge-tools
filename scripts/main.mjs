@@ -33,7 +33,7 @@ const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   settingsCategories: "./settings-categories.mjs",
   help: "./help-config.mjs",
   activityChaining: "./activity-chaining.mjs?v=3.3.1-follow-up-filter-2",
-  compatibility: "./integrations/compatibility-layer.mjs?v=3.9.3-unbound-item-guard-1",
+  compatibility: "./integrations/compatibility-layer.mjs?v=3.11.0-prepared-turn-activities-1",
   compendiumUsability: "./compendium-usability.mjs",
   chatImagePopouts: "./chat-image-popout.mjs",
   chatMessageDeletion: "./chat-message-deletion.mjs",
@@ -89,9 +89,12 @@ function loadFeatures(systemId) {
   if (!systemId || loadedSystemId === systemId) return featuresReady;
   loadedSystemId = systemId;
   const definitions = featureModulesForSystem(systemId);
-  featuresReady = Promise.all(Object.entries(definitions).map(async ([id, path]) => (
-    [id, await loadStartupModule(id, new URL(path, import.meta.url).href)]
-  ))).then(loadedEntries => {
+  const moduleVersion = game.modules?.get(MODULE_ID)?.version;
+  featuresReady = Promise.all(Object.entries(definitions).map(async ([id, path]) => {
+    const url = new URL(path, import.meta.url);
+    if (moduleVersion) url.searchParams.set("moduleVersion", moduleVersion);
+    return [id, await loadStartupModule(id, url.href)];
+  })).then(loadedEntries => {
     features = new Map(loadedEntries);
     return features;
   });

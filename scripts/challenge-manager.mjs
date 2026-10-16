@@ -18,18 +18,20 @@ const SHOW_INITIATIVE_CAROUSEL_SETTING = "challengeHudShowInitiativeCarousel";
 const SHOW_ENCOUNTER_TIMER_SETTING = "challengeHudShowEncounterTimer";
 const SHOW_TURN_TIMER_SETTING = "challengeHudShowTurnTimer";
 const DOOM_USAGE_FLAG = "doomActionsUsed";
+const DOOM_STARTING_VALUE_FLAG = "doomStartingValue";
 const ENCOUNTER_STARTED_AT_FLAG = "encounterStartedAt";
 const TURN_STARTED_AT_FLAG = "turnStartedAt";
 const RULES_LINKS = Object.freeze([
-  { label: "TOVF.ChallengeManager.Rules.Conditions", icon: "fa-circle-exclamation", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.PpKSlgQI6Xz4StJz" },
-  { label: "TOVF.ChallengeManager.Rules.Actions", icon: "fa-hand-fist", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.Hx63pkAqiTv1bpTg.JournalEntryPage.jTJ7GX4t88qkaijp" },
-  { label: "TOVF.ChallengeManager.Rules.Movement", icon: "fa-person-running", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.Hx63pkAqiTv1bpTg.JournalEntryPage.UFhtpXYvDelOu0s0" },
-  { label: "TOVF.ChallengeManager.Rules.Luck", icon: "fa-clover", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.Hx63pkAqiTv1bpTg.JournalEntryPage.1EJygnzku97gjYf2" },
-  { label: "TOVF.ChallengeManager.Rules.Doom", icon: "fa-skull-crossbones", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.mXJKutD4r9X3aSfB" },
-  { label: "TOVF.ChallengeManager.Rules.Playing", icon: "fa-book-open", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.Hx63pkAqiTv1bpTg" }
+  { label: "TOVF.ChallengeManager.Rules.Conditions", icon: "fa-circle-exclamation", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.mDsoub1hrTjA7kht" },
+  { label: "TOVF.ChallengeManager.Rules.Actions", icon: "fa-hand-fist", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.oXSr2avGlZ8KwZk3.JournalEntryPage.jTJ7GX4t88qkaijp" },
+  { label: "TOVF.ChallengeManager.Rules.Movement", icon: "fa-person-running", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.oXSr2avGlZ8KwZk3.JournalEntryPage.UFhtpXYvDelOu0s0" },
+  { label: "TOVF.ChallengeManager.Rules.Luck", icon: "fa-clover", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.oXSr2avGlZ8KwZk3.JournalEntryPage.1EJygnzku97gjYf2" },
+  { label: "TOVF.ChallengeManager.Rules.Doom", icon: "fa-skull-crossbones", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.DW9w92UpGeiESI5y" },
+  { label: "TOVF.ChallengeManager.Rules.Playing", icon: "fa-book-open", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.oXSr2avGlZ8KwZk3" }
 ]);
 let panel;
 let rollResultQueue = Promise.resolve();
+let doomAdjustmentQueue = Promise.resolve();
 let initializedDoomCombatId = null;
 let pendingDoomCombatId = null;
 const autoSkippingDefeatedCombats = new WeakSet();
@@ -237,19 +239,22 @@ function requestSkipActiveDefeatedNpc(combat) {
   });
 }
 
-function startingDoom(combat = game.combat) {
-  const adversaries = combat?.combatants.filter(combatant => combatant.actor && combatant.actor.type !== "pc") ?? [];
+function startingDoomForCombatants(combatants) {
+  const adversaries = combatants.filter(combatant => combatant.actor && combatant.actor.type !== "pc");
   const encounterCR = adversaries.reduce((total, combatant) => total + parseCR(
     combatant.actor?.system.attributes?.cr ?? combatant.actor?.system.details?.cr
   ), 0);
-  const { adversaryCount } = encounterStats(combat);
-  if (!adversaryCount) return 0;
+  if (!adversaries.length) return 0;
   if (encounterCR >= 21) return 6;
   if (encounterCR >= 17) return 5;
   if (encounterCR >= 13) return 4;
   if (encounterCR >= 9) return 3;
   if (encounterCR >= 5) return 2;
   return 1;
+}
+
+function startingDoom(combat = game.combat) {
+  return startingDoomForCombatants(combat?.combatants ?? []);
 }
 
 function usedDoomActions(combat = game.combat) {
@@ -304,6 +309,7 @@ async function initializeCombatDoom(combat, { force = false } = {}) {
     if (!force) await combat.unsetFlag(MODULE_ID, DOOM_USAGE_FLAG);
     const doom = startingDoom(combat);
     await setDoom(doom);
+    await combat.setFlag(MODULE_ID, DOOM_STARTING_VALUE_FLAG, doom);
     const persisted = Number(game.settings.get(MODULE_ID, SETTINGS.doom));
     if (persisted !== doom) throw new Error(`Doom Bank verification failed: expected ${doom}, received ${persisted}`);
     await game.settings.set(MODULE_ID, SETTINGS.active, true);
@@ -313,6 +319,32 @@ async function initializeCombatDoom(combat, { force = false } = {}) {
     initializedDoomCombatId = null;
     throw error;
   }
+}
+
+async function adjustDoomForJoinedAdversary(combatant) {
+  const combat = combatant.parent;
+  if (!combat?.started || activeGM()?.id !== game.user.id || !combatant.actor || combatant.actor.type === "pc") return;
+  const nextStartingValue = startingDoom(combat);
+  const storedStartingValue = combat.getFlag(MODULE_ID, DOOM_STARTING_VALUE_FLAG);
+  const previousStartingValue = Number.isFinite(Number(storedStartingValue))
+    ? Number(storedStartingValue)
+    : startingDoomForCombatants(combat.combatants.filter(entry => entry.id !== combatant.id));
+  const increase = Math.max(0, nextStartingValue - previousStartingValue);
+  if (increase > 0) {
+    const current = Number(game.settings.get(MODULE_ID, SETTINGS.doom)) || 0;
+    await setDoom(current + increase);
+  }
+  await combat.setFlag(MODULE_ID, DOOM_STARTING_VALUE_FLAG, nextStartingValue);
+}
+
+function requestJoinedAdversaryDoomAdjustment(combatant) {
+  doomAdjustmentQueue = doomAdjustmentQueue
+    .then(() => adjustDoomForJoinedAdversary(combatant))
+    .catch(error => {
+      console.error(`${MODULE_ID} | Could not adjust Doom Bank for joined adversary`, error);
+      ui.notifications.error(game.i18n.localize("TOVF.ChallengeManager.Doom.RecalculateFailed"));
+    });
+  return doomAdjustmentQueue;
 }
 
 function requestCombatDoomInitialization(combat, options) {
@@ -430,11 +462,11 @@ class ChallengeManager extends HandlebarsApplicationMixin(ApplicationV2) {
         active: index === game.combat?.turn
       })),
       rulesLinks: [
-        { label: "Conditions", icon: "fa-solid fa-circle-exclamation", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.PpKSlgQI6Xz4StJz" },
-        { label: "Actions in Combat", icon: "fa-solid fa-hand-fist", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.Hx63pkAqiTv1bpTg.JournalEntryPage.jTJ7GX4t88qkaijp" },
-        { label: "Movement in Combat", icon: "fa-solid fa-person-running", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.Hx63pkAqiTv1bpTg.JournalEntryPage.UFhtpXYvDelOu0s0" },
-        { label: "Playing the Game", icon: "fa-solid fa-book-open", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.Hx63pkAqiTv1bpTg" },
-        { label: "Doom", icon: "fa-solid fa-skull-crossbones", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.mXJKutD4r9X3aSfB" }
+        { label: "Conditions", icon: "fa-solid fa-circle-exclamation", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.mDsoub1hrTjA7kht" },
+        { label: "Actions in Combat", icon: "fa-solid fa-hand-fist", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.oXSr2avGlZ8KwZk3.JournalEntryPage.jTJ7GX4t88qkaijp" },
+        { label: "Movement in Combat", icon: "fa-solid fa-person-running", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.oXSr2avGlZ8KwZk3.JournalEntryPage.UFhtpXYvDelOu0s0" },
+        { label: "Playing the Game", icon: "fa-solid fa-book-open", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.oXSr2avGlZ8KwZk3" },
+        { label: "Doom", icon: "fa-solid fa-skull-crossbones", uuid: "Compendium.tov-feuerschwinge.rules.JournalEntry.DW9w92UpGeiESI5y" }
       ],
       allActorsExpanded: this.#allActorsExpanded,
       doomExpanded: this.#expandedSections.doom,
@@ -806,7 +838,7 @@ class ChallengeHud {
     if (action === "togglePartySummary") { this.#partySummaryOpen = !this.#partySummaryOpen; this.render(); return; }
     if (action === "openRulesJournal") {
       const document = await fromUuid(button.dataset.journalUuid).catch(() => null);
-      if (!document) return ui.notifications.warn(localize("TOVF.ChallengeManager.Rules.Missing"));
+      if (!document) return ui.notifications.warn(game.i18n.localize("TOVF.ChallengeManager.Rules.Missing"));
       if (document.documentName === "JournalEntryPage") document.parent.sheet.render(true, { pageId: document.id });
       else document.sheet.render(true);
       return;
@@ -1400,9 +1432,9 @@ export function registerChallengeManager() {
     }
     if (activityChanged || isCombatant) void refreshPanel();
   });
-  Hooks.on("createCombatant", () => {
+  Hooks.on("createCombatant", combatant => {
+    void requestJoinedAdversaryDoomAdjustment(combatant).finally(() => refreshPanel());
     if (game.settings.get(MODULE_ID, AUTO_OPEN_SETTING)) void openPanel();
-    else void refreshPanel();
   });
   Hooks.on("combatEnd", async () => {
     initializedDoomCombatId = null;
