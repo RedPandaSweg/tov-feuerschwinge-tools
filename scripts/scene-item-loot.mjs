@@ -436,9 +436,21 @@ async function createLoot({ sceneId, itemUuid, x, y, quantity = 1, targetLootUui
   return { lootUuid: lootToken.uuid, name: added.name, package: added.entries.length > 1 || hasCurrency(added.currency) };
 }
 
-function recipientContext(user) {
-  const token = canvas.tokens?.controlled
+function ownedTokenPlaceables(user) {
+  return canvas.tokens?.placeables?.filter(entry => (
+    !entry.document.hidden
+    && entry.actor?.testUserPermission(user, "OWNER")
+  )) ?? [];
+}
+
+function recipientContext(user, lootToken = null) {
+  const controlledToken = canvas.tokens?.controlled
     ?.find(entry => entry.actor?.testUserPermission(user, "OWNER"));
+  const token = isOperationalGM(user) || !lootToken
+    ? controlledToken
+    : (controlledToken && isAdjacentToLoot(controlledToken.document, lootToken)
+      ? controlledToken
+      : ownedTokenPlaceables(user).find(entry => isAdjacentToLoot(entry.document, lootToken)));
   if (token) return { actor: token.actor, token: token.document };
   return null;
 }
@@ -1029,9 +1041,15 @@ async function openLootDialog({ lootToken, loot, recipient, base }) {
 async function pickUpLootToken(lootToken) {
   const loot = lootData(lootToken);
   if (!loot) return false;
-  const recipient = recipientContext(game.user);
+  const recipient = recipientContext(game.user, lootToken);
   if (!recipient && !isOperationalGM(game.user)) {
-    ui.notifications.warn(uiText("TOVF.SceneLoot.Errors.NoCharacter", "Wähle einen eigenen Token aus, um das Item aufzunehmen."));
+    const errorKey = ownedTokenPlaceables(game.user).length
+      ? "TOVF.SceneLoot.Errors.OutOfReach"
+      : "TOVF.SceneLoot.Errors.NoCharacter";
+    const fallback = errorKey.endsWith("OutOfReach")
+      ? "Das Item kann nur vom gleichen oder einem angrenzenden Feld aufgenommen werden."
+      : "Wähle einen eigenen Token aus, um das Item aufzunehmen.";
+    ui.notifications.warn(uiText(errorKey, fallback));
     return true;
   }
   if (!isOperationalGM(game.user) && !isAdjacentToLoot(recipient?.token, lootToken)) {
@@ -1079,11 +1097,19 @@ function installLayerPatch() {
   if (!tokenPrototype || Object.hasOwn(tokenPrototype, TOKEN_PATCH)) return;
   Object.defineProperty(tokenPrototype, TOKEN_PATCH, { value: true });
   const originalTokenCanView = tokenPrototype._canView;
+  const originalTokenClick = tokenPrototype._onClickLeft;
   const originalTokenDoubleClick = tokenPrototype._onClickLeft2;
   const originalTokenRightDoubleClick = tokenPrototype._onClickRight2;
   tokenPrototype._canView = function(user, event) {
     if (lootData(this.document)) return this.layer.active && !this.document.isSecret;
     return originalTokenCanView.call(this, user, event);
+  };
+  tokenPrototype._onClickLeft = function(event, ...args) {
+    if (lootData(this.document) && !isOperationalGM(game.user)) {
+      event.stopPropagation();
+      return;
+    }
+    return originalTokenClick.call(this, event, ...args);
   };
   tokenPrototype._onClickLeft2 = function(event, ...args) {
     if (lootData(this.document)) {

@@ -33,9 +33,22 @@ function interactingMerchantActor() {
   return controlled.map(token => token.actor).find(actor => actor?.type === "pc") ?? game.user.character ?? null;
 }
 
+function userCanTradeAsActor(user, actor) {
+  if (!user || actor?.type !== "pc") return false;
+  const assignedCharacterId = user.character?.id ?? user.character;
+  if (assignedCharacterId === actor.id) return true;
+  if (!user.isGM) return actor.testUserPermission(user, "OWNER") === true;
+  return Number(actor.ownership?.[user.id] ?? actor.ownership?.default ?? 0)
+    >= CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER;
+}
+
+function tradeCharacters(user = game.user) {
+  return game.actors.filter(actor => userCanTradeAsActor(user, actor));
+}
+
 function tradeOwnedSide(trade) {
-  if (actorOwned(trade?.fromActorId)) return "from";
-  if (actorOwned(trade?.toActorId)) return "to";
+  if (trade?.fromUserId === game.user.id && userCanTradeAsActor(game.user, game.actors.get(trade.fromActorId))) return "from";
+  if (trade?.toUserId === game.user.id && userCanTradeAsActor(game.user, game.actors.get(trade.toActorId))) return "to";
   return null;
 }
 
@@ -734,7 +747,7 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
         const offer = this._myTradeOffer(); if (!offer) return;
         const existing = offer.items.find(entry => entry.itemId === item.id);
         if (existing) existing.quantity = Math.min(itemQuantity(item), existing.quantity + 1);
-        else offer.items.push({ itemId: item.id, quantity: 1 });
+        else offer.items.push({ itemId: item.id, name: item.name, img: item.img, quantity: 1 });
         updatePeerOffer(offer.trade, offer.side, offer.items, offer.copper);
         await this.render({ force: true });
       });
@@ -812,9 +825,14 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (activeTrade) {
       this.tradeId = activeTrade.id;
       const fromActor = game.actors.get(activeTrade.fromActorId), toActor = game.actors.get(activeTrade.toActorId);
-      const mySide = actorOwned(activeTrade.fromActorId) ? "from" : "to";
+      const mySide = tradeOwnedSide(activeTrade);
       const sideData = (side, owner) => ({ actorId: owner.id, name: owner.name, img: owner.img,
-        items: activeTrade[`${side}Items`] ?? [], gold: (Number(activeTrade[`${side}Copper`]) || 0) / 100,
+        items: (activeTrade[`${side}Items`] ?? []).map(entry => {
+          const item = owner.items.get(entry.itemId);
+          return { ...entry,
+            name: item?.name ?? entry.name ?? uiText("TOVF.Interface.Unknown_d0b00a", "Unbekannt"),
+            img: item?.img ?? entry.img ?? "icons/svg/item-bag.svg" };
+        }), gold: (Number(activeTrade[`${side}Copper`]) || 0) / 100,
         confirmed: activeTrade.confirmations?.[side] === true, editable: side === mySide,
         inventory: owner.items.filter(item => TRADEABLE_TYPES.has(item.type)).map(item => ({ id: item.id, name: item.name, quantity: itemQuantity(item) })) });
       activeTrade = { ...activeTrade, mySide, myConfirmed: activeTrade.confirmations?.[mySide] === true,
@@ -1127,14 +1145,11 @@ class CommerceApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (confirmed) await this._run(() => commerceRequest("requestCancel", { requestId: target.dataset.requestId }));
   }
   static async #createTrade() {
-    const ownActors = this._owned();
+    const ownActors = tradeCharacters();
     if (!ownActors.length) return ui.notifications.warn(uiText("TOVF.Interface.YouDoNotHaveACharacterWho_435d8f", "Du besitzt keinen Charakter, mit dem du handeln kannst."));
-    const ownActorIds = new Set(ownActors.map(actor => actor.id));
     const targetOwners = new Map();
-    for (const user of game.users.filter(user => user.active && !user.isGM && user.id !== game.user.id)) {
-      for (const actor of game.actors.filter(actor => actor.type === "pc"
-        && (user.character?.id === actor.id || actor.testUserPermission(user, "OWNER")))) {
-        if (ownActorIds.has(actor.id)) continue;
+    for (const user of game.users.filter(user => user.active && user.id !== game.user.id)) {
+      for (const actor of tradeCharacters(user)) {
         if (!targetOwners.has(actor.id)) targetOwners.set(actor.id, []);
         targetOwners.get(actor.id).push(user);
       }
@@ -1215,7 +1230,6 @@ async function handleTradeSync(sync) {
 async function handlePeerTrade(message) {
   if (message?.senderId === game.user.id) return;
   const incoming = message?.trade;
-  if (game.user.isGM) return;
   if (![incoming?.fromUserId, incoming?.toUserId].includes(game.user.id)) return;
   if (!incoming?.id || !tradeOwnedSide(incoming)) return;
   const current = liveTrades.get(incoming.id);
@@ -1236,7 +1250,8 @@ async function handlePeerTrade(message) {
     if (current && Number(current.revision) > Number(incoming.revision)) return;
     trade = storePeerTrade(incoming);
   }
-  if (message.event === "invite" && game.user.id === trade.toUserId && actorOwned(trade.toActorId) && !promptedTrades.has(trade.id)) {
+  if (message.event === "invite" && game.user.id === trade.toUserId
+    && userCanTradeAsActor(game.user, game.actors.get(trade.toActorId)) && !promptedTrades.has(trade.id)) {
     promptedTrades.add(trade.id);
     const fromName = game.actors.get(trade.fromActorId)?.name ?? uiText("TOVF.Interface.AnotherPlayer_21c334", "Ein anderer Spieler");
     const accepted = await foundry.applications.api.DialogV2.confirm({ classes: ["tovf-commerce-dialog"], window: { title: "Handelsanfrage" },
@@ -1260,7 +1275,11 @@ async function handlePeerTrade(message) {
 
 async function startPeerTrade({ fromActorId, toActorId, toUserId = null, itemId = null, quantity = 1 }) {
   const fromActor = game.actors.get(fromActorId), toActor = game.actors.get(toActorId);
-  if (!fromActor || !toActor || !actorOwned(fromActor.id) || fromActor.id === toActor.id) return ui.notifications.warn(uiText("TOVF.Interface.TheTradeCharactersAreInvalid_25a682", "Die Handelscharaktere sind nicht gültig."));
+  const targetUser = game.users.get(toUserId);
+  if (!fromActor || !toActor || !userCanTradeAsActor(game.user, fromActor)
+    || !userCanTradeAsActor(targetUser, toActor) || fromActor.id === toActor.id) {
+    return ui.notifications.warn(uiText("TOVF.Interface.TheTradeCharactersAreInvalid_25a682", "Die Handelscharaktere sind nicht gültig."));
+  }
   const initialItems = [];
   const item = itemId ? fromActor.items.get(itemId) : null;
   if (item && TRADEABLE_TYPES.has(item.type)) initialItems.push({ itemId: item.id, name: item.name, img: item.img,
@@ -1272,13 +1291,18 @@ async function startPeerTrade({ fromActorId, toActorId, toUserId = null, itemId 
 }
 
 async function acceptPeerTrade(tradeId) {
-  const trade = liveTrades.get(tradeId); if (!trade || !actorOwned(trade.toActorId)) return;
+  const trade = liveTrades.get(tradeId);
+  if (!trade || trade.toUserId !== game.user.id || !userCanTradeAsActor(game.user, game.actors.get(trade.toActorId))) return;
   trade.status = "active"; trade.acceptedAt = Date.now(); publishPeerTrade("accept", trade);
   await openCommerce({ mode: "trade", tradeId });
 }
 
 function updatePeerOffer(trade, side, items, copper) {
-  trade[`${side}Items`] = foundry.utils.deepClone(items);
+  const owner = game.actors.get(trade[`${side}ActorId`]);
+  trade[`${side}Items`] = foundry.utils.deepClone(items.map(entry => {
+    const item = owner?.items.get(entry.itemId);
+    return { ...entry, name: item?.name ?? entry.name, img: item?.img ?? entry.img };
+  }));
   trade[`${side}Copper`] = Math.max(0, Math.round(Number(copper) || 0));
   trade.confirmations = { from: false, to: false };
   publishPeerTrade("update", trade, side);
@@ -1307,9 +1331,9 @@ function cancelPeerTrade(tradeId) {
 }
 
 async function startTradeWithUser(user, { sourceActor = null, item = null, quantity = 1 } = {}) {
-  const sources = sourceActor ? [sourceActor] : ownedCharacters();
-  const targets = game.actors.filter(actor => actor.type === "pc" && (user?.character?.id === actor.id || actor.testUserPermission(user, "OWNER")))
-    .filter(actor => !sources.some(source => source.id === actor.id));
+  const sources = sourceActor && userCanTradeAsActor(game.user, sourceActor) ? [sourceActor] : tradeCharacters();
+  const targets = tradeCharacters(user)
+    .filter(actor => !sourceActor || actor.id !== sourceActor.id);
   if (!sources.length || !targets.length) return ui.notifications.warn(uiText("TOVF.Interface.NoSuitableCharacterWasFoundForThis_b92b58", "Für diesen Spieler konnte kein geeigneter Charakter gefunden werden."));
   const esc = foundry.utils.escapeHTML;
   const selection = await foundry.applications.api.DialogV2.prompt({ classes: ["tovf-commerce-dialog"], window: { title: uiText("TOVF.Interface.RequestTrade_cb2f87", "Handelsanfrage stellen") },
@@ -1319,7 +1343,8 @@ async function startTradeWithUser(user, { sourceActor = null, item = null, quant
 }
 
 async function chooseTradePartnerForItem(item) {
-  const users = game.users.filter(user => user.active && !user.isGM && user.id !== game.user.id && user.character?.id !== item.parent?.id);
+  const users = game.users.filter(user => user.active && user.id !== game.user.id
+    && tradeCharacters(user).some(actor => actor.id !== item.parent?.id));
   if (!users.length) return ui.notifications.warn(uiText("TOVF.Interface.NoOtherPlayerIsAvailableToTrade_b5e998", "Kein anderer Spieler ist für einen Handel verfügbar."));
   const data = await foundry.applications.api.DialogV2.prompt({ classes: ["tovf-commerce-dialog"], window: { title: `${item.name} zum Handel anbieten` },
     content: `<div class="standard-form"><div class="form-group"><label>${uiText("TOVF.Interface.Player_1f52fa", "Spieler")}</label><select name="userId">${users.map(user => `<option value="${user.id}">${foundry.utils.escapeHTML(user.name)}</option>`).join("")}</select></div><div class="form-group"><label>${uiText("TOVF.Interface.Quantity_ec3e62", "Menge")}</label><input name="quantity" type="number" value="1" min="1" max="${itemQuantity(item)}"></div></div>`,
@@ -1343,10 +1368,10 @@ export function registerCommerceControls() {
   Hooks.on(`${MODULE_ID}.commerceSync`, handleTradeSync);
   Hooks.on(`${MODULE_ID}.peerTrade`, handlePeerTrade);
   Hooks.on("getUserContextOptions", (_html, options) => options.push({ label: uiText("TOVF.Interface.StartTrade_dc3cad", "Handel starten"), icon: '<i class="fa-solid fa-handshake"></i>',
-    visible: element => { const user = game.users.get(element.dataset.userId); return user?.active && !user.isGM && user.id !== game.user.id; },
+    visible: element => { const user = game.users.get(element.dataset.userId); return user?.active && user.id !== game.user.id; },
     onClick: (_event,element) => void startTradeWithUser(game.users.get(element.dataset.userId)) }));
   Hooks.on("blackFlag.getInventoryContext", (_inventory, item, _activity, options) => {
-    if (!item?.parent || !actorOwned(item.parent.id) || !TRADEABLE_TYPES.has(item.type)) return;
+    if (!item?.parent || !userCanTradeAsActor(game.user, item.parent) || !TRADEABLE_TYPES.has(item.type)) return;
     options.push({ label: uiText("TOVF.Interface.OfferForTrade_33100d", "Zum Handel anbieten"), icon: '<i class="fa-solid fa-handshake"></i>', group: "action",
       onClick: () => void chooseTradePartnerForItem(item) });
   });

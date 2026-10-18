@@ -33,7 +33,7 @@ const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   settingsCategories: "./settings-categories.mjs",
   help: "./help-config.mjs",
   activityChaining: "./activity-chaining.mjs?v=3.3.1-follow-up-filter-2",
-  compatibility: "./integrations/compatibility-layer.mjs?v=3.11.0-prepared-turn-activities-1",
+  compatibility: "./integrations/compatibility-layer.mjs?v=3.11.0-mounted-token-drag-2-combat-turn-activities-1",
   compendiumUsability: "./compendium-usability.mjs",
   chatImagePopouts: "./chat-image-popout.mjs",
   chatMessageDeletion: "./chat-message-deletion.mjs",
@@ -43,7 +43,7 @@ const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   tokenPresets: "./token-presets.mjs?v=3.10.1-native-token-hud-palette-3",
   tokenLightAura: "./token-light-aura.mjs",
   simpleTileTriggers: "./simple-tile-triggers.mjs?v=3.8.5-scene-hud-3",
-  sceneItemLoot: "./scene-item-loot.mjs?v=3.9.3-scene-item-loot-17",
+  sceneItemLoot: "./scene-item-loot.mjs?v=3.9.3-scene-item-loot-18",
   sceneActionHud: "./scene-action-hud.mjs?v=3.8.5-scene-hud-9",
   serverUpdateWarning: "./server-update-warning.mjs?v=3.9.0-custom-warning-1",
   commerce: "./commerce/main.mjs?v=3.8.5-merchant-interactor-avatar-1",
@@ -52,11 +52,11 @@ const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   characterOptionIndex: "./character-option-index.mjs?v=3.9.3-character-option-index-1",
   spellScrolls: "./spell-scrolls.mjs?v=3.7.8-clearance-label-1",
   spellNameMarkers: "./spell-name-markers.mjs?v=3.5.0-spell-markers-1",
-  selectedTokenEffectsHud: "./selected-token-effects-hud.mjs?v=3.7.8-selected-token-effects-2",
+  selectedTokenEffectsHud: "./selected-token-effects-hud.mjs?v=3.8.0-selected-token-effects-3",
   macroActivity: "./macro-activity.mjs",
   weaponCustomization: "./weapon-customization.mjs",
   weaponEnchantment: "./weapon-enchantment.mjs",
-  mounting: "./mounting.mjs?v=3.10.1-native-token-hud-palette-4"
+  mounting: "./mounting.mjs?v=3.10.1-mount-priority-9"
 });
 const DND5E_FEATURE_MODULES = Object.freeze({
   dnd5eBundleExporter: "./import/dnd5e-bundle-exporter.mjs?v=3.8.0-content-bundle-2"

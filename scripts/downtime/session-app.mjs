@@ -8,6 +8,13 @@ import { isActiveCharacter, isoWeekKey, monthKey, passiveDowntimeConfig, playerC
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
+function userOwnsCharacter(user, actor) {
+  if (String(user.character?.id ?? user.character ?? "") === actor.id) return true;
+  if (!user.isGM) return actor.testUserPermission(user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER);
+  return Number(actor.ownership?.[user.id] ?? CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE)
+    >= CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER;
+}
+
 export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static DEFAULT_OPTIONS = {
     id: "downtime-manager-session",
@@ -142,11 +149,8 @@ export class SessionApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     const actorUuids = new Set(actors.map(actor => actor.uuid));
     const selectedActorUuids = new Set(actors.filter(actor => actor.selected).map(actor => actor.uuid));
-    const players = game.users.filter(user => !user.isGM).map(user => {
-      const owned = guildActors.filter(actor => actorUuids.has(actor.uuid) && (
-        (user.character?.id ?? user.character) === actor.id
-        || actor.testUserPermission(user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER)
-      ));
+    const players = game.users.map(user => {
+      const owned = guildActors.filter(actor => actorUuids.has(actor.uuid) && userOwnsCharacter(user, actor));
       return {
         id: user.id,
         name: user.name,

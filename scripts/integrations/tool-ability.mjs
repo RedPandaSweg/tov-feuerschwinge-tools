@@ -18,12 +18,45 @@ export function inferredToolAbility(item) {
   if (!match) return "";
   const associated = match[1].toLocaleLowerCase();
   return CONFIG.BlackFlag.abilities.localizedOptions
-    .find(option => associated.includes(String(option.label).toLocaleLowerCase()))?.value ?? "";
+    .map(option => {
+      const candidates = [
+        option.value,
+        option.label,
+        CONFIG.BlackFlag.abilities.localizedAbbreviations?.[option.value]
+      ]
+        .map(value => String(value ?? "").toLocaleLowerCase())
+        .filter(Boolean);
+      const positions = candidates
+        .map(candidate => associated.indexOf(candidate))
+        .filter(position => position >= 0);
+      return { value: option.value, position: positions.length ? Math.min(...positions) : -1 };
+    })
+    .filter(option => option.position >= 0)
+    .sort((a, b) => a.position - b.position)[0]?.value ?? "";
 }
 
-export function preferredToolAbility(actor, toolKey) {
+function configuredToolData(toolKey, configuration = CONFIG.BlackFlag.tools, prefix = "") {
   const normalizedKey = String(toolKey ?? "").toLocaleLowerCase();
-  const tool = actor?.items?.find(item => item.type === "tool" && [
+  for (const [key, entry] of Object.entries(configuration ?? {})) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+    const id = prefix ? `${prefix}:${key}` : key;
+    if (id.toLocaleLowerCase() === normalizedKey) return entry;
+    if (entry.children) {
+      const nested = configuredToolData(toolKey, entry.children, id);
+      if (nested) return nested;
+    }
+  }
+  return null;
+}
+
+export function actorTool(actor, toolKey) {
+  const normalizedKey = String(toolKey ?? "").toLocaleLowerCase();
+  const configuredTool = CONFIG.BlackFlag.tools.localizedOptions
+    .find(option => String(option.value).toLocaleLowerCase() === normalizedKey);
+  const configuredData = configuredToolData(toolKey);
+  const configuredLabel = String(configuredTool?.label ?? "").trim().toLocaleLowerCase();
+  const configuredSource = String(configuredData?.link ?? "");
+  return actor?.items?.find(item => item.type === "tool" && [
     item.system?.type?.base,
     item.system?.type?.category,
     item.system?.identifier?.value,
@@ -31,10 +64,24 @@ export function preferredToolAbility(actor, toolKey) {
   ].some(value => {
     const candidate = String(value ?? "").toLocaleLowerCase();
     return candidate === normalizedKey || normalizedKey.endsWith(`:${candidate}`);
-  }));
+  }) || (configuredLabel && String(item.name ?? "").trim().toLocaleLowerCase() === configuredLabel)
+    || (configuredSource && [item._stats?.compendiumSource, item.getFlag("core", "sourceId")].includes(configuredSource)));
+}
+
+export function preferredToolAbility(actor, toolKey) {
+  const tool = actorTool(actor, toolKey);
   if (!tool) return "";
   const configured = String(tool.getFlag(MODULE_ID, FLAG) ?? "");
   return configured && configured !== "auto" ? configured : inferredToolAbility(tool);
+}
+
+export async function rememberToolAbility(actor, toolKey, ability) {
+  const selected = String(ability ?? "");
+  if (!CONFIG.BlackFlag.abilities.localizedOptions.some(option => option.value === selected)) return false;
+  const tool = actorTool(actor, toolKey);
+  if (!tool || preferredToolAbility(actor, toolKey) === selected) return false;
+  await tool.setFlag(MODULE_ID, FLAG, selected);
+  return true;
 }
 
 export function installToolAbilitySelection() {

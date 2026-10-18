@@ -1,15 +1,4 @@
 {
-  "TOVF.Mounting.HUD.Mount": "Mount",
-  "TOVF.Mounting.HUD.Dismount": "Dismount",
-  "TOVF.Mounting.HUD.Passenger": "Board as passenger",
-  "TOVF.Mounting.Choose.Title": "Choose mount",
-  "TOVF.Mounting.Errors.Invalid": "This mount connection is not possible.",
-  "TOVF.Mounting.Errors.None": "This token is not mounted.",
-  "TOVF.Mounting.Errors.Permission": "You do not have permission for this.",
-  "TOVF.Mounting.Errors.Missing": "The mount no longer exists.",
-  "TOVF.Mounting.Errors.GM": "A game master must be connected.",
-  "TOVF.Mounting.Errors.Timeout": "The game master did not respond.",
-  "TOVF.Mounting.Errors.MustDismount": "Dismount before moving the rider.",
   "TOVF.SceneLoot.Placed": "{name} is now on the scene. Double-click to pick it up.",
   "TOVF.SceneLoot.PickedUp": "Picked up {name}.",
   "TOVF.SceneLoot.Package": "Loot Package",
@@ -109,6 +98,34 @@
     }
   },
   "TOVF": {
+    "Mounting": {
+      "HUD": {
+        "Mount": "Mount",
+        "Dismount": "Dismount",
+        "Passenger": "Board as passenger"
+      },
+      "Choose": {
+        "Title": "Choose mount"
+      },
+      "Position": {
+        "Title": "Adjust riding position",
+        "Saved": "Riding position saved.",
+        "Hint": "Move the rider freely to the desired position. Shift continues to control grid snapping only."
+      },
+      "Errors": {
+        "Invalid": "This mount connection is not possible.",
+        "None": "This token is not mounted.",
+        "Permission": "You do not have permission for this.",
+        "Missing": "The mount no longer exists.",
+        "GM": "A game master must be connected.",
+        "Timeout": "The game master did not respond.",
+        "MustDismount": "Dismount before moving the rider independently.",
+        "Controller": "Only the controlling rider can move the mount.",
+        "Position": "Invalid riding position.",
+        "NoMount": "No suitable mount was found within range.",
+        "RiderOccupied": "This mount already has a rider. Additional tokens may only board as passengers."
+      }
+    },
     "ActorDirectory": {
       "Inactive": "Inactive",
       "InactiveHint": "This character is marked as inactive in character activity."
@@ -894,6 +911,7 @@
       "Title": "Feuerschwinge Transfer Management",
       "Incidental": { "Title": "Incidental Gains Budget", "Budget": "Incidental Gains Budget", "OfRegular": "of the regular reward of", "ShowRules": "Show the Incidental Gains Budget rules", "Rules": "The game master may grant each character additional rewards worth no more than 10% of their regular gold reward during the session. This individual budget may be used for trade, theft, work, peddling, additional loot, or Items, such as when the game master wants to award a potion or another find. The gold value of all additional gains counts against the budget and may not exceed its limit.", "Exception": "The budget provides a flexible allowance for occasional additional gains. Its use or full expenditure is not expected, and characters have no entitlement to additional rewards." },
       "Deceased": { "Toggle": "Toggle death status for this session" },
+      "Users": { "Unassigned": "Unassigned", "AssignCharacters": "Unassigned session characters", "AssignCharactersHint": "Assign these characters to an existing user whenever possible." },
       "ImportHistory": { "Title": "Imported sessions", "Hint": "Multiple sessions may remain imported at the same time. Cleanup removes only the Actors, folders, and created players belonging to that import.", "Content": "{actors} Actors · {users} players", "Cleanup": "Delete content", "Cleaned": "Content deleted", "Empty": "No sessions have been imported yet." },
       "File": "Transfer file",
       "ActorRoot": "Actor scope for player characters",
@@ -1986,6 +2004,7 @@
       "AllSubtypes": "All subtypes",
       "NoMatches": "No projects match the selected filters.",
       "OtherProjects": "Other projects",
+      "RunningProjects": "Running Projects",
       "Types": { "ammunition": "Ammunition", "armor": "Armor", "consumable": "Consumables", "container": "Containers", "currency": "Currency", "gear": "Gear", "script": "Scripts", "siege": "Siege equipment", "sundry": "Sundry", "tool": "Tools", "vehicle": "Vehicles", "weapon": "Weapons" },
       "Subtypes": { "food": "Food", "poison": "Poisons", "potion": "Potions", "scroll": "Scrolls" }
     },

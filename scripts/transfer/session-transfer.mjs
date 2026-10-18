@@ -45,6 +45,12 @@ function assertGm() {
   if (!game.user.isGM) throw new Error(game.i18n.localize("TOVF.Session.Error.GMOnly"));
 }
 
+function valuesEqual(left, right) {
+  if (typeof foundry.utils.equals === "function") return foundry.utils.equals(left, right);
+  if (typeof foundry.utils.objectsEqual === "function") return foundry.utils.objectsEqual(left, right);
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 function removeProperty(object, path) {
   const remove = foundry.utils.deleteProperty ?? foundry.utils.unsetProperty;
   if (remove) return remove(object, path);
@@ -768,16 +774,28 @@ export async function importSession(file) {
   if (!accepted) return;
 
   let userImport = null;
-  if (bundle.users?.users?.length) {
-    const selection = await reviewSessionUsers(bundle.users);
+  let actorUserChoices = {};
+  const hasUnassignedParticipants = bundle.actors.some(entry => entry.sessionParticipant
+    && !bundle.users?.actors?.some(actor => actor.id === entry.transferId && actor.ownership?.length)
+    && !bundle.users?.users?.some(user => user.character?.id === entry.transferId));
+  if (bundle.users?.users?.length || hasUnassignedParticipants) {
+    const selection = await reviewSessionUsers(bundle.users, bundle.actors);
     if (!selection) return;
-    if (!selection.skip) userImport = await importUserBundle(bundle.users, { choices: selection.choices, applyActors: false, sessionPlayers: true });
+    if (!selection.skip) {
+      actorUserChoices = selection.actorUserChoices ?? {};
+      if (bundle.users?.users?.length) userImport = await importUserBundle(bundle.users, { choices: selection.choices, applyActors: false, sessionPlayers: true });
+    }
   }
   const userMapping = userImport?.mapping ?? knownUserMapping(bundle.users);
-  await game.settings.set(MODULE_ID, WEAPON_SETTING, bundle.configuration?.weaponDefinitions ?? {
+  const importedWeaponDefinitions = bundle.configuration?.weaponDefinitions ?? {
     properties: [],
     options: []
-  });
+  };
+  const weaponDefinitionsChanged = !valuesEqual(
+    game.settings.get(MODULE_ID, WEAPON_SETTING),
+    importedWeaponDefinitions
+  );
+  if (weaponDefinitionsChanged) await game.settings.set(MODULE_ID, WEAPON_SETTING, importedWeaponDefinitions);
   let sessionRoot = isUpdate ? game.folders.get(existingImport.importedContent?.sessionRootFolderId) : null;
   sessionRoot ??= await foundry.documents.Folder.implementation.create({
     name: String(bundle.session?.title || game.i18n.localize("DOWNTIME_MANAGER.Session.Untitled")),
@@ -816,6 +834,14 @@ export async function importSession(file) {
   if (userImport) {
     const actorMap = new Map(game.actors.map(a => [a.getFlag(MODULE_ID, TRANSFER_FLAG)?.id, a]));
     await applyUserAssignments(bundle.users, userImport.identityMap, actorMap, { sessionPlayers: true });
+  }
+  for (const [transferId, userId] of Object.entries(actorUserChoices)) {
+    if (!userId) continue;
+    const actor = game.actors.find(candidate => candidate.getFlag(MODULE_ID, TRANSFER_FLAG)?.id === transferId);
+    const user = game.users.get(userId);
+    if (!actor || !user) continue;
+    await actor.update({ [`ownership.${user.id}`]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER });
+    if (!user.character) await user.update({ character: actor.id });
   }
   await remapImportedTokenPresetActors(entriesToImport, importedRows);
   const importedSceneUuids = isUpdate ? [] : await importSessionScenes(bundle.scenes, importId);
@@ -861,7 +887,7 @@ export async function importSession(file) {
       importId,
       title: bundle.session.title,
       summary: bundle.session.summary,
-      actorUuids: [...new Set([...(game.settings.get(MODULE_ID, SETTINGS.ACTIVE_SESSION)?.actorUuids ?? []), ...actorUuids])],
+      actorUuids,
       participantTransferIds: [...participantIds],
       sourceWorld: bundle.metadata.sourceWorldName ?? bundle.metadata.sourceWorld,
       incidentalGains: foundry.utils.deepClone(bundle.session.incidentalGains ?? []),
@@ -872,7 +898,7 @@ export async function importSession(file) {
   }
   ui.notifications.info(game.i18n.format(isUpdate ? "TOVF.Session.ImportUpdated" : "TOVF.Session.ImportComplete", counts));
   if (isUpdate) await recordSessionTransferDiagnostic("warning", "import-update", "Existing session content was preserved; only missing participants were added.", { sessionId: bundle.session?.id, addedParticipants: counts.create });
-  SettingsConfig.reloadConfirm({ world: true });
+  if (weaponDefinitionsChanged) SettingsConfig.reloadConfirm({ world: true });
 }
 
 export function sessionImportHistory() {

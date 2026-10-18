@@ -555,7 +555,15 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
       project.classification.typeLabel
     ]))].map(([value, label]) => ({ value, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
-    const projectGroups = Array.from(projects.reduce((groups, project) => {
+    const sortProjects = (a, b) =>
+      a.classification.rarityOrder - b.classification.rarityOrder ||
+      a.name.localeCompare(b.name, game.i18n.lang);
+    const runningProjects = projects
+      .filter(project => project.projectStatus === "active")
+      .sort(sortProjects);
+    const projectGroups = Array.from(projects
+      .filter(project => project.projectStatus !== "active")
+      .reduce((groups, project) => {
       const key = project.classification.type;
       const group = groups.get(key) ?? {
         key,
@@ -568,11 +576,16 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }, new Map()).values())
       .map(group => ({
         ...group,
-        projects: group.projects.sort((a, b) =>
-          a.classification.rarityOrder - b.classification.rarityOrder ||
-          a.name.localeCompare(b.name, game.i18n.lang))
+        projects: group.projects.sort(sortProjects)
       }))
       .sort((a, b) => a.label.localeCompare(b.label, game.i18n.lang));
+    if (runningProjects.length) {
+      projectGroups.unshift({
+        key: "running-projects",
+        label: game.i18n.localize("DOWNTIME_MANAGER.Catalog.RunningProjects"),
+        projects: runningProjects
+      });
+    }
     return {
       ...base,
       actorName: actor.name,

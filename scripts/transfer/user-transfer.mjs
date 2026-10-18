@@ -152,7 +152,7 @@ export async function importUserBundle(bundle, { choices = {}, actorChoices = {}
   assertGM();
   if (busy) throw new Error(uiText("TOVF.Interface.AUserImportIsAlreadyRunning_fda359", "Ein Benutzerimport läuft bereits."));
   const plan = planUserImport(bundle, choices, actorChoices);
-  if (sessionPlayers && plan.rows.some(r => r.target && r.target.role !== 1)) throw new Error(uiText("TOVF.Interface.ForSessionUsersSelectANewAccount_f22f95", "Für Sessionbenutzer bitte einen neuen Zugang oder einen bestehenden Player auswählen. Spielleiterzugänge der Sessionwelt bleiben erhalten."));
+  if (sessionPlayers && plan.rows.some(r => r.target && ![CONST.USER_ROLES.PLAYER, CONST.USER_ROLES.TRUSTED].includes(r.target.role))) throw new Error(uiText("TOVF.Interface.ForSessionUsersSelectANewAccount_f22f95", "Für Sessionbenutzer bitte einen neuen Zugang oder einen bestehenden Player auswählen. Spielleiterzugänge der Sessionwelt bleiben erhalten."));
   // Check every new account before making changes; Assistants cannot create full GMs.
   if (plan.rows.some(row => row.targetId === "new" && (sessionPlayers ? CONST.USER_ROLES.PLAYER : row.source.role) > game.user.role)) {
     throw new Error(uiText("TOVF.Interface.UserTransferRoleTooHigh", "Du kannst keine Benutzer mit einer höheren Rolle als deiner eigenen anlegen. Ordne sie bestehenden Benutzern zu oder überspringe sie."));

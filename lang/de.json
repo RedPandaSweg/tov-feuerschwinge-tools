@@ -1,15 +1,4 @@
 {
-  "TOVF.Mounting.HUD.Mount": "Aufsitzen",
-  "TOVF.Mounting.HUD.Dismount": "Absitzen",
-  "TOVF.Mounting.HUD.Passenger": "Als Passagier einsteigen",
-  "TOVF.Mounting.Choose.Title": "Reittier wählen",
-  "TOVF.Mounting.Errors.Invalid": "Diese Reitverbindung ist nicht möglich.",
-  "TOVF.Mounting.Errors.None": "Dieses Token sitzt auf keinem Reittier.",
-  "TOVF.Mounting.Errors.Permission": "Dafür fehlt die Berechtigung.",
-  "TOVF.Mounting.Errors.Missing": "Das Reittier existiert nicht mehr.",
-  "TOVF.Mounting.Errors.GM": "Eine Spielleitung muss verbunden sein.",
-  "TOVF.Mounting.Errors.Timeout": "Die Spielleitung hat nicht geantwortet.",
-  "TOVF.Mounting.Errors.MustDismount": "Steige zuerst ab, bevor du den Reiter bewegst.",
   "TOVF.SceneLoot.Placed": "{name} liegt jetzt auf der Szene. Doppelklick zum Aufnehmen.",
   "TOVF.SceneLoot.PickedUp": "{name} wurde aufgenommen.",
   "TOVF.SceneLoot.Package": "Loot-Paket",
@@ -109,6 +98,34 @@
     }
   },
   "TOVF": {
+    "Mounting": {
+      "HUD": {
+        "Mount": "Aufsitzen",
+        "Dismount": "Absitzen",
+        "Passenger": "Als Passagier einsteigen"
+      },
+      "Choose": {
+        "Title": "Reittier wählen"
+      },
+      "Position": {
+        "Title": "Reitposition ändern",
+        "Saved": "Reitposition gespeichert.",
+        "Hint": "Verschiebe den Reiter jetzt frei an die gewünschte Position. Shift steuert weiterhin nur das Grid-Snapping."
+      },
+      "Errors": {
+        "Invalid": "Diese Reitverbindung ist nicht möglich.",
+        "None": "Dieses Token sitzt auf keinem Reittier.",
+        "Permission": "Dafür fehlt die Berechtigung.",
+        "Missing": "Das Reittier existiert nicht mehr.",
+        "GM": "Eine Spielleitung muss verbunden sein.",
+        "Timeout": "Die Spielleitung hat nicht geantwortet.",
+        "MustDismount": "Steige zuerst ab, bevor du den Reiter unabhängig bewegst.",
+        "Controller": "Nur der steuernde Reiter kann das Reittier bewegen.",
+        "Position": "Ungültige Reitposition.",
+        "NoMount": "Kein passendes Reittier in Reichweite gefunden.",
+        "RiderOccupied": "Dieses Reittier hat bereits einen Reiter. Weitere Tokens können nur als Passagiere einsteigen."
+      }
+    },
     "ActorDirectory": {
       "Inactive": "Inaktiv",
       "InactiveHint": "Dieser Charakter ist in der Charakteraktivität als inaktiv markiert."
@@ -893,6 +910,7 @@
       "Title": "Feuerschwinge Transferverwaltung",
       "Incidental": { "Title": "Zusatzeinkunftsbudget / Incidental Gains Budget", "Budget": "Zusatzeinkunftsbudget", "OfRegular": "von regulär", "ShowRules": "Regeln zum Zusatzeinkunftsbudget anzeigen", "Rules": "Die Spielleitung kann jedem Charakter während der Session zusätzliche Belohnungen im Wert von höchstens 10 % seiner regulären Goldbelohnung gewähren. Das individuelle Budget kann für Handel, Diebstahl, Arbeit, Hausieren sowie zusätzliche Beute oder Gegenstände eingesetzt werden, etwa wenn die Spielleitung eine Potion oder einen anderen Fund vergeben möchte. Der Goldwert sämtlicher zusätzlicher Gewinne wird auf dieses Budget angerechnet und darf dessen Obergrenze nicht überschreiten.", "Exception": "Das Budget bietet einen flexiblen Rahmen für gelegentliche zusätzliche Gewinne. Seine Nutzung oder vollständige Ausschöpfung wird nicht erwartet; ein Anspruch auf zusätzliche Belohnungen besteht nicht." },
       "Deceased": { "Toggle": "Todesstatus für diese Session umschalten" },
+      "Users": { "Unassigned": "Nicht zugeordnet", "AssignCharacters": "Unzugeordnete Sessioncharaktere", "AssignCharactersHint": "Ordne diese Charaktere nach Möglichkeit einem bestehenden Nutzer zu." },
       "ImportHistory": { "Title": "Importierte Sessions", "Hint": "Mehrere Sessions können gleichzeitig importiert sein. Der Cleanup entfernt ausschließlich die zu diesem Import gehörenden Actors, Ordner und angelegten Spieler.", "Content": "{actors} Actors · {users} Spieler", "Cleanup": "Inhalte löschen", "Cleaned": "Inhalte gelöscht", "Empty": "Es wurden noch keine Sessions importiert." },
       "File": "Transferdatei",
       "ActorRoot": "Actor-Bereich für Spielercharaktere",
@@ -1987,6 +2005,7 @@
                                             "AllSubtypes": "Alle Unterkategorien",
                                             "NoMatches": "Keine Projekte entsprechen den gewählten Filtern.",
                                             "OtherProjects": "Andere Projekte",
+                                            "RunningProjects": "Laufende Projekte",
                                             "Types": { "ammunition": "Munition", "armor": "Rüstung", "consumable": "Verbrauchsgegenstände", "container": "Behälter", "currency": "Währung", "gear": "Ausrüstung", "script": "Schriftstücke", "siege": "Belagerungsgerät", "sundry": "Sonstiges", "tool": "Werkzeuge", "vehicle": "Fahrzeuge", "weapon": "Waffen" },
                                             "Subtypes": { "food": "Nahrung", "poison": "Gifte", "potion": "Tränke", "scroll": "Schriftrollen" }
                                         },

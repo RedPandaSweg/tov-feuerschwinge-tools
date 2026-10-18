@@ -102,15 +102,13 @@ function effectDuration(effect) {
   return `${remaining} ${unit}`;
 }
 
-function effectSource(effect) {
+async function effectSource(effect) {
   if (effect.parent?.documentName === "Item") return effect.parent.name;
   const origin = String(effect.origin ?? "").trim();
-  if (!origin) return "";
-  try {
-    return fromUuidSync(origin)?.name ?? origin;
-  } catch {
-    return origin;
-  }
+  if (!origin) return effect.name ?? "";
+  const originDocument = await fromUuid(origin).catch(() => null);
+  const source = containingItem(originDocument) ?? originDocument;
+  return source?.name ?? effect.name ?? "";
 }
 
 function statusDefinition(id) {
@@ -151,7 +149,7 @@ async function effectEntries(actor) {
           img: definition?.img ?? definition?.icon ?? effect.img ?? "icons/svg/aura.svg",
           description: await statusDescription(definition, effect),
           duration: effectDuration(effect),
-          source: effectSource(effect)
+          source: await effectSource(effect)
         });
       }
       continue;
@@ -162,7 +160,7 @@ async function effectEntries(actor) {
       img: effect.img ?? "icons/svg/aura.svg",
       description: await effectDescription(effect),
       duration: effectDuration(effect),
-      source: effectSource(effect)
+      source: await effectSource(effect)
     });
   }
   const byName = (left, right) => left.name.localeCompare(right.name, game.i18n.lang);

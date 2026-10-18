@@ -4833,7 +4833,7 @@
 .tovf-effect-hud-group {
   display: grid;
   width: max-content;
-  justify-items: end;
+  justify-items: center;
 }
 
 .tovf-effect-hud-group+.tovf-effect-hud-group {

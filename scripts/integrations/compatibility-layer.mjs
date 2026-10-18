@@ -2,7 +2,8 @@ import { MODULE_ID } from "../core/constants.mjs";
 
 const DEFINITIONS = Object.freeze({
   core: [
-    ["preparedSpellTurnActivities", "./prepared-spell-turn-activities.mjs", "installPreparedSpellTurnActivities"],
+    ["mountedTokenDragging", "./mounting-token-drag.mjs?v=3.10.1-mounted-drag-1", "installMountedTokenDragging"],
+    ["combatTurnActivities", "./combat-turn-activities.mjs", "installCombatTurnActivities"],
     ["gearCategories", "./gear-categories.mjs", "installGearCategories"],
     ["characterCreation", "./character-creation-overrides.mjs?v=3.9.3-subclass-deduplication-1", "installCharacterCreationOverrides"],
     ["weaponOptionActivities", "./weapon-option-activities.mjs?v=3.2.4-tooltip-links-2", "installWeaponOptionActivities"],

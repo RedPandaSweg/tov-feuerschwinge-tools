@@ -1,6 +1,6 @@
 import { CHECK_DEFINITIONS, COIN_IDENTIFIERS, COIN_VALUE_CP, FLAGS, MODULE_ID } from "./constants.mjs";
 import { downtimeItemData } from "./downtime-item-service.mjs";
-import { preferredToolAbility } from "../integrations/tool-ability.mjs";
+import { preferredToolAbility, rememberToolAbility } from "../integrations/tool-ability.mjs";
 
 function numeric(value, fallback = 0) {
   const number = Number(value?.value ?? value);
@@ -127,7 +127,16 @@ export class BlackFlagSystemAdapter extends GenericSystemAdapter {
     let rolls;
     if (check?.type === "skill") rolls = await actor.rollSkill({ skill: check.key });
     else if (check?.type === "ability") rolls = await actor.rollAbilityCheck({ ability: check.key });
-    else if (check?.type === "tool") rolls = await actor.rollTool({ tool: check.key, ability: preferredToolAbility(actor, check.key) || undefined });
+    else if (check?.type === "tool") {
+      rolls = await actor.rollTool({ tool: check.key, ability: preferredToolAbility(actor, check.key) || undefined });
+      const toolRoll = Array.isArray(rolls) ? rolls[0] : rolls;
+      const selectedAbility = toolRoll?.data?.abilityId;
+      try {
+        await rememberToolAbility(actor, check.key, selectedAbility);
+      } catch (error) {
+        console.warn(`${MODULE_ID} | Unable to remember the selected tool ability.`, error);
+      }
+    }
     else throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.UnsupportedCheck"));
     const roll = Array.isArray(rolls) ? rolls[0] : rolls;
     if (!roll) return null;

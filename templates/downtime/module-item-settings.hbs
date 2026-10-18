@@ -14,8 +14,9 @@
       {{#if uuid}}<button type="button" data-action="clearItem" data-setting="{{setting}}"><i class="fa-solid fa-trash"></i> {{localize "DOWNTIME_MANAGER.Actions.Remove"}}</button>{{/if}}
     </fieldset>
   {{/each}}
-  <fieldset>
-    <legend>{{localize "TOVF.Session.Settings.SessionTransferScenes.Name"}}</legend>
+  <details class="sc-config-section">
+    <summary>{{localize "TOVF.Session.Settings.SessionTransferScenes.Name"}}</summary>
+    <fieldset>
     <p class="notes">{{localize "TOVF.Session.Settings.SessionTransferScenes.Hint"}}</p>
     <div class="sc-list sc-session-transfer-scenes">
       {{#each transferScenes}}
@@ -27,7 +28,8 @@
         </details>
       {{else}}<p class="notes">{{localize "TOVF.Session.Settings.SessionTransferScenes.NoScenes"}}</p>{{/each}}
     </div>
-  </fieldset>
+    </fieldset>
+  </details>
   <fieldset>
     <legend>{{localize "DOWNTIME_MANAGER.Settings.StationCategories.Name"}}</legend>
     <p class="notes">{{localize "DOWNTIME_MANAGER.Settings.StationCategories.Hint"}}</p>
