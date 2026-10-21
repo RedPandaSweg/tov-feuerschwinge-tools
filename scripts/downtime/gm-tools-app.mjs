@@ -14,7 +14,7 @@ import { openVoidTaintConfig } from "../void-taint/config-app.mjs";
 import { applyActorSpellMigration, previewActorSpellMigration } from "../spell-actor-migration.mjs?v=3.5.0-actor-spell-migration-10";
 import { applyWorkingEffectMigration, previewWorkingEffectMigration } from "../effect-pack-migration.mjs?v=3.7.8-working-effects-2";
 import { migrateLegacyWorldActiveEffects, previewLegacyActiveEffects } from "../core/active-effect-migration.mjs?v=3.8.0-legacy-effect-repair-1";
-import { sendServerUpdateWarning } from "../server-update-warning.mjs?v=3.9.0-custom-warning-1";
+import { sendServerUpdateWarning } from "../server-update-warning.mjs?v=3.11.3-all-connected-1";
 import {
   addVoidTaint,
   drawVoidTaintEffect,

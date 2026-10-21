@@ -74,7 +74,7 @@ export async function sendServerUpdateWarning() {
     ui.notifications.error(text("FullGMOnly"));
     return;
   }
-  const recipients = game.users.filter(user => user.active && !user.isGM);
+  const recipients = game.users.filter(user => user.active);
   const warning = await composeWarning();
   if (!warning) return;
   if (!warning.title || !warning.message) {
@@ -93,7 +93,6 @@ export async function sendServerUpdateWarning() {
 }
 
 async function showWarning(payload, event) {
-  if (game.user.isGM) return;
   const sender = game.users.get(event?.senderId);
   if (!isProjectAdministrator(sender)) return;
   const warning = cleanWarning(payload);
