@@ -98,6 +98,11 @@
     }
   },
   "TOVF": {
+    "CharacterSheet": {
+      "AbilityDesignV360": "Ability design 3.6",
+      "AbilityDesignHint": "Switch between the current Ability design and the layout from version 3.6.0.",
+      "AbilityDesignError": "The Ability design could not be saved."
+    },
     "Mounting": {
       "HUD": {
         "Mount": "Mount",

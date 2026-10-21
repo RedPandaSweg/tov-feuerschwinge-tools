@@ -66,7 +66,10 @@ async function rollCheck(actor, selection, event, originatingMessageId) {
       flags: { [game.system.id]: { originatingMessage: originatingMessageId } }
     }
   };
-  if (type === "skill") result = await actor.rollSkill({ skill: key, event }, dialogConfig, messageConfig);
+  if (type === "skill") {
+    const ability = CONFIG.BlackFlag.skills[key]?.ability;
+    result = await actor.rollSkill({ skill: key, ability, event }, dialogConfig, messageConfig);
+  }
   else if (type === "tool") result = await actor.rollTool({ tool: key, event }, dialogConfig, messageConfig);
   else if (type === "ability") result = await actor.rollAbilityCheck({ ability: key, event }, dialogConfig, messageConfig);
   else throw new Error(game.i18n.localize("TOV.ContestedActivity.Error.CheckMissing"));

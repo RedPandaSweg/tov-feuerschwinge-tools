@@ -23,7 +23,7 @@ const DEFINITIONS = Object.freeze({
     ["activeEffectChangesUi", "../active-effect-changes-ui.mjs?v=3.7.8-actor-effect-delete-3", "installActiveEffectChangesUi"],
     ["enchantActivityUi", "./enchant-activity-ui.mjs?v=3.8.5-enchant-library-5", "installEnchantActivityUi"],
     ["spellcastingFilterControls", "./spellcasting-filter-controls.mjs?v=3.8.5-spell-filter-controls-1", "installSpellcastingFilterControls"],
-    ["skillListControls", "./skill-list-controls.mjs?v=3.8.5-sheet-operational-controls-2", "installSkillListControls"]
+    ["skillListControls", "./skill-list-controls.mjs?v=3.11.3-ability-design-v360-12", "installSkillListControls"]
   ],
   optionalModules: [
     ["argon", "./argon-black-flag-compatibility.mjs?v=3.9.3-unbound-item-guard-1", "installArgonBlackFlagCompatibility"]

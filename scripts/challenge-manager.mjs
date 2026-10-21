@@ -159,13 +159,9 @@ function encounterStats(combat = game.combat) {
 }
 
 function initiativeTurns(combat = game.combat) {
-  return [...(combat?.combatants ?? [])].sort((left, right) => {
-    const leftInitiative = left.initiative == null ? -Infinity : Number(left.initiative);
-    const rightInitiative = right.initiative == null ? -Infinity : Number(right.initiative);
-    const leftValue = Number.isFinite(leftInitiative) ? leftInitiative : -Infinity;
-    const rightValue = Number.isFinite(rightInitiative) ? rightInitiative : -Infinity;
-    return rightValue - leftValue || Number(left.sort ?? 0) - Number(right.sort ?? 0);
-  });
+  // Foundry resolves initiative ties and exposes the authoritative encounter
+  // order through combat.turns. Re-sorting here can disagree with that order.
+  return [...(combat?.turns ?? [])];
 }
 
 function formatElapsed(milliseconds) {
@@ -932,7 +928,10 @@ class ChallengeHud {
 
   updateTimers(now = Date.now()) {
     if (!this.rendered) return;
-    for (const timer of this.element.querySelectorAll("[data-start-at]")) {
+    const timers = this.element.querySelectorAll(
+      "[data-encounter-timer][data-start-at], [data-turn-timer][data-start-at]"
+    );
+    for (const timer of timers) {
       const elapsed = now - Number(timer.dataset.startAt);
       timer.textContent = formatElapsed(elapsed);
       if (!timer.matches("[data-turn-timer]")) continue;

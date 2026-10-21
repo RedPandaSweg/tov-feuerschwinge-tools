@@ -24,7 +24,7 @@ const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   playerUnpause: "./player-unpause.mjs",
   compendiumLibrary: "./compendium-library.mjs?v=3.8.5-item-library-filters-2",
   dnd5eItemImporter: "./dnd5e-item-importer.mjs?v=3.8.0-import-spell-school-1",
-  challengeManager: "./challenge-manager.mjs?v=3.8.0-standalone-combat-hud-23",
+  challengeManager: "./challenge-manager.mjs?v=3.10.1-challenge-hud-2",
   linkTools: "./link-tools-config.mjs",
   featurePool: "./feature-pool-integration.mjs",
   tokenSizeSync: "./token-size-sync.mjs",
@@ -33,7 +33,7 @@ const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   settingsCategories: "./settings-categories.mjs",
   help: "./help-config.mjs",
   activityChaining: "./activity-chaining.mjs?v=3.3.1-follow-up-filter-2",
-  compatibility: "./integrations/compatibility-layer.mjs?v=3.11.0-mounted-token-drag-2-combat-turn-activities-1",
+  compatibility: "./integrations/compatibility-layer.mjs?v=3.11.3-ability-design-v360-7",
   compendiumUsability: "./compendium-usability.mjs",
   chatImagePopouts: "./chat-image-popout.mjs",
   chatMessageDeletion: "./chat-message-deletion.mjs",
@@ -47,7 +47,7 @@ const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   sceneActionHud: "./scene-action-hud.mjs?v=3.8.5-scene-hud-9",
   serverUpdateWarning: "./server-update-warning.mjs?v=3.9.0-custom-warning-1",
   commerce: "./commerce/main.mjs?v=3.8.5-merchant-interactor-avatar-1",
-  contestedActivity: "./contested-activity.mjs?v=3.8.5-dice-animation-wait-1",
+  contestedActivity: "./contested-activity.mjs?v=3.10.1-npc-skill-ability-1",
   talentBackgrounds: "./talent-backgrounds.mjs?v=3.3.1-talent-backgrounds-6",
   characterOptionIndex: "./character-option-index.mjs?v=3.9.3-character-option-index-1",
   spellScrolls: "./spell-scrolls.mjs?v=3.7.8-clearance-label-1",
@@ -56,7 +56,7 @@ const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   macroActivity: "./macro-activity.mjs",
   weaponCustomization: "./weapon-customization.mjs",
   weaponEnchantment: "./weapon-enchantment.mjs",
-  mounting: "./mounting.mjs?v=3.10.1-mount-priority-9"
+  mounting: "./mounting.mjs?v=3.10.1-owner-authority-10"
 });
 const DND5E_FEATURE_MODULES = Object.freeze({
   dnd5eBundleExporter: "./import/dnd5e-bundle-exporter.mjs?v=3.8.0-content-bundle-2"
@@ -89,12 +89,9 @@ function loadFeatures(systemId) {
   if (!systemId || loadedSystemId === systemId) return featuresReady;
   loadedSystemId = systemId;
   const definitions = featureModulesForSystem(systemId);
-  const moduleVersion = game.modules?.get(MODULE_ID)?.version;
-  featuresReady = Promise.all(Object.entries(definitions).map(async ([id, path]) => {
-    const url = new URL(path, import.meta.url);
-    if (moduleVersion) url.searchParams.set("moduleVersion", moduleVersion);
-    return [id, await loadStartupModule(id, url.href)];
-  })).then(loadedEntries => {
+  featuresReady = Promise.all(Object.entries(definitions).map(async ([id, path]) => (
+    [id, await loadStartupModule(id, new URL(path, import.meta.url).href)]
+  ))).then(loadedEntries => {
     features = new Map(loadedEntries);
     return features;
   });

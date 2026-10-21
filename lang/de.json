@@ -98,6 +98,11 @@
     }
   },
   "TOVF": {
+    "CharacterSheet": {
+      "AbilityDesignV360": "Ability-Design 3.6",
+      "AbilityDesignHint": "Zwischen dem aktuellen Ability-Design und dem Layout aus Version 3.6.0 wechseln.",
+      "AbilityDesignError": "Das Ability-Design konnte nicht gespeichert werden."
+    },
     "Mounting": {
       "HUD": {
         "Mount": "Aufsitzen",

@@ -1,6 +1,7 @@
 import { MODULE_ID } from "../core/constants.mjs";
 
 const SORT_FLAG = "skillListSort";
+const ABILITY_DESIGN_FLAG = "abilityDesignV360";
 const ABILITY_COLORS = Object.freeze({
   int: "var(--tovf-ability-int)", intelligence: "var(--tovf-ability-int)",
   cha: "var(--tovf-ability-cha)", charisma: "var(--tovf-ability-cha)",
@@ -34,6 +35,11 @@ function rootOf(element) {
   return element instanceof HTMLElement ? element : element?.[0] ?? null;
 }
 
+function mainPart(root) {
+  if (root?.matches?.('section[data-tab="main"]')) return root;
+  return root?.querySelector?.('section[data-tab="main"] .abilities')?.closest('section[data-tab="main"]') ?? null;
+}
+
 function skillIconName(skillId, label = "") {
   return SKILL_ICONS[String(skillId ?? "").toLowerCase()]
     ?? SKILL_ICONS[String(label).trim().toLowerCase()];
@@ -41,6 +47,57 @@ function skillIconName(skillId, label = "") {
 
 function sortMode(actor) {
   return actor.getFlag(MODULE_ID, SORT_FLAG) === "ability" ? "ability" : "alpha";
+}
+
+function addAbilityDesignControl(app, actor, root) {
+  const main = mainPart(root);
+  const abilities = main?.querySelector?.("fieldset.abilities");
+  if (!main || !abilities) return false;
+
+  const oldDesign = actor.getFlag(MODULE_ID, ABILITY_DESIGN_FLAG) === true;
+  main.classList.toggle("tovf-abilities-v360", oldDesign);
+
+  const controls = abilities.querySelector(":scope > .tovf-ability-controls");
+  const editing = app.isEditable && app._mode === app.constructor.MODES.EDIT;
+  if (!editing) {
+    controls?.remove();
+    abilities.querySelector("[data-tovf-ability-design]")?.remove();
+    return oldDesign;
+  }
+
+  const configure = abilities.querySelector(':scope > legend > button[data-action="showConfiguration"][data-type="ability"]')
+    ?? controls?.querySelector('button[data-action="showConfiguration"][data-type="ability"]');
+  if (!configure) return oldDesign;
+  if (abilities.querySelector("[data-tovf-ability-design]")) return oldDesign;
+
+  const control = document.createElement("button");
+  control.type = "button";
+  control.className = "link-button tovf-ability-design-control";
+  control.dataset.tovfAbilityDesign = "true";
+  control.setAttribute("aria-pressed", String(oldDesign));
+  control.setAttribute("aria-label", game.i18n.localize("TOVF.CharacterSheet.AbilityDesignV360"));
+  control.dataset.tooltip = game.i18n.localize("TOVF.CharacterSheet.AbilityDesignHint");
+  control.innerHTML = `<i class="fa-solid fa-toggle-${oldDesign ? "on" : "off"}" inert></i>`;
+  control.addEventListener("click", async event => {
+    event.preventDefault();
+    control.disabled = true;
+    try {
+      await actor.setFlag(MODULE_ID, ABILITY_DESIGN_FLAG, !oldDesign);
+    } catch (error) {
+      control.disabled = false;
+      console.error(`${MODULE_ID} | Could not save the Ability design.`, error);
+      ui.notifications.error(game.i18n.localize("TOVF.CharacterSheet.AbilityDesignError"));
+    }
+  });
+  if (oldDesign) {
+    configure.after(control);
+  } else {
+    const controlBar = document.createElement("div");
+    controlBar.className = "tovf-ability-controls";
+    controlBar.append(configure, control);
+    abilities.append(controlBar);
+  }
+  return oldDesign;
 }
 
 function swapAbilityValueDisplays(root) {
@@ -240,7 +297,8 @@ function enhanceSkills(app, element) {
   const actor = app?.document;
   if (actor?.documentName !== "Actor" || actor.type !== "pc") return;
   const root = rootOf(element);
-  swapAbilityValueDisplays(root);
+  const oldAbilityDesign = addAbilityDesignControl(app, actor, root);
+  if (!oldAbilityDesign) swapAbilityValueDisplays(root);
   addLuckRemoveControl(root);
   extendInventorySortingBar(root);
   addRestControls(root);

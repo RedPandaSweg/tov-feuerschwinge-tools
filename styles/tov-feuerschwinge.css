@@ -6259,7 +6259,7 @@
   grid-template-columns:
     [full-start left-start] 215px [left-end center-start] 190px [center-end right-start] auto [right-end full-end];
 
-  & .abilities {
+  &:not(.tovf-abilities-v360) .abilities {
     --tovf-ability-surface: linear-gradient(180deg, rgba(105, 52, 22, .8), rgba(56, 26, 12, .86));
     gap: 2rem;
     justify-content: space-evenly;
@@ -6899,6 +6899,21 @@
   & .skills .name {
     white-space: nowrap;
   }
+}
+
+.black-flag.pc.sheet .sheet-body section[data-tab="main"] fieldset.abilities {
+  position: relative;
+}
+
+.black-flag.pc.sheet .sheet-body section[data-tab="main"] .tovf-ability-controls {
+  position: absolute;
+  z-index: 10;
+  top: -.55rem;
+  left: .25rem;
+  display: flex;
+  align-items: center;
+  gap: .25rem;
+  width: max-content;
 }
 
 /* Skill and tool roll buttons: match the compact Token-Presets button language. */
