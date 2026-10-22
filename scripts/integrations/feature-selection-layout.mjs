@@ -10,6 +10,27 @@ function normalize(value) {
   return String(value ?? "").trim().toLocaleLowerCase(game.i18n.lang);
 }
 
+const PREREQUISITE_PATCH = Symbol("tovfEmptyPrerequisitePatch");
+
+function installEmptyPrerequisiteFix() {
+  const TalentData = CONFIG.Item.dataModels?.talent;
+  const prototype = TalentData?.prototype;
+  const original = prototype?.validatePrerequisites;
+  if (typeof original !== "function") return false;
+  if (prototype[PREREQUISITE_PATCH]) return true;
+
+  Object.defineProperty(prototype, PREREQUISITE_PATCH, { value: true });
+  Object.defineProperty(prototype, "validatePrerequisites", {
+    configurable: true,
+    writable: true,
+    value(actor) {
+      const result = original.call(this, actor);
+      return Array.isArray(result) && result.length === 0 ? true : result;
+    }
+  });
+  return true;
+}
+
 function styleFeatureSelection(app, element) {
   const Dialog = BlackFlag?.applications?.advancement?.ChooseFeaturesDialog;
   if (!Dialog || !(app instanceof Dialog)) return;
@@ -61,6 +82,9 @@ function styleFeatureSelection(app, element) {
 export function installFeatureSelectionLayout() {
   if (!BlackFlag?.applications?.advancement?.ChooseFeaturesDialog) {
     return { status: "incompatible", reason: "Missing BlackFlag.applications.advancement.ChooseFeaturesDialog." };
+  }
+  if (!installEmptyPrerequisiteFix()) {
+    return { status: "incompatible", reason: "Missing talent prerequisite validation API." };
   }
   Hooks.on("renderApplicationV2", styleFeatureSelection);
   return { status: "completed" };
