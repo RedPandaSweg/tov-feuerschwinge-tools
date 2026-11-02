@@ -13,7 +13,7 @@ import {
 
 const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   events: "./core/events.mjs?v=3.7.8-module-events-1",
-  scheduler: "./core/scheduler.mjs?v=3.7.8-central-scheduler-1",
+  scheduler: "./core/scheduler.mjs?v=3.11.5-task-authority-1",
   concentration: "./concentration.mjs?v=3.7.8-safe-documents-1",
   migrations: "./core/migrations.mjs",
   namespaceMigration: "./core/namespace-migration.mjs?v=3.8.0-storage-api-2",
@@ -28,12 +28,15 @@ const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   linkTools: "./link-tools-config.mjs",
   featurePool: "./feature-pool-integration.mjs",
   tokenSizeSync: "./token-size-sync.mjs",
+  tokenDistanceDisplay: "./token-distance-display.mjs?v=3.11.5-token-distance-display-1",
+  tokenPatrol: "./token-patrol.mjs?v=3.11.5-token-patrol-10",
+  moduleConflicts: "./module-conflicts.mjs?v=3.11.5-module-conflicts-1",
   creatureBuilder: "./creature-builder.mjs",
   actorDirectoryActivity: "./actor-directory-activity.mjs?v=3.8.0-inactive-markers-3",
   settingsCategories: "./settings-categories.mjs",
   help: "./help-config.mjs",
   activityChaining: "./activity-chaining.mjs?v=3.3.1-follow-up-filter-2",
-  compatibility: "./integrations/compatibility-layer.mjs?v=3.11.3-ability-design-v360-7",
+  compatibility: "./integrations/compatibility-layer.mjs?v=3.11.5-luck-reroll-dsn-1",
   compendiumUsability: "./compendium-usability.mjs",
   chatImagePopouts: "./chat-image-popout.mjs",
   chatMessageDeletion: "./chat-message-deletion.mjs",
@@ -122,7 +125,7 @@ const MODULE_MENU_ORDER = new Map([
   ["itemDefaults", 60], ["playerActorFolders", 70], ["sessionRewards", 80]
 ]);
 const MODULE_SETTING_ORDER = new Map([
-  ["worldRole", 0], ["automaticTokenSizing", 10], ["unpauseWithoutGM", 20],
+  ["worldRole", 0], ["automaticTokenSizing", 10], ["tokenDistanceDisplay", 15], ["unpauseWithoutGM", 20],
   ["sessionHistoryEnabled", 30]
 ]);
 
@@ -200,6 +203,8 @@ function initSteps() {
     step("challengeManager", "challengeManager", "registerChallengeManager"),
     step("featurePool", "featurePool", "registerFeaturePoolIntegration"),
     step("tokenSizeSync", "tokenSizeSync", "registerTokenSizeSync"),
+    step("tokenDistanceDisplay", "tokenDistanceDisplay", "registerTokenDistanceDisplay"),
+    step("tokenPatrol", "tokenPatrol", "registerTokenPatrol"),
     step("creatureBuilder", "creatureBuilder", "registerCreatureBuilder"),
     step("actorDirectoryActivity", "actorDirectoryActivity", "registerActorDirectoryActivity"),
     step("help", "help", "registerHelp"),
@@ -213,6 +218,7 @@ function initSteps() {
 
 function readyEarlySteps() {
   return compactSteps([
+    step("moduleConflictWarning", "moduleConflicts", "activateModuleConflictWarning"),
     step("compatibilityActivation", "compatibility", "activateCompatibilityLayer"),
     step("moduleEventsActivation", "events", "activateModuleEvents"),
     step("simpleTileTriggerActivation", "simpleTileTriggers", "activateSimpleTileTriggers"),
@@ -229,6 +235,8 @@ function readyEarlySteps() {
     step("tokenPresetSocket", "tokenPresets", "activateTokenPresetSocket"),
     step("tokenLightAuraSocket", "tokenLightAura", "activateTokenLightAuraSocket"),
     step("selectedTokenEffectsHud", "selectedTokenEffectsHud", "activateSelectedTokenEffectsHud"),
+    step("tokenDistanceDisplayActivation", "tokenDistanceDisplay", "activateTokenDistanceDisplay"),
+    step("tokenPatrolActivation", "tokenPatrol", "activateTokenPatrol"),
     step("mountingActivation", "mounting", "activateMounting")
   ]);
 }

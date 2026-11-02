@@ -11,14 +11,14 @@ const DEFINITIONS = Object.freeze({
     ["toolAbility", "./tool-ability.mjs", "installToolAbilitySelection"],
     ["toolProficiencyRemoval", "./tool-proficiency-removal.mjs", "installToolProficiencyRemoval"],
     ["spellLearningPersistence", "./spell-learning-persistence.mjs", "installSpellLearningPersistence"],
-    ["theurgeSpellcasting", "./theurge-spellcasting.mjs?v=3.7.7-theurge-replacement-2", "installTheurgeSpellcasting"]
+    ["theurgeSpellcasting", "./theurge-spellcasting.mjs?v=3.11.5-theurge-sources-1", "installTheurgeSpellcasting"]
   ],
   documentUi: [
     ["customBackground", "./custom-background.mjs?v=3.8.5-custom-background-17", "installCustomBackground"],
     ["characterOptionFilters", "./character-option-filters.mjs?v=3.9.3-character-option-filters-1", "installCharacterOptionFilters"],
     ["classSelectionLayout", "./class-selection-layout.mjs", "installClassSelectionLayout"],
     ["featureSelectionLayout", "./feature-selection-layout.mjs?v=3.11.4-empty-talent-prerequisites-1", "installFeatureSelectionLayout"],
-    ["spellManager", "./spell-manager.mjs", "installSpellManager"],
+    ["spellManager", "./spell-manager.mjs?v=3.11.5-theurge-source-selection-1", "installSpellManager"],
     ["multiLevelDown", "./multi-level-down.mjs", "installMultiLevelDown"],
     ["activeEffectChangesUi", "../active-effect-changes-ui.mjs?v=3.7.8-actor-effect-delete-3", "installActiveEffectChangesUi"],
     ["enchantActivityUi", "./enchant-activity-ui.mjs?v=3.8.5-enchant-library-5", "installEnchantActivityUi"],
@@ -26,6 +26,7 @@ const DEFINITIONS = Object.freeze({
     ["skillListControls", "./skill-list-controls.mjs?v=3.11.3-ability-design-v360-12", "installSkillListControls"]
   ],
   optionalModules: [
+    ["luckRerollDiceSoNice", "./luck-reroll-dice-so-nice.mjs?v=3.11.5-luck-reroll-dsn-1", "installLuckRerollDiceSoNice"],
     ["argon", "./argon-black-flag-compatibility.mjs?v=3.9.3-unbound-item-guard-1", "installArgonBlackFlagCompatibility"]
   ],
   ready: [

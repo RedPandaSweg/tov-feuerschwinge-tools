@@ -131,9 +131,73 @@
         "RiderOccupied": "This mount already has a rider. Additional tokens may only board as passengers."
       }
     },
+    "Patrol": {
+      "Title": "Patrol Tools",
+      "Open": "Open Patrol Tools",
+      "Tokens": "Scene Tokens",
+      "SelectionHint": "Select one or more Tokens. The configuration on the right is applied to the complete selection.",
+      "UseControlled": "Use controlled",
+      "SelectActive": "Select active",
+      "ClearSelection": "Clear selection",
+      "Selected": "Selected",
+      "Edit": "Edit",
+      "Editing": "Editing existing patrol:",
+      "NoTokens": "This Scene contains no Tokens.",
+      "Configuration": "Patrol configuration",
+      "ConfigurationHint": "The configuration is applied to every selected Token. Use Edit to load an existing patrol.",
+      "Mode": "Patrol type",
+      "Modes": { "Random": "Random within a Region", "Route": "Fixed route" },
+      "Region": "Region",
+      "SelectRegion": "Select Region",
+      "RegionHint": "The complete Token must fit inside the Region at its random destination.",
+      "RouteBehavior": "Route behavior",
+      "RouteModes": { "Loop": "Continuous loop", "PingPong": "Back and forth", "Random": "Random waypoint" },
+      "GridSnap": "Place waypoints in grid spaces",
+      "GridSnapHint": "Uses the grid space containing the clicked pixel. Positions remain pixel-perfect on gridless Scenes.",
+      "RecordRoute": "Record route",
+      "ClearRoute": "Clear route",
+      "NoWaypoints": "No waypoints have been recorded.",
+      "Timing": "Movement and pauses",
+      "Speed": "Speed",
+      "SpeedHint": "Grid sizes per second. This controls Foundry's native movement animation.",
+      "Pause": "Random pause",
+      "Seconds": "seconds",
+      "Behavior": "Behavior",
+      "AutoRotate": "Turn toward movement",
+      "SuspendInCombat": "Pause during Combat",
+      "SavePaused": "Save configuration (stopped)",
+      "ApplyStart": "Apply and start",
+      "StopSelected": "Stop selected",
+      "StopAll": "Stop all",
+      "RemoveSelected": "Remove selected",
+      "AppliedStarted": "Started patrol for {count} Token(s).",
+      "AppliedPaused": "Saved paused patrol configuration for {count} Token(s).",
+      "Stopped": "Stopped {count} patrol(s).",
+      "Removed": "Removed {count} patrol configuration(s).",
+      "Status": { "Active": "Active", "Paused": "Paused", "None": "Not configured" },
+      "Route": {
+        "Recording": "Left-click waypoints on the Scene. Enter saves; Escape cancels.",
+        "Keys": "Enter: save · Esc: cancel",
+        "Recorded": "Recorded a route with {count} waypoints.",
+        "Cancelled": "Route recording cancelled."
+      },
+      "Errors": {
+        "Admin": "Only a full Game Master may manage patrols.",
+        "Selection": "Select at least one Token.",
+        "Region": "Select an existing Region.",
+        "Route": "Record at least two route waypoints.",
+        "Scene": "Open the patrol Scene before recording a route.",
+        "Canvas": "The Foundry canvas element is unavailable.",
+        "NoScene": "Open a Scene first."
+      }
+    },
     "ActorDirectory": {
       "Inactive": "Inactive",
-      "InactiveHint": "This character is marked as inactive in character activity."
+      "InactiveHint": "This character is marked as inactive in character activity.",
+      "FolderVisibility": {
+        "Label": "Hide this folder from players",
+        "Hint": "Also applies to subfolders. Actors retain their permissions and remain readable to module features, but do not appear in players' Actor Directory."
+      }
     },
     "SceneLoot": {
       "Configure": "Configure Loot",
@@ -765,6 +829,10 @@
           "Name": "Show initiative carousel",
           "Hint": "Shows or hides the initiative carousel in this Challenge HUD."
         },
+        "ShowInitiativeCarouselToPlayers": {
+          "Name": "Show initiative carousel to players",
+          "Hint": "Shows or hides the initiative carousel for players throughout this world. The game master display remains unchanged."
+        },
         "ShowEncounterTimer": {
           "Name": "Show encounter duration",
           "Hint": "Shows the encounter's elapsed real time below the round counter."
@@ -781,6 +849,7 @@
       },
       "Hud": {
         "Round": "Round",
+        "Move": "Move Challenge HUD · Double-click to reset its position",
         "RollInitiative": "Roll initiative",
         "RollNpcInitiative": "Roll initiative for all NPCs",
         "PreviousTurn": "Previous turn",
@@ -854,6 +923,16 @@
         "Name": "Automatic Token Size",
         "Hint": "Automatically matches PC and NPC token footprint and artwork scale to creature size. Tiny and Small remain on one grid space with smaller artwork."
       }
+    },
+    "TokenDistance": {
+      "Label": "↔ {distance} {units}",
+      "Setting": {
+        "Name": "Token Distance Display",
+        "Hint": "Shows the distance between Tokens on hover, for your targets, and while holding Alt. Applies to every user in this world."
+      }
+    },
+    "ModuleConflicts": {
+      "Warning": "The following incompatible modules are active: {modules}. Review their configuration or disable them to avoid conflicts with Feuerschwinge Tools."
     },
     "SettingsSections": {
       "General": "General",

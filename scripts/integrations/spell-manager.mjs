@@ -148,13 +148,6 @@ export function installSpellManager() {
   if (!Dialog.DEFAULT_OPTIONS.classes.includes("tovf-spell-manager-dialog")) {
     Dialog.DEFAULT_OPTIONS.classes.push("tovf-spell-manager-dialog");
   }
-  Dialog.DEFAULT_OPTIONS.actions.tovfSelectSlot = function(event, target) {
-    const index = Number(target.dataset.tovfSelectSlot);
-    if (!Number.isInteger(index) || !this.slots[index]) return;
-    captureState(this);
-    this.selectedSlot = index;
-    scheduleRender(this);
-  };
 
   prototype._prepareContext = async function(options) {
     const context = await originalPrepareContext.call(this, options);

@@ -2,7 +2,7 @@ import { uiText } from "../core/localization.mjs";
 import { isOperationalGM, isProjectAdministrator } from "../core/permissions.mjs?v=3.7.8-permissions-1";
 import { startupReport } from "../core/startup.mjs?v=3.7.8-lifecycle-phases-1";
 import { compatibilityReport } from "../integrations/compatibility-layer.mjs?v=3.7.8-argon-module-check-2";
-import { schedulerReport } from "../core/scheduler.mjs?v=3.7.8-central-scheduler-1";
+import { schedulerReport } from "../core/scheduler.mjs?v=3.11.5-task-authority-1";
 import { FLAGS, MODULE_ID } from "./constants.mjs";
 import { sessionTransferDiagnostics } from "../transfer/session-transfer.mjs";
 import { DowntimeDashboardApp } from "./dashboard-app.mjs";

@@ -1,6 +1,6 @@
 import { MODULE_ID, modulePath } from "./core/constants.mjs";
 import { emitModuleEvent, subscribeModuleEvent } from "./core/events.mjs?v=3.7.8-module-events-1";
-import { registerScheduledTask } from "./core/scheduler.mjs?v=3.7.8-central-scheduler-1";
+import { registerScheduledTask } from "./core/scheduler.mjs?v=3.11.5-task-authority-1";
 
 const SETTINGS = {
   doom: "doomPoints",
@@ -15,8 +15,11 @@ const SHOW_NPC_HEALTH_SETTING = "challengeHudShowNpcHealthToPlayers";
 const SHOW_OTHER_PLAYER_HEALTH_SETTING = "challengeHudShowOtherPlayerHealthToPlayers";
 const MAX_INITIATIVE_CARDS_SETTING = "challengeHudMaxInitiativeCards";
 const SHOW_INITIATIVE_CAROUSEL_SETTING = "challengeHudShowInitiativeCarousel";
+const SHOW_INITIATIVE_CAROUSEL_TO_PLAYERS_SETTING = "challengeHudShowInitiativeCarouselToPlayers";
 const SHOW_ENCOUNTER_TIMER_SETTING = "challengeHudShowEncounterTimer";
 const SHOW_TURN_TIMER_SETTING = "challengeHudShowTurnTimer";
+const HUD_POSITION_SETTING = "challengeHudPosition";
+const HUD_EDGE_MARGIN = 8;
 const DOOM_USAGE_FLAG = "doomActionsUsed";
 const DOOM_STARTING_VALUE_FLAG = "doomStartingValue";
 const ENCOUNTER_STARTED_AT_FLAG = "encounterStartedAt";
@@ -63,6 +66,7 @@ class ChallengeHudSettings extends HandlebarsApplicationMixin(ApplicationV2) {
       showNpcHealth: game.settings.get(MODULE_ID, SHOW_NPC_HEALTH_SETTING),
       showOtherPlayerHealth: game.settings.get(MODULE_ID, SHOW_OTHER_PLAYER_HEALTH_SETTING),
       showInitiativeCarousel: game.settings.get(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_SETTING),
+      showInitiativeCarouselToPlayers: game.settings.get(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_TO_PLAYERS_SETTING),
       showEncounterTimer: game.settings.get(MODULE_ID, SHOW_ENCOUNTER_TIMER_SETTING),
       showTurnTimer: game.settings.get(MODULE_ID, SHOW_TURN_TIMER_SETTING),
       maxInitiativeCards: game.settings.get(MODULE_ID, MAX_INITIATIVE_CARDS_SETTING)
@@ -88,6 +92,7 @@ class ChallengeHudSettings extends HandlebarsApplicationMixin(ApplicationV2) {
       await game.settings.set(MODULE_ID, AUTO_OPEN_SETTING, values.autoOpen === true);
       await game.settings.set(MODULE_ID, SHOW_NPC_HEALTH_SETTING, values.showNpcHealth === true);
       await game.settings.set(MODULE_ID, SHOW_OTHER_PLAYER_HEALTH_SETTING, values.showOtherPlayerHealth === true);
+      await game.settings.set(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_TO_PLAYERS_SETTING, values.showInitiativeCarouselToPlayers === true);
     }
     ui.notifications.info(game.i18n.localize("TOVF.ChallengeManager.Settings.Menu.Saved"));
   }
@@ -119,6 +124,89 @@ function connectedPlayerActors() {
 
 async function refreshPanel() {
   if (panel?.rendered) await panel.render({ force: true });
+}
+
+function playerInitiativeCarouselEnabled() {
+  return game.settings.get(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_TO_PLAYERS_SETTING)
+    && game.settings.get(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_SETTING);
+}
+
+function defaultChallengeHudPosition() {
+  const navigation = document.querySelector("#navigation, #scene-navigation");
+  const navigationItems = [...(navigation?.querySelectorAll("button, a, .scene, .scene-view") ?? [])]
+    .map(element => element.getBoundingClientRect())
+    .filter(rect => rect.width > 0 && rect.height > 0 && rect.top < 100 && rect.right < window.innerWidth - 200);
+  const navigationBounds = navigation?.getBoundingClientRect();
+  const navigationRight = navigationItems.length
+    ? Math.max(...navigationItems.map(rect => rect.right))
+    : Math.min(navigationBounds?.right ?? 64, 220);
+  const navigationTop = navigationItems.length
+    ? Math.min(...navigationItems.map(rect => rect.top))
+    : navigationBounds?.top ?? 6;
+  return { left: navigationRight + HUD_EDGE_MARGIN, top: navigationTop };
+}
+
+function storedChallengeHudPosition() {
+  const position = game.settings.get(MODULE_ID, HUD_POSITION_SETTING);
+  const left = Number(position?.left);
+  const top = Number(position?.top);
+  return Number.isFinite(left) && Number.isFinite(top) ? { left, top } : null;
+}
+
+function positionChallengeHud(element, position) {
+  const maximumLeft = Math.max(HUD_EDGE_MARGIN, window.innerWidth - element.offsetWidth - HUD_EDGE_MARGIN);
+  const maximumTop = Math.max(HUD_EDGE_MARGIN, window.innerHeight - element.offsetHeight - HUD_EDGE_MARGIN);
+  const left = Math.clamp(Number(position?.left) || 0, HUD_EDGE_MARGIN, maximumLeft);
+  const top = Math.clamp(Number(position?.top) || 0, HUD_EDGE_MARGIN, maximumTop);
+  element.style.left = `${Math.round(left)}px`;
+  element.style.top = `${Math.round(top)}px`;
+  return { left, top };
+}
+
+function activateChallengeHudDrag(element) {
+  const handle = element.querySelector("[data-hud-drag]");
+  if (!handle) return;
+  handle.addEventListener("pointerdown", event => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const bounds = element.getBoundingClientRect();
+    const offset = { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
+    const origin = { x: event.clientX, y: event.clientY };
+    let moved = false;
+    handle.setPointerCapture(event.pointerId);
+    handle.classList.add("is-dragging");
+    const move = moveEvent => {
+      moved ||= Math.hypot(moveEvent.clientX - origin.x, moveEvent.clientY - origin.y) > 2;
+      if (!moved) return;
+      positionChallengeHud(element, {
+        left: moveEvent.clientX - offset.x,
+        top: moveEvent.clientY - offset.y
+      });
+    };
+    const finish = finishEvent => {
+      if (handle.hasPointerCapture(finishEvent.pointerId)) handle.releasePointerCapture(finishEvent.pointerId);
+      handle.classList.remove("is-dragging");
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", finish);
+      handle.removeEventListener("pointercancel", finish);
+      if (!moved) return;
+      const position = positionChallengeHud(element, element.getBoundingClientRect());
+      void game.settings.set(MODULE_ID, HUD_POSITION_SETTING, {
+        left: Math.round(position.left),
+        top: Math.round(position.top)
+      });
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", finish);
+    handle.addEventListener("pointercancel", finish);
+  });
+  handle.addEventListener("dblclick", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    void game.settings.set(MODULE_ID, HUD_POSITION_SETTING, {})
+      .then(() => positionChallengeHud(element, defaultChallengeHudPosition()));
+  });
 }
 
 function activeSessionActorIds() {
@@ -680,7 +768,8 @@ class ChallengeHud {
       : carouselStep > previousCarouselStep ? " is-advancing" : " is-reversing";
     const showNpcHealth = isGM || game.settings.get(MODULE_ID, SHOW_NPC_HEALTH_SETTING);
     const showOtherPlayerHealth = isGM || game.settings.get(MODULE_ID, SHOW_OTHER_PLAYER_HEALTH_SETTING);
-    const showInitiativeCarousel = game.settings.get(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_SETTING);
+    const showInitiativeCarousel = game.settings.get(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_SETTING)
+      && (isGM || game.settings.get(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_TO_PLAYERS_SETTING));
     const showEncounterTimer = game.settings.get(MODULE_ID, SHOW_ENCOUNTER_TIMER_SETTING);
     const showTurnTimer = game.settings.get(MODULE_ID, SHOW_TURN_TIMER_SETTING);
     const { encounterStartedAt, turnStartedAt } = combatTiming();
@@ -758,6 +847,7 @@ class ChallengeHud {
       doomAction({ id: "Movement", icon: "fa-person-running" })
     ].join("");
     const doom = `<header class="tovf-challenge-hud-doom-header"><span>${localize("TOVF.ChallengeManager.Doom.Bank")}</span><div class="tovf-challenge-hud-doom-meta"><button type="button" data-hud-action="recalculateDoom" title="${escape(localize("TOVF.ChallengeManager.Doom.Recalculate"))}" aria-label="${escape(localize("TOVF.ChallengeManager.Doom.Recalculate"))}"><i class="fa-solid fa-arrows-rotate" inert></i></button><small>${localize("TOVF.ChallengeManager.Encounter.MaxCR")}: ${escape(formatCR(maxCR))} <i>|</i> ${localize("TOVF.ChallengeManager.Encounter.Adversaries")}: ${activeAdversaryCount}/${adversaryCount}</small></div></header><div class="tovf-challenge-hud-doom-count"><button type="button" data-hud-action="doom" data-amount="-1">&minus;</button><input type="number" min="0" value="${game.settings.get(MODULE_ID, SETTINGS.doom)}" data-hud-doom><button type="button" data-hud-action="doom" data-amount="1">+</button></div><div class="tovf-challenge-hud-doom-actions">${doomActions}</div><label><input type="checkbox" data-hud-doom-announce ${game.settings.get(MODULE_ID, SETTINGS.announceDoom) ? "checked" : ""}> ${localize("TOVF.ChallengeManager.Doom.AnnounceCurrent")}</label>`;
+    const dragHandle = `<button type="button" class="tovf-challenge-hud-toggle tovf-challenge-hud-drag" data-hud-drag title="${escape(localize("TOVF.ChallengeManager.Hud.Move"))}" aria-label="${escape(localize("TOVF.ChallengeManager.Hud.Move"))}"><i class="fa-solid fa-grip-vertical" inert></i></button>`;
     const rulesDrawer = drawer("rules", "fa-book-open", localize("TOVF.ChallengeManager.Rules.Title"), rules, "", localize("TOVF.ChallengeManager.Rules.Short"));
     const controls = isGM
       ? `${partySummary}${drawer("roll", "fa-dice-d20", localize("TOVF.ChallengeManager.Roll.Title"), roll, "", localize("TOVF.ChallengeManager.Roll.Short"))}${rulesDrawer}${drawer("doom", "", localize("TOVF.ChallengeManager.Doom.Bank"), doom, `<b>${game.settings.get(MODULE_ID, SETTINGS.doom)}</b>`)}`
@@ -781,19 +871,12 @@ class ChallengeHud {
     const initiativeCarousel = hasCombatants && showInitiativeCarousel
       ? `<div class="tovf-challenge-hud-initiative${carouselDirection}">${combatants}</div>`
       : "";
-    this.element.innerHTML = `<div class="tovf-challenge-hud-bar"><div class="tovf-challenge-hud-left">${controls}${roundCounter}</div>${initiativeCarousel}</div>`;
+    this.element.innerHTML = `<div class="tovf-challenge-hud-bar"><div class="tovf-challenge-hud-left">${dragHandle}${controls}${roundCounter}</div>${initiativeCarousel}</div>`;
     this.#carouselCombatId = game.combat?.id ?? null;
     this.#carouselStep = hasCombatants ? carouselStep : null;
     this.#carouselOffset = hasCombatants ? carouselOffset : null;
-    const navigation = document.querySelector("#navigation, #scene-navigation");
-    const navigationItems = [...(navigation?.querySelectorAll("button, a, .scene, .scene-view") ?? [])]
-      .map(element => element.getBoundingClientRect())
-      .filter(rect => rect.width > 0 && rect.height > 0 && rect.top < 100 && rect.right < window.innerWidth - 200);
-    const navigationBounds = navigation?.getBoundingClientRect();
-    const navigationRight = navigationItems.length ? Math.max(...navigationItems.map(rect => rect.right)) : Math.min(navigationBounds?.right ?? 64, 220);
-    const navigationTop = navigationItems.length ? Math.min(...navigationItems.map(rect => rect.top)) : navigationBounds?.top ?? 6;
-    this.element.style.left = `${Math.ceil(navigationRight + 8)}px`;
-    this.element.style.top = `${Math.ceil(navigationTop)}px`;
+    positionChallengeHud(this.element, storedChallengeHudPosition() ?? defaultChallengeHudPosition());
+    activateChallengeHudDrag(this.element);
     this.element.onclick = event => void this.#onClick(event);
     this.element.onchange = event => void this.#onChange(event);
     this.element.onkeydown = event => {
@@ -1362,6 +1445,18 @@ export function registerChallengeManager() {
     hint: "TOVF.ChallengeManager.Settings.ShowOtherPlayerHealth.Hint",
     onChange: () => void refreshPanel()
   });
+  game.settings.register(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_TO_PLAYERS_SETTING, {
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: true,
+    name: "TOVF.ChallengeManager.Settings.ShowInitiativeCarouselToPlayers.Name",
+    hint: "TOVF.ChallengeManager.Settings.ShowInitiativeCarouselToPlayers.Hint",
+    onChange: enabled => {
+      if (!game.user.isGM && enabled && game.combat?.started && playerInitiativeCarouselEnabled()) void openPanel();
+      else void refreshPanel();
+    }
+  });
   game.settings.register(MODULE_ID, MAX_INITIATIVE_CARDS_SETTING, {
     scope: "client",
     config: false,
@@ -1371,6 +1466,12 @@ export function registerChallengeManager() {
     name: "TOVF.ChallengeManager.Settings.MaxInitiativeCards.Name",
     hint: "TOVF.ChallengeManager.Settings.MaxInitiativeCards.Hint",
     onChange: () => void refreshPanel()
+  });
+  game.settings.register(MODULE_ID, HUD_POSITION_SETTING, {
+    scope: "client",
+    config: false,
+    type: Object,
+    default: {}
   });
   game.settings.register(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_SETTING, {
     scope: "client",
@@ -1479,8 +1580,8 @@ export function registerChallengeManager() {
     initializedDoomCombatId = null;
     panel?.collapsePartySummary();
     void updateCombatTiming(combat, { encounterStarted: true, turnChanged: true });
-    if (game.settings.get(MODULE_ID, AUTO_OPEN_SETTING)
-      || (!game.user.isGM && game.settings.get(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_SETTING))) void openPanel();
+    if ((game.user.isGM && game.settings.get(MODULE_ID, AUTO_OPEN_SETTING))
+      || (!game.user.isGM && playerInitiativeCarouselEnabled())) void openPanel();
   });
   Hooks.on("deleteCombat", async () => {
     initializedDoomCombatId = null;
@@ -1496,8 +1597,10 @@ export function registerChallengeManager() {
 export function activateChallengeManager() {
   panel ??= game.user.isGM ? new ChallengeHud() : null;
   if (game.user.isGM && game.settings.get(MODULE_ID, AUTO_OPEN_ON_READY_SETTING)) void openPanel();
-  else if ((game.combat?.turns?.length ?? 0) > 0 && (game.settings.get(MODULE_ID, AUTO_OPEN_SETTING)
-    || (!game.user.isGM && game.combat?.started && game.settings.get(MODULE_ID, SHOW_INITIATIVE_CAROUSEL_SETTING)))) void openPanel();
+  else if ((game.combat?.turns?.length ?? 0) > 0 && (
+    (game.user.isGM && game.settings.get(MODULE_ID, AUTO_OPEN_SETTING))
+    || (!game.user.isGM && game.combat?.started && playerInitiativeCarouselEnabled())
+  )) void openPanel();
   game.modules.get(MODULE_ID).api ??= {};
   Object.assign(game.modules.get(MODULE_ID).api, {
     openChallengeManager: openPanel,

@@ -13,14 +13,18 @@ export function isResponsibleGM() {
   return game.user.isGM && responsibleGM()?.id === game.user.id;
 }
 
-export function registerScheduledTask({ id, intervalMs, run, immediate = true }) {
+export function registerScheduledTask({ id, intervalMs, run, immediate = true, isResponsible = isResponsibleGM,
+  authority = "operational-gm" }) {
   if (!id || typeof run !== "function") throw new TypeError("A scheduled task requires an id and run callback.");
+  if (typeof isResponsible !== "function") throw new TypeError("A scheduled task authority must be a function.");
   if (tasks.has(id)) return false;
   tasks.set(id, {
     id,
     intervalMs: Math.max(1000, Number(intervalMs) || 60000),
     run,
     immediate,
+    isResponsible,
+    authority: String(authority),
     running: false,
     nextCheckAt: 0,
     lastStartedAt: 0,
@@ -32,7 +36,7 @@ export function registerScheduledTask({ id, intervalMs, run, immediate = true })
 }
 
 async function executeTask(task, now) {
-  if (task.running || task.nextCheckAt > now) return;
+  if (!task.isResponsible() || task.running || task.nextCheckAt > now) return;
   task.running = true;
   task.lastStartedAt = now;
   // Keep the cadence independent from task duration and failed executions.
@@ -53,17 +57,14 @@ function scheduleNext(delay = null) {
   if (!activated) return;
   clearTimeout(timer);
   const now = Date.now();
-  const wait = delay ?? (isResponsibleGM()
-    ? Math.max(0, Math.min(...[...tasks.values()].map(task => task.nextCheckAt - now)))
+  const responsibleTasks = [...tasks.values()].filter(task => task.isResponsible());
+  const wait = delay ?? (responsibleTasks.length
+    ? Math.max(0, Math.min(...responsibleTasks.map(task => task.nextCheckAt - now)))
     : 30000);
   timer = setTimeout(() => void tick(), Math.max(0, Math.min(wait, 2147483647)));
 }
 
 async function tick() {
-  if (!isResponsibleGM()) {
-    scheduleNext();
-    return;
-  }
   const now = Date.now();
   await Promise.all([...tasks.values()].map(task => executeTask(task, now)));
   scheduleNext();
@@ -84,6 +85,7 @@ export function schedulerReport() {
     responsibleGM: responsibleGM()?.id ?? null,
     tasks: [...tasks.values()].map(task => ({
       id: task.id,
+      authority: task.authority,
       intervalMs: task.intervalMs,
       running: task.running,
       nextCheckAt: task.nextCheckAt,

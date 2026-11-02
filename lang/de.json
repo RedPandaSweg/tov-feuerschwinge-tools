@@ -131,9 +131,73 @@
         "RiderOccupied": "Dieses Reittier hat bereits einen Reiter. Weitere Tokens können nur als Passagiere einsteigen."
       }
     },
+    "Patrol": {
+      "Title": "Patrol Tools",
+      "Open": "Patrol Tools öffnen",
+      "Tokens": "Tokens der Szene",
+      "SelectionHint": "Wähle einzelne oder mehrere Tokens aus. Die Konfiguration rechts wird auf die gesamte Auswahl angewendet.",
+      "UseControlled": "Kontrollierte übernehmen",
+      "SelectActive": "Aktive auswählen",
+      "ClearSelection": "Auswahl leeren",
+      "Selected": "Ausgewählt",
+      "Edit": "Bearbeiten",
+      "Editing": "Bestehende Patrouille wird bearbeitet:",
+      "NoTokens": "Diese Szene enthält keine Tokens.",
+      "Configuration": "Patrouillenkonfiguration",
+      "ConfigurationHint": "Die Konfiguration wird auf alle ausgewählten Tokens angewendet. Über Bearbeiten lädst du eine bestehende Patrouille.",
+      "Mode": "Patrouillenart",
+      "Modes": { "Random": "Zufällig in einer Region", "Route": "Feste Route" },
+      "Region": "Region",
+      "SelectRegion": "Region auswählen",
+      "RegionHint": "Das vollständige Token muss an seinem zufälligen Ziel innerhalb der Region liegen.",
+      "RouteBehavior": "Routenverhalten",
+      "RouteModes": { "Loop": "Endlosschleife", "PingPong": "Hin und zurück", "Random": "Zufälliger Wegpunkt" },
+      "GridSnap": "Wegpunkte auf Rasterfelder setzen",
+      "GridSnapHint": "Verwendet das Rasterfeld, in dem der angeklickte Pixel liegt. Auf gridlosen Szenen bleiben die Positionen pixelgenau.",
+      "RecordRoute": "Route aufzeichnen",
+      "ClearRoute": "Route leeren",
+      "NoWaypoints": "Noch keine Wegpunkte aufgezeichnet.",
+      "Timing": "Bewegung und Pausen",
+      "Speed": "Geschwindigkeit",
+      "SpeedHint": "Rastergrößen pro Sekunde. Der Wert steuert die native Foundry-Bewegungsanimation.",
+      "Pause": "Zufällige Pause",
+      "Seconds": "Sekunden",
+      "Behavior": "Verhalten",
+      "AutoRotate": "In Bewegungsrichtung drehen",
+      "SuspendInCombat": "Im Combat pausieren",
+      "SavePaused": "Konfiguration speichern (gestoppt)",
+      "ApplyStart": "Anwenden und starten",
+      "StopSelected": "Auswahl stoppen",
+      "StopAll": "Alle stoppen",
+      "RemoveSelected": "Auswahl entfernen",
+      "AppliedStarted": "Patrouille für {count} Token(s) gestartet.",
+      "AppliedPaused": "Patrouillenkonfiguration für {count} Token(s) pausiert gespeichert.",
+      "Stopped": "{count} Patrouille(n) gestoppt.",
+      "Removed": "{count} Patrouillenkonfiguration(en) entfernt.",
+      "Status": { "Active": "Aktiv", "Paused": "Pausiert", "None": "Nicht konfiguriert" },
+      "Route": {
+        "Recording": "Setze die Wegpunkte per Linksklick auf der Szene. Enter speichert, Escape verwirft.",
+        "Keys": "Enter: speichern · Esc: abbrechen",
+        "Recorded": "Route mit {count} Wegpunkten aufgezeichnet.",
+        "Cancelled": "Routenaufzeichnung abgebrochen."
+      },
+      "Errors": {
+        "Admin": "Nur ein voller Game Master darf Patrouillen verwalten.",
+        "Selection": "Wähle mindestens einen Token aus.",
+        "Region": "Wähle eine vorhandene Region aus.",
+        "Route": "Zeichne mindestens zwei Routenwegpunkte auf.",
+        "Scene": "Öffne die Szene der Patrouille, bevor du eine Route aufzeichnest.",
+        "Canvas": "Das Foundry-Canvas ist nicht verfügbar.",
+        "NoScene": "Öffne zuerst eine Szene."
+      }
+    },
     "ActorDirectory": {
       "Inactive": "Inaktiv",
-      "InactiveHint": "Dieser Charakter ist in der Charakteraktivität als inaktiv markiert."
+      "InactiveHint": "Dieser Charakter ist in der Charakteraktivität als inaktiv markiert.",
+      "FolderVisibility": {
+        "Label": "Diesen Ordner für Spieler ausblenden",
+        "Hint": "Gilt auch für Unterordner. Actors behalten ihre Berechtigungen und bleiben für Modul-Funktionen lesbar, erscheinen aber nicht in der Actor-Seitenleiste der Spieler."
+      }
     },
     "SceneLoot": {
       "Configure": "Loot konfigurieren",
@@ -764,6 +828,10 @@
           "Name": "Initiative Carousel anzeigen",
           "Hint": "Blendet das Initiative Carousel in diesem Challenge HUD ein oder aus."
         },
+        "ShowInitiativeCarouselToPlayers": {
+          "Name": "Initiative Carousel für Spieler anzeigen",
+          "Hint": "Blendet das Initiative Carousel weltweit für Spieler ein oder aus. Die Anzeige für Spielleitungen bleibt unverändert."
+        },
         "ShowEncounterTimer": {
           "Name": "Encounter-Laufzeit anzeigen",
           "Hint": "Zeigt unter dem Rundencounter die vergangene reale Zeit des Encounters an."
@@ -780,6 +848,7 @@
       },
       "Hud": {
         "Round": "Runde",
+        "Move": "Challenge HUD verschieben · Doppelklick setzt die Position zurück",
         "RollInitiative": "Initiative würfeln",
         "RollNpcInitiative": "Initiative für alle NPCs würfeln",
         "PreviousTurn": "Vorheriger Zug",
@@ -853,6 +922,16 @@
         "Name": "Automatische Tokengröße",
         "Hint": "Passt Grundfläche und Bildskalierung von PC- und NPC-Tokens automatisch an die Kreaturengröße an. Tiny und Small bleiben auf einem Feld und werden optisch verkleinert."
       }
+    },
+    "TokenDistance": {
+      "Label": "⟷ {distance} {units}",
+      "Setting": {
+        "Name": "Token-Distanzanzeige",
+        "Hint": "Zeigt beim Überfahren, für eigene Ziele und beim Halten von Alt die Entfernung zwischen Tokens an. Gilt für alle Benutzer dieser Welt."
+      }
+    },
+    "ModuleConflicts": {
+      "Warning": "Folgende inkompatible Module sind aktiv: {modules}. Prüfe ihre Konfiguration oder deaktiviere sie, um Konflikte mit Feuerschwinge Tools zu vermeiden."
     },
     "SettingsSections": {
       "General": "Allgemein",

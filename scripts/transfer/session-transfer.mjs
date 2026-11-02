@@ -334,6 +334,22 @@ function resolveActorScope(selectedActors, rootId, {
   return { actors: [...actors.values()], folderIds };
 }
 
+function includeTokenPresetActorDependencies(actors) {
+  const included = new Map(actors.map(actor => [actor.id, actor]));
+  const pending = [...included.values()];
+  for (let index = 0; index < pending.length; index++) {
+    const presets = pending[index].getFlag(MODULE_ID, "tokenPresets");
+    if (!Array.isArray(presets)) continue;
+    for (const preset of presets) {
+      const referenced = game.actors.get(String(preset?.actorId ?? ""));
+      if (!referenced || included.has(referenced.id)) continue;
+      included.set(referenced.id, referenced);
+      pending.push(referenced);
+    }
+  }
+  return [...included.values()];
+}
+
 function resolveExportPreviewScope(selectedActors, includeFolders) {
   const actors = new Map(selectedActors.map(actor => [actor.id, actor]));
   if (!includeFolders) return { actors: [...actors.values()], folderIds: new Set() };
@@ -559,11 +575,13 @@ export async function exportSession(actorIds, {
   if (!selection) return;
   const chosenActors = selection.actorIds.map(id => game.actors.get(id)).filter(actor => actor?.type === "pc");
   if (!chosenActors.length) throw new Error(game.i18n.localize("TOVF.Session.Error.NoActors"));
-  const { actors, folderIds } = resolveActorScope(chosenActors, actorRootId, {
+  const scope = resolveActorScope(chosenActors, actorRootId, {
     includeFolders,
     includeFolderActors: includeFolders,
     selectedFolderIds: includeFolders ? selection.folderIds : []
   });
+  const folderIds = scope.folderIds;
+  const actors = includeTokenPresetActorDependencies(scope.actors);
 
   const definitions = foundry.utils.deepClone(game.settings.get(MODULE_ID, WEAPON_SETTING));
   const actorEntries = [];
@@ -731,8 +749,11 @@ async function updateOrCreateActor(entry, replacements, folderMapping = new Map(
 }
 
 async function remapImportedTokenPresetActors(entries, importedRows) {
+  const targetsByTransferId = new Map(game.actors.map(actor => [
+    actor.getFlag(MODULE_ID, TRANSFER_FLAG)?.id,
+    actor
+  ]).filter(([transferId]) => transferId));
   const sourceToTarget = new Map();
-  const targetsByTransferId = new Map(importedRows.map(row => [row.transferId, row.actor]));
   for (const entry of entries) {
     const target = targetsByTransferId.get(entry.transferId);
     if (target && entry.data?._id) sourceToTarget.set(String(entry.data._id), target.id);
@@ -843,7 +864,7 @@ export async function importSession(file) {
     await actor.update({ [`ownership.${user.id}`]: CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER });
     if (!user.character) await user.update({ character: actor.id });
   }
-  await remapImportedTokenPresetActors(entriesToImport, importedRows);
+  await remapImportedTokenPresetActors(bundle.actors, importedRows);
   const importedSceneUuids = isUpdate ? [] : await importSessionScenes(bundle.scenes, importId);
   if (bundle.compendiums && !isUpdate) await importCompendiumBundle(bundle.compendiums, null, { confirm: false });
   const importedActorUuids = game.actors
@@ -1036,6 +1057,43 @@ function managedSessionActors() {
   });
 }
 
+function tokenPresetActorReferences(actors) {
+  const referencedIds = new Set();
+  for (const actor of actors) {
+    const presets = actor.getFlag(MODULE_ID, "tokenPresets");
+    if (!Array.isArray(presets)) continue;
+    for (const preset of presets) {
+      const actorId = String(preset?.actorId ?? "");
+      if (actorId) referencedIds.add(actorId);
+    }
+  }
+  return [...referencedIds].map(actorId => {
+    const actor = game.actors.get(actorId);
+    const transferId = actor?.getFlag(MODULE_ID, TRANSFER_FLAG)?.id;
+    return transferId ? { actorId, transferId } : null;
+  }).filter(Boolean);
+}
+
+function remapSessionResultTokenPresetActors(data, existingActor, references, candidates) {
+  const presets = foundry.utils.getProperty(data, `flags.${MODULE_ID}.tokenPresets`);
+  if (!Array.isArray(presets)) return data;
+  const currentPresets = existingActor?.getFlag(MODULE_ID, "tokenPresets");
+  const existingPresets = new Map((Array.isArray(currentPresets) ? currentPresets : [])
+    .map(preset => [String(preset?.id ?? ""), preset]));
+  const remapped = presets.map(preset => {
+    const actorId = String(preset?.actorId ?? "");
+    if (!actorId) return preset;
+    const target = candidates.get(references.get(actorId));
+    if (target) return { ...preset, actorId: target.id };
+    const existingActorId = String(existingPresets.get(String(preset?.id ?? ""))?.actorId ?? "");
+    return existingActorId && game.actors.has(existingActorId)
+      ? { ...preset, actorId: existingActorId }
+      : preset;
+  });
+  foundry.utils.setProperty(data, `flags.${MODULE_ID}.tokenPresets`, remapped);
+  return data;
+}
+
 export async function exportSessionResult({ deceasedTransferIds = null } = {}) {
   assertGm();
   if (role() !== WORLD_ROLES.SESSION) throw new Error(game.i18n.localize("TOVF.Session.Error.SessionOnly"));
@@ -1061,6 +1119,7 @@ export async function exportSessionResult({ deceasedTransferIds = null } = {}) {
     formatVersion: TRANSFER_FORMAT_VERSION,
     metadata: baseMetadata(),
     actors: entries,
+    actorReferences: tokenPresetActorReferences(actors),
     users: createSessionUserBundle(actors),
     session: active.id ? {
       id: active.id,
@@ -1089,6 +1148,10 @@ export async function importSessionResult(file) {
   const activeSession = game.settings.get(MODULE_ID, SETTINGS.ACTIVE_SESSION) ?? {};
 
   const candidates = new Map(game.actors.map(actor => [actorTransferId(actor), actor]));
+  const actorReferences = new Map((bundle.actorReferences ?? []).map(reference => [
+    String(reference?.actorId ?? ""),
+    String(reference?.transferId ?? "")
+  ]).filter(([actorId, transferId]) => actorId && transferId));
   const rows = [];
   for (const entry of bundle.actors) {
     const actor = candidates.get(entry.transferId);
@@ -1102,7 +1165,12 @@ export async function importSessionResult(file) {
   if (!rows.length) throw new Error(game.i18n.localize("TOVF.Session.Error.NoMatchingActors"));
   const acceptedRows = rows.map(row => ({
     ...row,
-    importedData: normalizeLegacyActiveEffects(foundry.utils.deepClone(row.entry.data))
+    importedData: remapSessionResultTokenPresetActors(
+      normalizeLegacyActiveEffects(foundry.utils.deepClone(row.entry.data)),
+      row.actor,
+      actorReferences,
+      candidates
+    )
   }));
   const importedRows = [];
   const skippedChanges = [];

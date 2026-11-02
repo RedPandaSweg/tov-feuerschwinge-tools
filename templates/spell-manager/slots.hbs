@@ -6,7 +6,8 @@
   <ul class="unlist spell-list news-slots">
     {{#each slots}}
       <li {{#if selected}}class="selected"{{/if}}>
-        <button type="button" class="tovf-slot-choice" data-action="tovfSelectSlot" data-tovf-select-slot="{{@index}}" aria-pressed="{{#if selected}}true{{else}}false{{/if}}">
+        <label class="tovf-slot-choice">
+          <input class="tovf-slot-input" type="radio" name="selected-slot" value="{{@index}}" {{checked selected}}>
           <span class="icon">{{#if spell.img}}<img src="{{spell.img}}" alt="">{{else}}<span class="placeholder">{{number}}</span>{{/if}}</span>
           <span class="name">{{#if spell.name}}{{spell.name}}{{else}}{{localize name}}{{/if}}</span>
           <span class="tovf-spell-circle {{#if mark.replace}}replace{{/if}}">
@@ -16,7 +17,7 @@
               <span class="tovf-circle-star" aria-hidden="true">✦</span><b>{{mark.text}}</b>
             {{/if}}
           </span>
-        </button>
+        </label>
       </li>
     {{/each}}
   </ul>

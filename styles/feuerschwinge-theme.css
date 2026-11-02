@@ -861,9 +861,23 @@
   box-shadow: inset 0 0 8px rgba(0, 0, 0, .3);
 }
 
+.application.tovf-spell-manager-dialog .tovf-slot-input {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .application.tovf-spell-manager-dialog .tovf-slot-choice:is(:hover, :focus-visible) {
   border-color: var(--tovf-color-ember-hot);
   background: rgba(105, 42, 18, .5);
+}
+
+.application.tovf-spell-manager-dialog .tovf-slot-choice:has(.tovf-slot-input:focus-visible) {
+  outline: 2px solid var(--tovf-color-ember-hot);
+  outline-offset: 1px;
 }
 
 .application.tovf-spell-manager-dialog .slots li.selected > .tovf-slot-choice {

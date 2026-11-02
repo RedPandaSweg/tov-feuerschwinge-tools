@@ -657,6 +657,10 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #invest(event, target) {
     const actor = getActiveCrafter();
     if (!actor) return ui.notifications.error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ActorMissing"));
+    if (target.dataset.investmentPending === "true") return;
+    target.dataset.investmentPending = "true";
+    target.disabled = true;
+    target.setAttribute("aria-busy", "true");
     try {
       const input = this.element.querySelector(`[data-downtime-for="${CSS.escape(target.dataset.uuid)}"]`);
       const select = this.element.querySelector(`[data-check-for="${CSS.escape(target.dataset.uuid)}"]`);
@@ -668,6 +672,11 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
       ));
       this.render();
     } catch (error) { ui.notifications.error(error.message); }
+    finally {
+      delete target.dataset.investmentPending;
+      target.removeAttribute("aria-busy");
+      if (target.isConnected) target.disabled = false;
+    }
   }
 
   static async #useProgressItem(event, target) {
@@ -765,11 +774,21 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
   static async #sharedInvest(event, target) {
     const actor = getActiveCrafter();
+    if (!actor) return ui.notifications.error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ActorMissing"));
+    if (target.dataset.investmentPending === "true") return;
+    target.dataset.investmentPending = "true";
+    target.disabled = true;
+    target.setAttribute("aria-busy", "true");
     try {
       const amount = this.element.querySelector(`[data-shared-downtime-for="${CSS.escape(target.dataset.uuid)}"]`)?.value;
       const select = this.element.querySelector(`[data-shared-check-for="${CSS.escape(target.dataset.uuid)}"]`); const [type, key] = String(select?.value ?? "").split(":");
       await sharedProjectAction("invest", { ...sharedPayload(this, target, actor), amount, check: { type, key } }); this.render();
     } catch (error) { ui.notifications.error(error.message); }
+    finally {
+      delete target.dataset.investmentPending;
+      target.removeAttribute("aria-busy");
+      if (target.isConnected) target.disabled = false;
+    }
   }
   static async #sharedUseProgressItem(event, target) {
     const actor = getActiveCrafter();

@@ -133,6 +133,12 @@ export class SharedProjectService {
   static async invest({ stationUuid, projectUuid, actorUuid, amount, check = null }) {
     const { stationActor, station, actor, definition } = await this.#documents(stationUuid, projectUuid, actorUuid);
     if (!actor) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ActorMissing"));
+    return DowntimeService.runInvestment(actor, () => this.#invest({
+      stationActor, station, actor, definition, projectUuid, actorUuid, amount, check
+    }));
+  }
+
+  static async #invest({ stationActor, station, actor, definition, projectUuid, actorUuid, amount, check }) {
     this.#assertEligible(actor, station, definition);
     const states = this.get(stationActor);
     const state = this.#state(states, projectUuid);

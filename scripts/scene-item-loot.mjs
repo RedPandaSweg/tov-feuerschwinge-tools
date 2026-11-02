@@ -469,9 +469,14 @@ function isAdjacentToLoot(token, lootToken) {
     && Math.abs(tokenCenterY - lootCenterY) <= allowedY;
 }
 
-function challengePartyActors() {
+function challengePartyActors(recipient = null) {
   const ids = new Set(game.settings.get(MODULE_ID, PARTY_ACTORS_SETTING) ?? []);
-  return game.actors.filter(actor => actor.type === "pc" && ids.has(actor.id) && actor.getFlag(MODULE_ID, "active") !== false);
+  const party = game.actors.filter(actor => actor.type === "pc" && ids.has(actor.id) && actor.getFlag(MODULE_ID, "active") !== false);
+  if (!party.length || recipient?.type !== "pc" || recipient.getFlag(MODULE_ID, "active") === false) return party;
+  const recipientIndex = party.findIndex(actor => actor.id === recipient.id);
+  if (recipientIndex >= 0) party[recipientIndex] = recipient;
+  else party.push(recipient);
+  return party;
 }
 
 function hasLoot(loot) {
@@ -629,7 +634,7 @@ async function distributeLootCurrency({ lootUuid, actorUuid, tokenUuid }, userId
     if (token?.documentName !== "Token" || token.actor?.uuid !== actor.uuid || !token.actor?.testUserPermission(user, "OWNER")) throw new Error(uiText("TOVF.SceneLoot.Errors.NoCharacter", "W\u00e4hle einen eigenen Token aus, um das Item aufzunehmen."));
     if (!isAdjacentToLoot(token, lootToken)) throw new Error(uiText("TOVF.SceneLoot.Errors.OutOfReach", "Das Item kann nur vom gleichen oder einem angrenzenden Feld aufgenommen werden."));
   }
-  const party = challengePartyActors();
+  const party = challengePartyActors(actor);
   if (!party.length) throw new Error(uiText("TOVF.SceneLoot.Errors.NoParty", "Im Challenge Manager ist keine Party ausgew\u00e4hlt."));
   const shareCurrency = Object.fromEntries(CURRENCY_DENOMINATIONS.map(denomination => [
     denomination,

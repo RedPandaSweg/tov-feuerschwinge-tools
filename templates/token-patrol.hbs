@@ -1,0 +1,136 @@
+<div class="tovf-patrol-layout">
+  <aside class="tovf-patrol-sidebar">
+    <header>
+      <h2>{{localize "TOVF.Patrol.Tokens"}}</h2>
+      <p class="notes">{{localize "TOVF.Patrol.SelectionHint"}}</p>
+      <div class="tovf-patrol-selection-actions">
+        <button type="button" data-action="useControlled"><i class="fa-solid fa-arrow-pointer"></i> {{localize "TOVF.Patrol.UseControlled"}}</button>
+        <button type="button" data-action="selectActive"><i class="fa-solid fa-person-walking"></i> {{localize "TOVF.Patrol.SelectActive"}}</button>
+        <button type="button" data-action="clearSelection"><i class="fa-solid fa-xmark"></i> {{localize "TOVF.Patrol.ClearSelection"}}</button>
+      </div>
+      <strong>{{localize "TOVF.Patrol.Selected"}}: <span data-selection-count>{{selectedCount}}</span></strong>
+    </header>
+
+    <div class="tovf-patrol-token-list">
+      {{#each tokens}}
+        <article class="tovf-patrol-token-row {{#if enabled}}active{{else if configured}}paused{{/if}}">
+          <input type="checkbox" data-token-select="{{id}}" {{checked selected}} aria-label="{{name}}">
+          <img src="{{image}}" alt="">
+          <div class="tovf-patrol-token-summary">
+            <strong>{{name}}</strong>
+            <span>{{status}}{{#if configured}} · {{mode}}{{/if}}</span>
+          </div>
+          {{#if configured}}
+            <button type="button" class="tovf-patrol-edit" data-action="edit" data-token-id="{{id}}" data-tooltip="{{localize 'TOVF.Patrol.Edit'}}" aria-label="{{localize 'TOVF.Patrol.Edit'}}"><i class="fa-solid fa-pen"></i> <span>{{localize "TOVF.Patrol.Edit"}}</span></button>
+          {{/if}}
+        </article>
+      {{else}}
+        <p class="notes">{{localize "TOVF.Patrol.NoTokens"}}</p>
+      {{/each}}
+    </div>
+
+    <footer class="tovf-patrol-bulk-actions">
+      <button type="button" data-action="stopSelected"><i class="fa-solid fa-pause"></i> {{localize "TOVF.Patrol.StopSelected"}}</button>
+      <button type="button" data-action="stopAll"><i class="fa-solid fa-stop"></i> {{localize "TOVF.Patrol.StopAll"}}</button>
+      <button type="button" class="danger" data-action="removeSelected"><i class="fa-solid fa-trash"></i> {{localize "TOVF.Patrol.RemoveSelected"}}</button>
+    </footer>
+  </aside>
+
+  <section class="tovf-patrol-editor">
+    <header>
+      <h2>{{localize "TOVF.Patrol.Configuration"}}</h2>
+      {{#if editingTokenName}}
+        <p class="tovf-patrol-editing"><i class="fa-solid fa-pen"></i> {{localize "TOVF.Patrol.Editing"}} <strong>{{editingTokenName}}</strong></p>
+      {{/if}}
+      <p class="notes">{{localize "TOVF.Patrol.ConfigurationHint"}}</p>
+    </header>
+
+    <div class="tovf-patrol-form-grid tovf-patrol-mode-grid">
+      <div class="form-group">
+        <label>{{localize "TOVF.Patrol.Mode"}}</label>
+        <div class="form-fields">
+          <select name="mode">
+            <option value="random" {{#if draft.randomMode}}selected{{/if}}>{{localize "TOVF.Patrol.Modes.Random"}}</option>
+            <option value="route" {{#if draft.routeModeSelected}}selected{{/if}}>{{localize "TOVF.Patrol.Modes.Route"}}</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group" data-random-region {{#unless draft.randomMode}}hidden{{/unless}}>
+        <label>{{localize "TOVF.Patrol.Region"}}</label>
+        <div class="form-fields">
+          <select name="regionId">
+            <option value="">{{localize "TOVF.Patrol.SelectRegion"}}</option>
+            {{#each regions}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}
+          </select>
+        </div>
+        <p class="hint">{{localize "TOVF.Patrol.RegionHint"}}</p>
+      </div>
+      <div class="form-group" data-route-behavior {{#unless draft.routeModeSelected}}hidden{{/unless}}>
+        <label>{{localize "TOVF.Patrol.RouteBehavior"}}</label>
+        <div class="form-fields">
+          <select name="routeMode">
+            <option value="loop" {{#if draft.loopSelected}}selected{{/if}}>{{localize "TOVF.Patrol.RouteModes.Loop"}}</option>
+            <option value="pingPong" {{#if draft.pingPongSelected}}selected{{/if}}>{{localize "TOVF.Patrol.RouteModes.PingPong"}}</option>
+            <option value="random" {{#if draft.randomRouteSelected}}selected{{/if}}>{{localize "TOVF.Patrol.RouteModes.Random"}}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div data-route-options {{#unless draft.routeModeSelected}}hidden{{/unless}}>
+      <div class="form-group">
+        <label>{{localize "TOVF.Patrol.GridSnap"}}</label>
+        <div class="form-fields"><input type="checkbox" name="snapToGrid" {{checked draft.snapToGrid}}></div>
+        <p class="hint">{{localize "TOVF.Patrol.GridSnapHint"}}</p>
+      </div>
+      <div class="tovf-patrol-route-actions">
+        <button type="button" data-action="recordRoute"><i class="fa-solid fa-route"></i> {{localize "TOVF.Patrol.RecordRoute"}}</button>
+        <button type="button" data-action="clearRoute"><i class="fa-solid fa-eraser"></i> {{localize "TOVF.Patrol.ClearRoute"}}</button>
+      </div>
+      <ol class="tovf-patrol-waypoints">
+        {{#each draft.waypoints}}
+          <li><strong>{{number}}.</strong> X {{x}}, Y {{y}}, Z {{elevation}}</li>
+        {{else}}
+          <li class="empty">{{localize "TOVF.Patrol.NoWaypoints"}}</li>
+        {{/each}}
+      </ol>
+    </div>
+
+    <fieldset>
+      <legend>{{localize "TOVF.Patrol.Timing"}}</legend>
+      <div class="form-group">
+        <label>{{localize "TOVF.Patrol.Speed"}}</label>
+        <div class="form-fields"><input type="number" name="speed" min="0.1" max="20" step="0.1" value="{{draft.speed}}"></div>
+        <p class="hint">{{localize "TOVF.Patrol.SpeedHint"}}</p>
+      </div>
+      <div class="form-group slim-pair">
+        <label>{{localize "TOVF.Patrol.Pause"}}</label>
+        <div class="form-fields tovf-patrol-pause-fields">
+          <input type="number" name="pauseMin" min="0" max="3600" step="0.1" value="{{draft.pauseMin}}">
+          <span>–</span>
+          <input type="number" name="pauseMax" min="0" max="3600" step="0.1" value="{{draft.pauseMax}}">
+          <span>{{localize "TOVF.Patrol.Seconds"}}</span>
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>{{localize "TOVF.Patrol.Behavior"}}</legend>
+      <div class="tovf-patrol-form-grid">
+        <div class="form-group">
+          <label>{{localize "TOVF.Patrol.AutoRotate"}}</label>
+          <div class="form-fields"><input type="checkbox" name="autoRotate" {{checked draft.autoRotate}}></div>
+        </div>
+        <div class="form-group">
+          <label>{{localize "TOVF.Patrol.SuspendInCombat"}}</label>
+          <div class="form-fields"><input type="checkbox" name="suspendInCombat" {{checked draft.suspendInCombat}}></div>
+        </div>
+      </div>
+    </fieldset>
+
+    <footer class="form-footer">
+      <button type="button" data-action="applyPaused"><i class="fa-solid fa-floppy-disk"></i> {{localize "TOVF.Patrol.SavePaused"}}</button>
+      <button type="button" data-action="applyAndStart"><i class="fa-solid fa-play"></i> {{localize "TOVF.Patrol.ApplyStart"}}</button>
+    </footer>
+  </section>
+</div>

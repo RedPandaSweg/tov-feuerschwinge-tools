@@ -1,5 +1,39 @@
 const LEARNING_MODE = "theurge";
+const THEURGE_SOURCES = Object.freeze(["arcane", "divine"]);
 let installed = false;
+
+function installTheurgeSourceSelection() {
+  const Spellcasting = CONFIG.Advancement?.types?.spellcasting?.documentClass;
+  const prototype = Spellcasting?.prototype;
+  const originalSlotSources = prototype?.slotSources;
+  if (typeof originalSlotSources !== "function") return false;
+  if (originalSlotSources.__tovfTheurgeSourceSelection) return true;
+
+  const slotSources = function(levels, slot) {
+    if (this.configuration.spells.mode !== LEARNING_MODE) {
+      return originalSlotSources.call(this, levels, slot);
+    }
+
+    const sources = new Set(THEURGE_SOURCES);
+    if (this.configuration.permissiveSources) return sources;
+
+    const total = this.statsForLevel(levels).get(slot?.type)?.total ?? 0;
+    if (total < sources.size) return sources;
+
+    const numericLevel = Number(levels);
+    const level = Number.isFinite(numericLevel) ? numericLevel : this.relavantLevel(levels);
+    const isFirstLevel = level === this.level.value;
+    const divisor = Math.floor(total / (sources.size + (isFirstLevel ? 1 : 0)));
+    if (divisor < 1 || !Number.isInteger(slot?.number)) return sources;
+
+    const source = THEURGE_SOURCES[Math.floor(slot.number / divisor)];
+    return source ? new Set([source]) : sources;
+  };
+
+  Object.defineProperty(slotSources, "__tovfTheurgeSourceSelection", { value: true });
+  prototype.slotSources = slotSources;
+  return true;
+}
 
 function installTheurgeReplacementFix() {
   const Dialog = globalThis.BlackFlag?.applications?.advancement?.SpellcastingDialog;
@@ -113,6 +147,9 @@ export function installTheurgeSpellcasting() {
   if (typeof spellcastingType?.documentClass?.prototype?.replacesSpellAt !== "function") {
     missing.push("SpellcastingAdvancement.replacesSpellAt");
   }
+  if (typeof spellcastingType?.documentClass?.prototype?.slotSources !== "function") {
+    missing.push("SpellcastingAdvancement.slotSources");
+  }
   if (typeof spellcastingType?.sheetClasses?.config?.prototype?._prepareLearningContext !== "function") {
     missing.push("SpellcastingConfig._prepareLearningContext");
   }
@@ -124,6 +161,7 @@ export function installTheurgeSpellcasting() {
   }
   installed = true;
   installTheurgeLearningMode();
+  installTheurgeSourceSelection();
   installTheurgeReplacementFix();
   return { status: "completed" };
 }

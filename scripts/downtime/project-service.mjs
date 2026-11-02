@@ -124,7 +124,13 @@ export class ProjectService {
     return state;
   }
 
-  static async invest(actor, stationActor, projectUuid, requestedDowntime, check = null) {
+  static invest(actor, stationActor, projectUuid, requestedDowntime, check = null) {
+    return DowntimeService.runInvestment(actor, () =>
+      this.#invest(actor, stationActor, projectUuid, requestedDowntime, check)
+    );
+  }
+
+  static async #invest(actor, stationActor, projectUuid, requestedDowntime, check = null) {
     let station = getStationData(stationActor);
     const { definition } = await this.project(projectUuid, actor, stationActor);
     station = StationEngine.projectConfiguration(station, definition);
