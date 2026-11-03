@@ -743,8 +743,10 @@ async function updateOrCreateActor(entry, replacements, folderMapping = new Map(
     await target.importFromJSON(JSON.stringify(data));
     return { operation: "update", actor: target, transferId: entry.transferId };
   }
-  delete data._id;
-  const actor = await Actor.create(data);
+  const sourceId = String(data._id ?? "");
+  const canRestoreId = /^[A-Za-z0-9]{16}$/.test(sourceId) && !game.actors.has(sourceId);
+  if (!canRestoreId) delete data._id;
+  const actor = await Actor.create(data, { keepId: canRestoreId });
   return { operation: "create", actor, transferId: entry.transferId };
 }
 
@@ -767,6 +769,32 @@ async function remapImportedTokenPresetActors(entries, importedRows) {
     }));
     if (JSON.stringify(remapped) !== JSON.stringify(presets)) {
       await row.actor.setFlag(MODULE_ID, "tokenPresets", remapped);
+    }
+  }
+}
+
+async function remapImportedSummonOrigins(entries) {
+  if (game.system.id !== "black-flag") return;
+  const targetsByTransferId = new Map(game.actors.map(actor => [
+    actor.getFlag(MODULE_ID, TRANSFER_FLAG)?.id,
+    actor
+  ]).filter(([transferId]) => transferId));
+  const sourceToTargetId = new Map(entries.map(entry => {
+    const sourceId = String(entry.data?._id ?? "");
+    const targetId = targetsByTransferId.get(entry.transferId)?.id ?? "";
+    return [sourceId, targetId];
+  }).filter(([sourceId, targetId]) => sourceId && targetId));
+
+  for (const entry of entries) {
+    const actor = targetsByTransferId.get(entry.transferId);
+    if (!actor?.getFlag(game.system.id, "summonedCopy")) continue;
+    const origin = String(actor.getFlag(game.system.id, "summon.origin") ?? "");
+    const match = origin.match(/^Actor\.([^.]+)(\.Item\..+)$/);
+    const targetActorId = sourceToTargetId.get(match?.[1]);
+    if (!targetActorId) continue;
+    const remapped = `Actor.${targetActorId}${match[2]}`;
+    if (remapped !== origin) {
+      await actor.update({ [`flags.${game.system.id}.summon.origin`]: remapped });
     }
   }
 }
@@ -865,6 +893,7 @@ export async function importSession(file) {
     if (!user.character) await user.update({ character: actor.id });
   }
   await remapImportedTokenPresetActors(bundle.actors, importedRows);
+  await remapImportedSummonOrigins(bundle.actors);
   const importedSceneUuids = isUpdate ? [] : await importSessionScenes(bundle.scenes, importId);
   if (bundle.compendiums && !isUpdate) await importCompendiumBundle(bundle.compendiums, null, { confirm: false });
   const importedActorUuids = game.actors
