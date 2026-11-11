@@ -212,6 +212,12 @@
     "Compatibility": {
       "InstallFailed": "Feuerschwinge Tools: Compatibility-Integrationen konnten nicht geladen werden: {integrations}. Andere Modulfunktionen wurden weiter gestartet. Details stehen in der Konsole."
     },
+    "TalentPrerequisites": {
+      "AnyAbility": {
+        "Label": "Beliebiger konfigurierter Attributswert genügt",
+        "Hint": "Wenn Require All aktiviert ist, genügt einer der konfigurierten Attributswerte. Alle übrigen Voraussetzungen bleiben erforderlich."
+      }
+    },
     "Startup": {
       "InstallFailed": "Feuerschwinge Tools: Modulfunktionen konnten nicht gestartet werden: {features}. Andere Funktionen wurden weiter geladen. Details stehen in der Konsole."
     },

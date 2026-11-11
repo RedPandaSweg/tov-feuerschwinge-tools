@@ -17,7 +17,7 @@ const DEFINITIONS = Object.freeze({
     ["customBackground", "./custom-background.mjs?v=3.8.5-custom-background-17", "installCustomBackground"],
     ["characterOptionFilters", "./character-option-filters.mjs?v=3.9.3-character-option-filters-1", "installCharacterOptionFilters"],
     ["classSelectionLayout", "./class-selection-layout.mjs", "installClassSelectionLayout"],
-    ["featureSelectionLayout", "./feature-selection-layout.mjs?v=3.11.4-empty-talent-prerequisites-1", "installFeatureSelectionLayout"],
+    ["featureSelectionLayout", "./feature-selection-layout.mjs?v=3.11.5-talent-prerequisite-groups-1", "installFeatureSelectionLayout"],
     ["spellManager", "./spell-manager.mjs?v=3.11.5-theurge-source-selection-1", "installSpellManager"],
     ["multiLevelDown", "./multi-level-down.mjs", "installMultiLevelDown"],
     ["activeEffectChangesUi", "../active-effect-changes-ui.mjs?v=3.7.8-actor-effect-delete-3", "installActiveEffectChangesUi"],

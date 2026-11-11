@@ -212,6 +212,12 @@
     "Compatibility": {
       "InstallFailed": "Feuerschwinge Tools: Compatibility integrations failed to load: {integrations}. Other module features continued to start. See the console for details."
     },
+    "TalentPrerequisites": {
+      "AnyAbility": {
+        "Label": "Any configured ability score is sufficient",
+        "Hint": "When Require All is enabled, one configured ability score is sufficient. All other prerequisites remain required."
+      }
+    },
     "Startup": {
       "InstallFailed": "Feuerschwinge Tools: Module features failed to start: {features}. Other features continued to load. See the console for details."
     },
