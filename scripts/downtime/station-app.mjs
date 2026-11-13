@@ -105,6 +105,18 @@ function lastResultView(result, actorValueEnabled, actorValueLabel, showRewardSu
 }
 function sharedPayload(app, target, actor) { return { stationUuid: app.stationActor.uuid, projectUuid: target.dataset.uuid, actorUuid: actor.uuid }; }
 
+function progressPerDowntime(station, actor, check, actorValue) {
+  const fixedProgress = Number(station.fixedProgressPerDowntime);
+  if (Number.isFinite(fixedProgress) && fixedProgress > 0) return round(fixedProgress, 6);
+  return StationEngine.calculateProgress({
+    station,
+    downtime: 1,
+    rollRow: { addition: 0, multiplier: 1 },
+    actorValue,
+    actorSources: StationEngine.actorProgressSources(actor, check)
+  }).progress;
+}
+
 const KNOWN_ITEM_TYPES = new Set([
   "ammunition", "armor", "consumable", "container", "currency", "gear",
   "script", "siege", "sundry", "tool", "vehicle", "weapon"
@@ -350,6 +362,15 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
     subtype.addEventListener("change", apply);
     status.addEventListener("change", apply);
     apply({ rebuildSubtypes: true, selectedSubtype: this._catalogState.subtype });
+    for (const select of catalog.querySelectorAll("[data-check-for], [data-shared-check-for]")) {
+      select.addEventListener("change", () => {
+        const rate = select.selectedOptions[0]?.dataset.progressPerDowntime;
+        if (rate === undefined) return;
+        for (const output of select.closest("[data-project-entry]")?.querySelectorAll("[data-progress-per-downtime]") ?? []) {
+          output.textContent = rate;
+        }
+      });
+    }
     if (this._viewState) {
       const view = this._viewState;
       this._viewState = null;
@@ -457,8 +478,18 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
           progress: round(Math.max(0, Number(contribution.progress) || 0), 6)
         } });
       }
+      const actorValue = RewardService.getStationValue(actor, this.stationActor, projectStation);
       const checks = StationEngine.checkDefinitions(
         StationEngine.availableChecks(projectStation, definition)
+      ).map(check => ({
+        ...check,
+        progressPerDowntime: progressPerDowntime(projectStation, actor, check, actorValue)
+      }));
+      const defaultProgressPerDowntime = progressPerDowntime(
+        projectStation,
+        actor,
+        checks[0] ?? null,
+        actorValue
       );
       const checkSelectionRequired = Boolean(projectStation.progressSources?.checkProficiency?.enabled);
       const stationToolOk = hasRequiredTool(actor, station.requiredTool);
@@ -468,7 +499,13 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const projectCurrencyCost = adapter.capabilities.currency
         ? await ResourceService.currencyCost(definition.ingredients ?? [])
         : 0;
-      const displayedGoldCost = round(Number(definition.goldCost ?? 0) + projectCurrencyCost, 4);
+      const quantityState = state && !state.completed ? state : sharedState ?? state;
+      const batchQuantity = Math.max(1, Math.floor(Number(quantityState?.batches) || 1));
+      const showBatchQuantity = Boolean(quantityState && batchQuantity > 1);
+      const displayedGoldCost = round(
+        (Number(definition.goldCost ?? 0) + projectCurrencyCost) * (quantityState ? batchQuantity : 1),
+        4
+      );
       const progress = Number(state?.progress ?? 0);
       const requiredProgress = Number(state?.requiredProgress ?? definition.requiredProgress);
       const maxInvestment = state
@@ -496,6 +533,9 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
         personal: source.personal,
         repeatable: definition.repeatable,
         singleQuantity: Boolean(definition.spellScroll),
+        batchQuantity,
+        showBatchQuantity,
+        progressPerDowntime: defaultProgressPerDowntime,
         knownSpell,
         classification,
         projectStatus,

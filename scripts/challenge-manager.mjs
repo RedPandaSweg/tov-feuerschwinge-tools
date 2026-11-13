@@ -451,6 +451,13 @@ async function createRollRequest({ actorIds, type, key, dc, showAverage = false,
     ui.notifications.warn(game.i18n.localize("TOVF.ChallengeManager.Roll.NoActors"));
     return;
   }
+  const whisper = privateRoll
+    ? game.users
+      .filter(user => user.id === game.user.id || user.isGM || actors.some(actor => (
+        actor.testUserPermission(user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER)
+      )))
+      .map(user => user.id)
+    : [];
   const label = requestLabel(type, key);
   const dcLabel = dc ? ` · DC ${dc}` : "";
   const buttons = actors.map(actor => `
@@ -464,6 +471,7 @@ async function createRollRequest({ actorIds, type, key, dc, showAverage = false,
   `).join("");
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker(),
+    ...(privateRoll ? { whisper } : {}),
     content: `
       <section class="tovf-roll-request-card">
         <h3>${Handlebars.escapeExpression(label)}${dcLabel}</h3>
@@ -727,14 +735,6 @@ class ChallengeHud {
       image.addEventListener("load", classify, { once: true });
       if (image.complete) classify();
     }
-    for (const drawerElement of this.element.querySelectorAll(".tovf-challenge-hud-drawer")) {
-      drawerElement.onpointerleave = () => {
-        const name = drawerElement.querySelector("[data-drawer]")?.dataset.drawer;
-        if (!name || !this.#drawers[name]) return;
-        this.#drawers[name] = false;
-        this.render();
-      };
-    }
     queueMicrotask(() => this.element?.querySelector(".tovf-challenge-hud-initiative .is-active")?.scrollIntoView({ block: "nearest", inline: "center" }));
     return this;
   }
@@ -894,14 +894,6 @@ class ChallengeHud {
       image.addEventListener("load", classify, { once: true });
       if (image.complete) classify();
     }
-    for (const drawerElement of this.element.querySelectorAll(".tovf-challenge-hud-drawer")) {
-      drawerElement.onpointerleave = () => {
-        const name = drawerElement.querySelector("[data-drawer]")?.dataset.drawer;
-        if (!name || !this.#drawers[name]) return;
-        this.#drawers[name] = false;
-        this.render();
-      };
-    }
     return this;
   }
 
@@ -930,7 +922,7 @@ class ChallengeHud {
       const combatant = game.combat?.combatants.get(button.dataset.combatantId);
       const actor = combatant?.actor;
       if (!combatant || !actor || (!game.user.isGM && !actor.testUserPermission(game.user, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER))) return;
-      await game.combat.rollInitiative([combatant.id], { rerollInitiative: false });
+      await actor.configureInitiativeRoll({ event });
       return;
     }
     if (action === "rollNpcInitiative") {

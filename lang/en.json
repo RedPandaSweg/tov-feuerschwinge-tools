@@ -2193,6 +2193,7 @@
       "Paused": "Inactive",
       "Personal": "Personal",
       "Quantity": "Quantity",
+      "ProgressPerDowntime": "progress / downtime",
       "Repeatable": "Repeatable",
       "RequireCompletionCheck": "Require a completion check", "CompletionDC": "Completion DC", "CompletionRetryDowntime": "Downtime per retry", "CompletionCheck": "Completion check", "CompletionRetryCost": "Retry cost", "RollCompletionCheck": "Roll completion check",
       "RollTable": "Project roll result table",

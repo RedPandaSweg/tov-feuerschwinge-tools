@@ -24,7 +24,7 @@ const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   playerUnpause: "./player-unpause.mjs",
   compendiumLibrary: "./compendium-library.mjs?v=3.8.5-item-library-filters-2",
   dnd5eItemImporter: "./dnd5e-item-importer.mjs?v=3.8.0-import-spell-school-1",
-  challengeManager: "./challenge-manager.mjs?v=3.10.1-challenge-hud-2",
+  challengeManager: "./challenge-manager.mjs?v=3.12.2-initiative-carousel-dialog-1",
   linkTools: "./link-tools-config.mjs",
   featurePool: "./feature-pool-integration.mjs",
   tokenSizeSync: "./token-size-sync.mjs",

@@ -2199,6 +2199,7 @@
                                              "Name":  "Name",
                                              "Personal":  "Persönlich",
                                              "Quantity":  "Anzahl",
+                                             "ProgressPerDowntime": "Fortschritt / DT",
                                              "Repeatable":  "Wiederholbar",
                                              "RequireCompletionCheck": "Abschlussprüfung erforderlich", "CompletionDC": "Abschluss-DC", "CompletionRetryDowntime": "Downtime pro erneutem Versuch", "CompletionCheck": "Abschlussprüfung", "CompletionRetryCost": "Kosten des erneuten Versuchs", "RollCompletionCheck": "Abschlussprüfung würfeln",
                                              "RollTable":  "Projekt-Würfelergebnistabelle",

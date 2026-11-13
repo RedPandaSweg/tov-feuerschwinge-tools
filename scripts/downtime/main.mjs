@@ -10,7 +10,7 @@ import {
   MODULE_ID,
   SETTINGS
 } from "./constants.mjs";
-import { StationApp } from "./station-app.mjs?v=3.9.3-project-order-2";
+import { StationApp } from "./station-app.mjs?v=3.12.2-project-progress-rate-1";
 import { StationConfigApp } from "./station-config-app.mjs?v=3.4.2-progress-item-controls-1";
 import { ModuleItemSettingsApp } from "./module-item-settings-app.mjs";
 import { PlayerActorFolderSettingsApp } from "./player-actor-folder-settings-app.mjs";
