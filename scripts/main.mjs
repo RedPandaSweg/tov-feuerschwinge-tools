@@ -36,7 +36,7 @@ const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   settingsCategories: "./settings-categories.mjs",
   help: "./help-config.mjs",
   activityChaining: "./activity-chaining.mjs?v=3.3.1-follow-up-filter-2",
-  compatibility: "./integrations/compatibility-layer.mjs?v=3.11.5-luck-reroll-dsn-1",
+  compatibility: "./integrations/compatibility-layer.mjs?v=3.12.4-temple-sword-1",
   compendiumUsability: "./compendium-usability.mjs",
   chatImagePopouts: "./chat-image-popout.mjs",
   chatMessageDeletion: "./chat-message-deletion.mjs",

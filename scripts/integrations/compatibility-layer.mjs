@@ -5,6 +5,7 @@ const DEFINITIONS = Object.freeze({
     ["mountedTokenDragging", "./mounting-token-drag.mjs?v=3.10.1-mounted-drag-1", "installMountedTokenDragging"],
     ["combatTurnActivities", "./combat-turn-activities.mjs", "installCombatTurnActivities"],
     ["gearCategories", "./gear-categories.mjs", "installGearCategories"],
+    ["templeSwordProficiency", "./temple-sword-proficiency.mjs?v=3.12.4-temple-sword-1", "installTempleSwordProficiency"],
     ["characterCreation", "./character-creation-overrides.mjs?v=3.9.3-subclass-deduplication-1", "installCharacterCreationOverrides"],
     ["weaponOptionActivities", "./weapon-option-activities.mjs?v=3.2.4-tooltip-links-2", "installWeaponOptionActivities"],
     ["activityChaining", "../activity-chaining.mjs?v=3.3.1-follow-up-filter-2", "installActivityChaining"],
