@@ -59,7 +59,7 @@ const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   macroActivity: "./macro-activity.mjs",
   weaponCustomization: "./weapon-customization.mjs",
   weaponEnchantment: "./weapon-enchantment.mjs",
-  mounting: "./mounting.mjs?v=3.10.1-owner-authority-10"
+  mounting: "./mounting.mjs?v=3.12.3-mount-copy-collision-2"
 });
 const DND5E_FEATURE_MODULES = Object.freeze({
   dnd5eBundleExporter: "./import/dnd5e-bundle-exporter.mjs?v=3.8.0-content-bundle-2"
