@@ -36,7 +36,7 @@ import {
 import { MIGRATION_SETTING, migrateIntegratedDowntime } from "./migration.mjs";
 import { openFeuerschwingeSettings } from "../settings-categories.mjs";
 import { createWorldSpellScroll } from "../spell-scrolls.mjs?v=3.7.8-clearance-label-1";
-import { GMToolsApp } from "./gm-tools-app.mjs?v=3.8.0-unresolved-advancement-formulas-1";
+import { GMToolsApp } from "./gm-tools-app.mjs?v=3.12.5-diagnostics-layout-1";
 import { canSynchronizeCompendiumItem, synchronizeCompendiumItem } from "../item-compendium-sync.mjs?v=3.8.5-preferred-source-sync-1";
 import { RaffleApp, configureRaffle } from "./raffle-app.mjs?v=3.8.5-raffle-packages-3";
 import { isRaffle } from "./raffle-service.mjs?v=3.8.5-raffle-packages-2";

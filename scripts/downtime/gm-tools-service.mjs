@@ -13,6 +13,7 @@ import { assignMilestoneEvidence, milestoneEvidence } from "../campaign/mileston
 import { getStationData, round } from "./utils.mjs";
 import { RewardService } from "./reward-service.mjs";
 import { deleteExistingEmbeddedDocuments } from "../core/document-operations.mjs?v=3.7.8-safe-documents-1";
+import { auditActorSpellData } from "../actor-spell-audit.mjs?v=3.12.5-orphan-spell-cache-cleanup-1";
 
 function requireGM() {
   if (!game.user?.isGM) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.GMTools.Errors.GMOnly"));
@@ -711,22 +712,36 @@ export class GMToolsService {
     for (const actor of playerCharacters()) {
       const rawDowntime = actor.getFlag(MODULE_ID, FLAGS.DOWNTIME);
       if (rawDowntime != null && (!Number.isFinite(Number(rawDowntime)) || Number(rawDowntime) < 0)) {
-        problems.push({ actorUuid: actor.uuid, actorName: actor.name, type: "downtime", label: game.i18n.localize("DOWNTIME_MANAGER.GMTools.Diagnostics.InvalidDowntime") });
+        problems.push({ actorUuid: actor.uuid, actorName: actor.name, type: "downtime", repairable: true, label: game.i18n.localize("DOWNTIME_MANAGER.GMTools.Diagnostics.InvalidDowntime") });
       }
       const progress = actor.getFlag(MODULE_ID, FLAGS.SESSION_PROGRESS);
       if (progress != null && (typeof progress !== "object" || Array.isArray(progress))) {
-        problems.push({ actorUuid: actor.uuid, actorName: actor.name, type: "progress", label: game.i18n.localize("DOWNTIME_MANAGER.GMTools.Diagnostics.InvalidProgress") });
+        problems.push({ actorUuid: actor.uuid, actorName: actor.name, type: "progress", repairable: true, label: game.i18n.localize("DOWNTIME_MANAGER.GMTools.Diagnostics.InvalidProgress") });
       }
       for (const project of ProjectService.get(actor)) {
         const projectUuid = project.projectUuid ?? project.recipeUuid;
         const station = project.stationUuid ? await fromUuid(project.stationUuid).catch(() => null) : null;
         const item = projectUuid ? await fromUuid(projectUuid).catch(() => null) : null;
-        if (!station) problems.push({ actorUuid: actor.uuid, actorName: actor.name, stateId: project.id, type: "station", label: game.i18n.format("DOWNTIME_MANAGER.GMTools.Diagnostics.MissingStation", { project: project.projectName ?? projectUuid ?? "?" }) });
-        if (!item) problems.push({ actorUuid: actor.uuid, actorName: actor.name, stateId: project.id, type: "project", label: game.i18n.format("DOWNTIME_MANAGER.GMTools.Diagnostics.MissingProject", { project: project.projectName ?? projectUuid ?? "?" }) });
+        if (!station) problems.push({ actorUuid: actor.uuid, actorName: actor.name, stateId: project.id, type: "station", repairable: false, label: game.i18n.format("DOWNTIME_MANAGER.GMTools.Diagnostics.MissingStation", { project: project.projectName ?? projectUuid ?? "?" }) });
+        if (!item) problems.push({ actorUuid: actor.uuid, actorName: actor.name, stateId: project.id, type: "project", repairable: false, label: game.i18n.format("DOWNTIME_MANAGER.GMTools.Diagnostics.MissingProject", { project: project.projectName ?? projectUuid ?? "?" }) });
+      }
+      const spellAudit = auditActorSpellData(actor.toObject());
+      const orphanedSpells = spellAudit.spells.filter(spell => spell.disposition === "safe-removal-candidate");
+      if (orphanedSpells.length) {
+        problems.push({
+          actorUuid: actor.uuid,
+          actorName: actor.name,
+          type: "orphanSpellCaches",
+          repairable: true,
+          label: game.i18n.format("DOWNTIME_MANAGER.GMTools.Diagnostics.OrphanSpellCaches", {
+            count: orphanedSpells.length,
+            spells: orphanedSpells.map(spell => spell.name).join(", ")
+          })
+        });
       }
     }
     const active = this.activeSession();
-    if (active.status === "awarding") problems.push({ type: "session", label: game.i18n.localize("DOWNTIME_MANAGER.GMTools.Diagnostics.LockedSession") });
+    if (active.status === "awarding") problems.push({ type: "session", repairable: true, label: game.i18n.localize("DOWNTIME_MANAGER.GMTools.Diagnostics.LockedSession") });
     return problems;
   }
 
@@ -747,21 +762,47 @@ export class GMToolsService {
         changes.sessionProgress = progress;
         repair.sessionProgress = foundry.utils.deepClone(DEFAULT_SESSION_PROGRESS);
       }
-      if (Object.keys(changes).length) {
-        snapshots.push({ actorUuid: actor.uuid, before: changes });
-        actorRepairs.push({ actor, repair });
+      const spellAudit = auditActorSpellData(actor.toObject());
+      const orphanSpellItems = spellAudit.safeRemovalIds
+        .map(id => actor.items.get(id))
+        .filter(Boolean);
+      if (Object.keys(changes).length || orphanSpellItems.length) {
+        snapshots.push({
+          actorUuid: actor.uuid,
+          before: changes,
+          items: orphanSpellItems.map(item => item.toObject())
+        });
+        actorRepairs.push({
+          actor,
+          repair,
+          orphanSpellIds: orphanSpellItems.map(item => item.id)
+        });
       }
     }
     const active = this.activeSession();
     const settingBefore = active.status === "awarding" ? active : null;
-    const repaired = actorRepairs.reduce((count, entry) => count + Object.keys(entry.repair).length, 0) + (settingBefore ? 1 : 0);
-    if (!repaired) return 0;
+    const plannedRepairs = actorRepairs.reduce((count, entry) => (
+      count + Object.keys(entry.repair).length + entry.orphanSpellIds.length
+    ), 0) + (settingBefore ? 1 : 0);
+    if (!plannedRepairs) return 0;
     await storeUndo({ kind: "batch", actors: snapshots, settingBefore });
-    for (const { actor, repair } of actorRepairs) {
-      if ("downtime" in repair) await actor.setFlag(MODULE_ID, FLAGS.DOWNTIME, repair.downtime);
-      if ("sessionProgress" in repair) await actor.setFlag(MODULE_ID, FLAGS.SESSION_PROGRESS, repair.sessionProgress);
+    let repaired = 0;
+    for (const { actor, repair, orphanSpellIds } of actorRepairs) {
+      if ("downtime" in repair) {
+        await actor.setFlag(MODULE_ID, FLAGS.DOWNTIME, repair.downtime);
+        repaired += 1;
+      }
+      if ("sessionProgress" in repair) {
+        await actor.setFlag(MODULE_ID, FLAGS.SESSION_PROGRESS, repair.sessionProgress);
+        repaired += 1;
+      }
+      const { deleted } = await deleteExistingEmbeddedDocuments(actor, "Item", orphanSpellIds);
+      repaired += deleted.length;
     }
-    if (settingBefore) await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, { ...active, status: "draft", lockId: null });
+    if (settingBefore) {
+      await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, { ...active, status: "draft", lockId: null });
+      repaired += 1;
+    }
     return repaired;
   }
 
@@ -808,6 +849,8 @@ export class GMToolsService {
           if (entry.before.active == null) await actor.unsetFlag(MODULE_ID, FLAGS.ACTIVE);
           else await actor.setFlag(MODULE_ID, FLAGS.ACTIVE, entry.before.active);
         }
+        const missingItems = (entry.items ?? []).filter(item => !actor.items.has(item._id));
+        if (missingItems.length) await actor.createEmbeddedDocuments("Item", missingItems, { keepId: true });
       }
       if (snapshot.settingBefore) await game.settings.set(MODULE_ID, SETTINGS.ACTIVE_SESSION, snapshot.settingBefore);
     } else if (snapshot.kind === "flags") {

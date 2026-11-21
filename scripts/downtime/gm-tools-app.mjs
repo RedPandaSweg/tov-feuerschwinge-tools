@@ -8,7 +8,7 @@ import { sessionTransferDiagnostics } from "../transfer/session-transfer.mjs";
 import { DowntimeDashboardApp } from "./dashboard-app.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
 import { evidenceKey, milestoneEvidence } from "../campaign/milestone-evidence.mjs";
-import { GMToolsService } from "./gm-tools-service.mjs?v=3.8.0-unresolved-advancement-formulas-1";
+import { GMToolsService } from "./gm-tools-service.mjs?v=3.12.5-orphan-spell-cache-cleanup-1";
 import { isActiveCharacter, milestoneEntries, actorLevel, highestMilestoneProgress, isoWeekKey, levelFromMilestones, milestoneLevelForActor, monthKey, passiveDowntimeConfig, SessionService, sessionProgress, TIER_CAP_LEVELS, tierCapLevel, tierOfPlay } from "./session-service.mjs";
 import { openVoidTaintConfig } from "../void-taint/config-app.mjs";
 import { applyActorSpellMigration, previewActorSpellMigration } from "../spell-actor-migration.mjs?v=3.5.0-actor-spell-migration-10";
@@ -209,6 +209,8 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     const selected = this.actorUuid ? await GMToolsService.characterData(this.actorUuid) : null;
     const diagnostics = this.tab === "diagnostics" ? await GMToolsService.diagnostics() : [];
+    const safeDiagnostics = diagnostics.filter(problem => problem.repairable);
+    const reviewDiagnostics = diagnostics.filter(problem => !problem.repairable);
     const legacyEffectFormulas = this.tab === "diagnostics" ? GMToolsService.legacyEffectFormulaSummary() : null;
     const expiredTemporaryEffects = this.tab === "diagnostics" ? GMToolsService.expiredTemporaryEffectSummary() : null;
     const effectCleanup = expiredTemporaryEffects ? {
@@ -453,6 +455,8 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
       },
       milestoneMismatches,
       diagnostics,
+      safeDiagnostics,
+      reviewDiagnostics,
       legacyEffectFormulas,
       expiredTemporaryEffects,
       effectCleanup,
@@ -468,7 +472,8 @@ export class GMToolsApp extends HandlebarsApplicationMixin(ApplicationV2) {
         value: voidTaintValue(actor),
         threshold: voidTaintThreshold(actor)
       })) : [],
-      hasDiagnostics: diagnostics.length > 0,
+      hasDiagnostics: safeDiagnostics.length > 0,
+      hasManualDiagnostics: reviewDiagnostics.length > 0 || Boolean(legacyEffectFormulas?.actors),
       database,
       undo: undo.kind && undoTab === this.tab ? {
         available: true,

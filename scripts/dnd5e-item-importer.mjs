@@ -141,15 +141,43 @@ function sourceRarity(source) {
 }
 
 const DND_SPELL_SCHOOLS = Object.freeze({
-  abj: "abjuration", con: "conjuration", div: "divination", enc: "enchantment",
-  evo: "evocation", ill: "illusion", nec: "necromancy", trs: "transmutation"
+  abj: "abjuration", abjuration: "abjuration", schoolofabjuration: "abjuration",
+  con: "conjuration", conjuration: "conjuration", schoolofconjuration: "conjuration",
+  div: "divination", divination: "divination", schoolofdivination: "divination",
+  enc: "enchantment", enchantment: "enchantment", schoolofenchantment: "enchantment",
+  evo: "evocation", evocation: "evocation", schoolofevocation: "evocation",
+  ill: "illusion", illusion: "illusion", schoolofillusion: "illusion",
+  nec: "necromancy", necromancy: "necromancy", schoolofnecromancy: "necromancy",
+  trs: "transmutation", transmutation: "transmutation", schooloftransmutation: "transmutation"
 });
 
+function spellFieldValue(value) {
+  if (!value || typeof value !== "object") return value;
+  return value.value ?? value.id ?? value.key ?? value.fullKey ?? value.name ?? value.label ?? "";
+}
+
+function sourceSpellCircle(source) {
+  const system = source?.system ?? {};
+  const candidates = [system.level, system.circle?.base, system.circle?.value];
+  for (const candidate of candidates) {
+    const raw = spellFieldValue(candidate);
+    if (raw === null || raw === undefined || String(raw).trim() === "") continue;
+    const text = String(raw).trim().toLocaleLowerCase("en");
+    const circle = text === "cantrip" ? 0 : Number(text.match(/^\d+/)?.[0] ?? raw);
+    if (Number.isInteger(circle) && circle >= 0 && circle <= 9) return circle;
+  }
+  console.warn(`${MODULE_ID} | Could not determine D&D5e spell circle for "${source?.name ?? "Unknown Spell"}".`);
+  return 0;
+}
+
 function sourceSpellSchool(source) {
-  const raw = String(scalarValue(source?.system?.school, "")).trim().toLocaleLowerCase();
-  const school = DND_SPELL_SCHOOLS[raw] ?? raw;
-  // Do not write an ID which the active Black Flag installation does not know.
-  return CONFIG.BlackFlag?.spellSchools?.[school] ? school : "";
+  const raw = spellFieldValue(source?.system?.school);
+  const key = String(raw ?? "").trim().toLocaleLowerCase("en").replace(/[^a-z]/g, "");
+  const school = DND_SPELL_SCHOOLS[key] ?? "";
+  if (!school) {
+    console.warn(`${MODULE_ID} | Could not map D&D5e spell school "${String(raw ?? "")}" for "${source?.name ?? "Unknown Spell"}".`);
+  }
+  return school;
 }
 
 function sourceData(source) {
@@ -197,8 +225,7 @@ async function convertItem(source, sourcePack, { assetImporter = null, folder = 
     }
   };
   if (source.type === "spell") {
-    const level = scalarValue(sourceSystem.level, 0);
-    data.system.circle = { value: Number.isFinite(Number(level)) ? Number(level) : 0 };
+    data.system.circle = { value: null, base: sourceSpellCircle(source) };
     const school = sourceSpellSchool(source);
     if (school) data.system.school = school;
   }

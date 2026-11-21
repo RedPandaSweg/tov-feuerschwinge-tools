@@ -1,13 +1,6 @@
-const PATCH_FLAG = "__tovfSpellManager";
-const EXCLUDED_SPELL_PACKS = new Set([
-  "koboldpressogl-bf.koboldpressspells"
-]);
+import { isPlayerSelectableSpellAsync } from "../core/spell-source-policy.mjs";
 
-function isExcludedSpell(spell) {
-  if (EXCLUDED_SPELL_PACKS.has(spell?.pack)) return true;
-  const uuid = String(spell?.uuid ?? "");
-  return [...EXCLUDED_SPELL_PACKS].some(pack => uuid.startsWith(`Compendium.${pack}.`));
-}
+const PATCH_FLAG = "__tovfSpellManager";
 
 function spellCircle(spell) {
   return Number(spell?.system?.circle?.base ?? 0);
@@ -153,7 +146,11 @@ export function installSpellManager() {
     const context = await originalPrepareContext.call(this, options);
     const state = stateFor(this);
     const search = state.search.trim().toLocaleLowerCase(game.i18n.lang);
-    const spells = (context.spells ?? []).filter(spell => !isExcludedSpell(spell));
+    const selectable = await Promise.all((context.spells ?? []).map(async spell => ({
+      spell,
+      allowed: await isPlayerSelectableSpellAsync(spell)
+    })));
+    const spells = selectable.filter(entry => entry.allowed).map(entry => entry.spell);
     const availableCircles = [...new Set(spells.map(spell => spellCircle(spell)))]
       .sort((left, right) => left - right);
     if (state.circle !== "all" && !availableCircles.some(circle => String(circle) === state.circle)) {
