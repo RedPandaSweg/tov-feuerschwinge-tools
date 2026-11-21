@@ -3988,6 +3988,10 @@
   gap: .45rem;
 }
 
+.tovf-creature-builder-root > .hint {
+  margin: 0;
+}
+
 .tovf-creature-builder-options {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(13rem, .65fr);

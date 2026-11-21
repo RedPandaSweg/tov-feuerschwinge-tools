@@ -397,8 +397,7 @@
         "Label": "Open Creature Builder",
         "Hint": "Creates a complete Black Flag Actor with actions, features, and spells from structured Creature JSON."
       },
-      "Intro": "Paste Creature JSON or load a JSON file.",
-      "CreatorInstructions": "Creature Creator is provided as a ChatGPT plugin. Download the ZIP file and install it in ChatGPT; the previous custom GPT is no longer used.",
+      "Intro": "Creature Creator is provided as a ChatGPT plugin. Download the ZIP file and install it in ChatGPT. You can then paste the generated Creature JSON here or load it from a file.",
       "CreatorLink": "Download the Feuerschwingen Creature Creator plugin (.zip)",
       "Source": "Creature JSON",
       "File": "JSON file",

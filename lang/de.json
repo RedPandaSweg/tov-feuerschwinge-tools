@@ -397,8 +397,7 @@
         "Label": "Creature Builder öffnen",
         "Hint": "Erstellt aus einem strukturierten Kreaturen-JSON einen vollständigen Black-Flag-Actor mit Aktionen, Merkmalen und Zaubern."
       },
-      "Intro": "Füge ein Kreaturen-JSON ein oder lade eine JSON-Datei.",
-      "CreatorInstructions": "Der Creature Creator wird als ChatGPT-Plugin bereitgestellt. Lade die ZIP-Datei herunter und installiere sie in ChatGPT; das bisherige Custom GPT wird nicht mehr verwendet.",
+      "Intro": "Der Creature Creator wird als ChatGPT-Plugin bereitgestellt. Lade die ZIP-Datei herunter und installiere sie in ChatGPT. Das dort erzeugte Kreaturen-JSON kannst du anschließend hier einfügen oder als Datei laden.",
       "CreatorLink": "Feuerschwingen Creature Creator Plugin herunterladen (.zip)",
       "Source": "Kreaturen-JSON",
       "File": "JSON-Datei",
