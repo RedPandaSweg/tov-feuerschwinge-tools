@@ -45,6 +45,8 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
       removeStationTool: StationConfigApp.#removeStationTool,
       removeProgressItem: StationConfigApp.#removeProgressItem,
       saveProgressItem: StationConfigApp.#saveProgressItem,
+      removePaymentItem: StationConfigApp.#removePaymentItem,
+      savePaymentItem: StationConfigApp.#savePaymentItem,
       openRecipe: StationConfigApp.#openRecipe,
       removeRecipe: StationConfigApp.#removeRecipe,
       removeStation: StationConfigApp.#removeStation,
@@ -126,6 +128,10 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
       const document = await fromUuid(entry.uuid).catch(() => null);
       return { ...entry, name: entry.name || document?.name || entry.uuid, img: entry.img || document?.img || "icons/svg/item-bag.svg" };
     }));
+    const paymentItems = await Promise.all(station.paymentItems.map(async entry => {
+      const document = await fromUuid(entry.uuid).catch(() => null);
+      return { ...entry, name: entry.name || document?.name || entry.uuid, img: entry.img || document?.img || "icons/svg/item-bag.svg" };
+    }));
     return {
       actorName: this.actor.name,
       actorUuid: this.actor.uuid,
@@ -136,6 +142,7 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
       checkGroups,
       tool,
       progressItems,
+      paymentItems,
       exampleSources: StationEngine.actorProgressSources(exampleActor, exampleCheck),
       formulaExampleLabel: exampleActor
         ? game.i18n.format("DOWNTIME_MANAGER.Station.FormulaExampleActor", { actor: exampleActor.name })
@@ -159,6 +166,7 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
     this.#bindDrop(".project-drop-zone", event => this.#dropProject(event));
     this.#bindDrop(".tool-drop-zone", event => this.#dropTool(event));
     this.#bindDrop(".progress-item-drop-zone", event => this.#dropProgressItem(event));
+    this.#bindDrop(".payment-item-drop-zone", event => this.#dropPaymentItem(event));
     this.element.querySelector('[name="actorValue.enabled"]')
       ?.addEventListener("change", event => {
         const options = this.element.querySelector("[data-actor-value-options]");
@@ -284,6 +292,10 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
       ...entry,
       progress: Math.max(0.000001, numberOr(value(`progressItems.${index}.progress`), 1))
     }));
+    station.paymentItems = station.paymentItems.map((entry, index) => ({
+      ...entry,
+      goldValue: Math.max(0.000001, numberOr(value(`paymentItems.${index}.goldValue`), 1))
+    }));
     station.rollInterval = Math.max(0.000001, numberOr(value("rollInterval"), 1));
     station.evaluationMode = value("evaluationMode") === "natural" ? "natural" : "total";
     station.allowedChecks = Array.from(
@@ -395,6 +407,17 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
     });
   }
 
+  async #dropPaymentItem(event) {
+    event.preventDefault();
+    const data = foundry.applications.ux.TextEditor.implementation.getDragEventData(event);
+    const item = data.type === "Item" ? await Item.implementation.fromDropData(data) : null;
+    if (!item?.uuid) return ui.notifications.warn(game.i18n.localize("DOWNTIME_MANAGER.Errors.DropItem"));
+    await this.#persistDraft(station => {
+      if (station.paymentItems.some(entry => entry.uuid === item.uuid)) return;
+      station.paymentItems.push({ uuid: item.uuid, name: item.name, img: item.img, identifier: itemIdentifier(item), goldValue: 1 });
+    });
+  }
+
   static async #createRecipe() {
     try {
       await createRecipeFromBaseItem("", { onCreate: recipe => this.#persistDraft(station => {
@@ -446,6 +469,16 @@ export class StationConfigApp extends HandlebarsApplicationMixin(ApplicationV2) 
   }
 
   static async #saveProgressItem(event, target) {
+    event.preventDefault();
+    await this.#persistDraft(() => {});
+    ui.notifications.info(game.i18n.localize("DOWNTIME_MANAGER.Notifications.StationSaved"));
+  }
+
+  static async #removePaymentItem(event, target) {
+    await this.#persistDraft(station => station.paymentItems.splice(Number(target.dataset.index), 1));
+  }
+
+  static async #savePaymentItem(event) {
     event.preventDefault();
     await this.#persistDraft(() => {});
     ui.notifications.info(game.i18n.localize("DOWNTIME_MANAGER.Notifications.StationSaved"));

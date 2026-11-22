@@ -1,10 +1,10 @@
 import { assertCraftingAccess } from "./crafting-access.mjs";
 import { FLAGS, MODULE_ID } from "./constants.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
-import { GoldService } from "./gold-service.mjs";
+import { PaymentService } from "./payment-service.mjs";
 import { ResourceService } from "./resource-service.mjs";
 import { RewardService } from "./reward-service.mjs";
-import { StationEngine } from "./station-engine.mjs";
+import { StationEngine } from "./station-engine.mjs?v=3.13.0-investment-cap-1";
 import { actorKnowsSpell, categoriesMatch, getStationData, recipeData, round, spellScrollRecipeData, spellScrollScribingRecipeData, toolRequirementStatus } from "./utils.mjs?v=3.4.2-requirement-feedback-1";
 import { getSystemAdapter } from "./system-adapter.mjs";
 
@@ -49,7 +49,7 @@ export class ProjectService {
     return { item, definition };
   }
 
-  static async start(actor, stationActor, projectUuid, batchQuantity = 1) {
+  static async start(actor, stationActor, projectUuid, batchQuantity = 1, paymentItems = []) {
     const { item, definition } = await this.project(projectUuid, actor, stationActor);
     const station = getStationData(stationActor);
     if (!station.enabled) {
@@ -92,14 +92,20 @@ export class ProjectService {
     if (!(definition.rewards ?? []).length && !(definition.characterRewards ?? []).length) {
       throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.RewardRequired"));
     }
-    if (!(await ResourceService.has(actor, definition.ingredients ?? [], batches))) {
+    const itemCosts = await ResourceService.itemCosts(definition.ingredients ?? []);
+    if (!(await ResourceService.has(actor, itemCosts, batches))) {
       throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ResourcesMissing"));
     }
-    const startGold = round(Number(definition.goldCost ?? 0) * batches, 6);
-    if (getSystemAdapter().capabilities.currency && startGold > 0 && !(await GoldService.spendGold(actor, startGold))) {
+    const currencyCost = getSystemAdapter().capabilities.currency
+      ? await ResourceService.currencyCost(definition.ingredients ?? [], batches)
+      : 0;
+    const startGold = round(Number(definition.goldCost ?? 0) * batches + currencyCost, 6);
+    if (getSystemAdapter().capabilities.currency && startGold > 0 && !(await PaymentService.spend(
+      actor, station, startGold, paymentItems, { reservedCosts: itemCosts, multiplier: batches }
+    ))) {
       throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.GoldMissing"));
     }
-    if (!(await ResourceService.spend(actor, definition.ingredients ?? [], batches))) {
+    if (!(await ResourceService.spend(actor, itemCosts, batches))) {
       throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ResourcesMissing"));
     }
 
@@ -157,13 +163,20 @@ export class ProjectService {
     if (state.pendingRoll) {
       throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.RollRequired"));
     }
-    const maximum = StationEngine.maxInvestment(station, state, DowntimeService.get(actor));
+    if (station.progressSources?.checkProficiency?.enabled) {
+      this.#validateCheck(station, definition, check);
+    }
+    const progressRate = StationEngine.calculateProgress({
+      station,
+      downtime: 1,
+      rollRow: { addition: 0, multiplier: 1 },
+      actorValue: RewardService.getStationValue(actor, stationActor, station),
+      actorSources: StationEngine.actorProgressSources(actor, check)
+    }).progress;
+    const maximum = StationEngine.maxInvestment(station, state, DowntimeService.get(actor), progressRate);
     const requested = Number(requestedDowntime);
     if (!Number.isFinite(requested) || requested <= 0 || requested > maximum + 1e-9) {
       throw new Error(game.i18n.format("DOWNTIME_MANAGER.Errors.InvalidDowntime", { maximum }));
-    }
-    if (station.progressSources?.checkProficiency?.enabled) {
-      this.#validateCheck(station, definition, check);
     }
     if (!(await DowntimeService.spend(actor, requested))) {
       throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.DowntimeMissing"));

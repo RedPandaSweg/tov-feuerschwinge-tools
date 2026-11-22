@@ -2090,6 +2090,14 @@
                              "Currency":  {
                                               "GP":  "gp"
                                           },
+                             "Payment":  {
+                                             "Title": "Projektkosten bezahlen",
+                                             "Cost": "Projektkosten: {cost} gp. Wähle, wie viele Ersatz-Items du verwenden möchtest.",
+                                             "ValueAvailable": "je {value} gp · {available} verfügbar",
+                                             "Summary": "Ersatz-Items: {items} gp · Gold: {gold} gp",
+                                             "Overpayment": "Die gewählten Items übersteigen die Kosten um {amount} gp. Es gibt kein Wechselgeld.",
+                                             "PayAndStart": "Bezahlen und starten"
+                                         },
                              "Catalog": {
                                             "Entries": "Projekte",
                                             "Search": "Projekte durchsuchen",
@@ -2314,6 +2322,11 @@
                                              "ProgressItems":  "Fortschritts-Items",
                                              "ProgressItemsHint":  "Lege Items ab und bestimme den festen Fortschritt pro verbrauchtem Item. Dieser Fortschritt ignoriert Würfe und Modifikatoren.",
                                              "DropProgressItem":  "Item, das in Fortschritt umgewandelt werden kann, hier ablegen",
+                                             "PaymentItems": "Goldersatz-Items",
+                                             "PaymentItemsHint": "Diese Items können bei allen Projekten dieser Station den Goldanteil vollständig oder gemeinsam mit Gold bezahlen. Lege den gp-Wert eines Items fest.",
+                                             "DropPaymentItem": "Item, das Gold ersetzen kann, hier ablegen",
+                                             "NoPaymentItems": "Keine Goldersatz-Items konfiguriert.",
+                                             "GoldValue": "gp pro Item",
                                              "FlatProgress":  "Fester Fortschritt",
                                              "ProgressSource":  "Quelle",
                                              "SourceValue":  "Wert / verwenden",
@@ -2433,6 +2446,9 @@
                                             "DowntimeMissing":  "Es ist nicht genügend Downtime verfügbar.",
                                             "DropItem":  "Lege einen gültigen Gegenstand ab.",
                                             "GoldMissing":  "Für die Startkosten ist nicht genügend Gold verfügbar.",
+                                            "InvalidPayment": "Die gewählte Projektzahlung ist ungültig.",
+                                            "PaymentItemUnavailable": "Ein gewähltes Goldersatz-Item ist für diese Station nicht konfiguriert.",
+                                            "PaymentItemMissing": "Der Charakter besitzt nicht genügend der gewählten Goldersatz-Items.",
                                             "StationDisabled": "Diese Downtime-Station ist deaktiviert.",
                                             "StationToolMissing": "Das für diese Station erforderliche Werkzeug fehlt oder wird nicht beherrscht.",
                                             "ToolProficiencyMissing": "Die erforderliche Proficiency fehlt: {tools}.",

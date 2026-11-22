@@ -197,6 +197,15 @@ export function getStationData(actor) {
       identifier: String(entry.identifier ?? ""),
       progress: Math.max(0.000001, Number(entry.progress) || 1)
     }));
+  data.paymentItems = (Array.isArray(stored.paymentItems) ? stored.paymentItems : [])
+    .filter(entry => entry?.uuid)
+    .map(entry => ({
+      uuid: String(entry.uuid),
+      name: String(entry.name ?? ""),
+      img: String(entry.img ?? ""),
+      identifier: String(entry.identifier ?? ""),
+      goldValue: Math.max(0.000001, Number(entry.goldValue) || 1)
+    }));
   data.modifiers = Array.isArray(stored.modifiers) ? stored.modifiers : [];
   data.progressSources = foundry.utils.mergeObject(
     foundry.utils.deepClone(DEFAULT_STATION_CONFIG.progressSources),

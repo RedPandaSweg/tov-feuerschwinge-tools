@@ -12,7 +12,8 @@ const DEFINITIONS = Object.freeze({
     ["toolAbility", "./tool-ability.mjs", "installToolAbilitySelection"],
     ["toolProficiencyRemoval", "./tool-proficiency-removal.mjs", "installToolProficiencyRemoval"],
     ["spellLearningPersistence", "./spell-learning-persistence.mjs", "installSpellLearningPersistence"],
-    ["theurgeSpellcasting", "./theurge-spellcasting.mjs?v=3.11.5-theurge-sources-1", "installTheurgeSpellcasting"]
+    ["theurgeSpellcasting", "./theurge-spellcasting.mjs?v=3.11.5-theurge-sources-1", "installTheurgeSpellcasting"],
+    ["wyrdPactProgression", "./wyrd-pact-progression.mjs?v=3.12.6-wyrd-pact-progression-2", "installWyrdPactProgression"]
   ],
   documentUi: [
     ["customBackground", "./custom-background.mjs?v=3.8.5-custom-background-17", "installCustomBackground"],

@@ -206,7 +206,7 @@ export class StationEngine {
     };
   }
 
-  static maxInvestment(station, state, availableDowntime) {
+  static maxInvestment(station, state, availableDowntime, progressPerDowntime = null) {
     if (state.pendingRoll) return 0;
     const fixedProgress = Number(station.fixedProgressPerDowntime);
     if (Number.isFinite(fixedProgress) && fixedProgress > 0) {
@@ -215,7 +215,13 @@ export class StationEngine {
     }
     const interval = Math.max(EPSILON, Number(station.rollInterval) || 1);
     const missing = Math.max(0, interval - Number(state.intervalProgress ?? 0));
-    return round(Math.min(missing, Math.max(0, Number(availableDowntime) || 0)), 6);
+    let maximum = Math.min(missing, Math.max(0, Number(availableDowntime) || 0));
+    const rate = Number(progressPerDowntime);
+    if (Number.isFinite(rate) && rate > 0) {
+      const remainingProgress = Math.max(0, Number(state.requiredProgress) - Number(state.progress ?? 0));
+      maximum = Math.min(maximum, remainingProgress / rate);
+    }
+    return round(maximum, 6);
   }
 
   static calculateRewardQuantity(baseQuantity, rollRow, batches = 1) {

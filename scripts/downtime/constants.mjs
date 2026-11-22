@@ -354,6 +354,7 @@ export const DEFAULT_STATION_CONFIG = Object.freeze({
   evaluationMode: "total",
   requiredTool: null,
   progressItems: [],
+  paymentItems: [],
   spellScrollRecipes: false,
   spellScrollScribing: false,
   recipes: [],

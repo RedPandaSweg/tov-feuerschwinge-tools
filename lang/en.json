@@ -2089,6 +2089,14 @@
       "StationModifierHelp": "Fixed progress addition configured in General."
     },
     "Currency": { "GP": "gp" },
+    "Payment": {
+      "Title": "Pay project cost",
+      "Cost": "Project cost: {cost} gp. Choose how many replacement items you want to use.",
+      "ValueAvailable": "{value} gp each · {available} available",
+      "Summary": "Replacement items: {items} gp · gold: {gold} gp",
+      "Overpayment": "The selected items exceed the cost by {amount} gp. No change is returned.",
+      "PayAndStart": "Pay and start"
+    },
     "Catalog": {
       "Entries": "projects",
       "Search": "Search projects",
@@ -2304,6 +2312,11 @@
       "ProgressItems": "Progress items",
       "ProgressItemsHint": "Drop items here and define the flat progress granted per consumed item. This progress ignores rolls and modifiers.",
       "DropProgressItem": "Drop an item that can be converted into progress here",
+      "PaymentItems": "Gold replacement items",
+      "PaymentItemsHint": "These items can pay the gold portion of every project at this station, either completely or together with gold. Set the gp value of one item.",
+      "DropPaymentItem": "Drop an item that can replace gold here",
+      "NoPaymentItems": "No gold replacement items configured.",
+      "GoldValue": "gp per item",
       "FlatProgress": "Flat progress",
       "ProgressSource": "Source",
       "SourceValue": "Value / use",
@@ -2415,6 +2428,9 @@
       "DefaultCostItemInvalid": "The configured default required item could not be loaded.",
       "DefaultCostItemMissing": "No default required item is configured in the module settings.",
       "GoldMissing": "Not enough gold is available for the start cost.",
+      "InvalidPayment": "The selected project payment is invalid.",
+      "PaymentItemUnavailable": "A selected gold replacement item is not configured for this station.",
+      "PaymentItemMissing": "The character does not have enough of the selected gold replacement items.",
       "StationDisabled": "This downtime station is disabled.",
       "StationToolMissing": "The tool required by this station is missing or not proficient.",
       "ToolProficiencyMissing": "Required Proficiency is missing: {tools}.",

@@ -28,6 +28,15 @@
     </fieldset>
   </details>
 
+  {{#if capabilities.currency}}<details class="sc-config-section" data-section="payment-items">
+    <summary>{{localize "DOWNTIME_MANAGER.Station.PaymentItems"}}</summary>
+    <fieldset>
+      <p class="notes">{{localize "DOWNTIME_MANAGER.Station.PaymentItemsHint"}}</p>
+      <div class="payment-item-drop-zone item-drop-zone">{{localize "DOWNTIME_MANAGER.Station.DropPaymentItem"}}</div>
+      <div class="sc-list">{{#each paymentItems}}<div class="sc-row sc-payment-item-row"><img src="{{img}}" alt=""><span class="grow">{{name}}</span><label><span>{{localize "DOWNTIME_MANAGER.Station.GoldValue"}}</span><input type="number" name="paymentItems.{{@index}}.goldValue" value="{{goldValue}}" min="0.000001" step="any"></label><button type="button" data-action="savePaymentItem" data-index="{{@index}}" title="{{localize 'DOWNTIME_MANAGER.Actions.Save'}}"><i class="fa-solid fa-floppy-disk"></i></button><button type="button" data-action="removePaymentItem" data-index="{{@index}}" title="{{localize 'DOWNTIME_MANAGER.Tooltips.Actions.RemoveEntry'}}"><i class="fa-solid fa-trash"></i></button></div>{{else}}<p class="notes">{{localize "DOWNTIME_MANAGER.Station.NoPaymentItems"}}</p>{{/each}}</div>
+    </fieldset>
+  </details>{{/if}}
+
   <details class="sc-config-section" data-section="progress-sources" open>
     <summary>{{localize "DOWNTIME_MANAGER.Station.ProgressSources"}}</summary>
     <fieldset class="sc-progress-sources">

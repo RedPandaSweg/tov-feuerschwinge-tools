@@ -453,12 +453,14 @@ async function applyDocumentSynchronization(pack, plans, sourceCollection, docum
     pack: pack.collection,
     render: false,
     diff: false,
-    recursive: false
+    recursive: false,
+    [MODULE_ID]: { preservePrototypeToken: true }
   });
   if (create.length) await pack.documentClass.createDocuments(create, {
     pack: pack.collection,
     keepId: true,
-    render: false
+    render: false,
+    [MODULE_ID]: { preservePrototypeToken: true }
   });
   await verifyDocumentSynchronization(pack, [...update, ...create]);
   return { create: create.length, update: update.length };

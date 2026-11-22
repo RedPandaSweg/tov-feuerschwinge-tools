@@ -15,6 +15,10 @@ function enabled() {
   return game.settings.get(MODULE_ID, SETTING);
 }
 
+function preservesPrototypeToken(options) {
+  return options?.[MODULE_ID]?.preservePrototypeToken === true;
+}
+
 export function tokenSizeForActor(actor) {
   return TOKEN_SIZES[actor?.system?.traits?.size] ?? null;
 }
@@ -42,7 +46,8 @@ function sizeFromChange(actor, changes) {
   return TOKEN_SIZES[key] ?? null;
 }
 
-function prepareNewPrototypeTokenSize(actor, changes) {
+function prepareNewPrototypeTokenSize(actor, changes, options) {
+  if (preservesPrototypeToken(options)) return;
   if (!enabled()) return;
   if (actor.isToken) return;
   const size = sizeFromChange(actor, changes);
@@ -58,10 +63,11 @@ function prepareNewPrototypeTokenSize(actor, changes) {
   }
 }
 
-function prepareChangedPrototypeTokenSize(actor, changes) {
+function prepareChangedPrototypeTokenSize(actor, changes, options) {
+  if (preservesPrototypeToken(options)) return;
   if (!enabled()) return;
   if (!foundry.utils.hasProperty(changes, "system.traits.size")) return;
-  prepareNewPrototypeTokenSize(actor, changes);
+  prepareNewPrototypeTokenSize(actor, changes, options);
 }
 
 function preparePlacedTokenSize(token, changes) {
@@ -106,7 +112,7 @@ async function synchronizePcPrototype(actor) {
 }
 
 async function synchronizeDerivedPcSize(actor, _changes, options, userId) {
-  if (userId !== game.user.id || options[MODULE_ID]?.tokenSizeSync) return;
+  if (userId !== game.user.id || options[MODULE_ID]?.tokenSizeSync || preservesPrototypeToken(options)) return;
   await synchronizePcPrototype(actor);
 }
 

@@ -18,6 +18,14 @@ export class ResourceService {
     return round(total, 6);
   }
 
+  static async itemCosts(ingredients) {
+    const result = [];
+    for (const ingredient of ingredients ?? []) {
+      if (!(await this.#currencyValue(ingredient))) result.push(ingredient);
+    }
+    return result;
+  }
+
   static findMatches(actor, ingredient) {
     const wantedUuid = String(ingredient.uuid ?? "").toLowerCase();
     const wantedName = String(ingredient.name ?? "").trim().toLowerCase();

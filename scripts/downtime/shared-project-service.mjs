@@ -1,10 +1,10 @@
 import { FLAGS, MODULE_ID } from "./constants.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
-import { GoldService } from "./gold-service.mjs";
+import { PaymentService } from "./payment-service.mjs";
 import { ProjectService } from "./project-service.mjs";
 import { ResourceService } from "./resource-service.mjs";
 import { RewardService } from "./reward-service.mjs";
-import { StationEngine } from "./station-engine.mjs";
+import { StationEngine } from "./station-engine.mjs?v=3.13.0-investment-cap-1";
 import { actorKnowsSpell, getStationData, round, toolRequirementStatus } from "./utils.mjs?v=3.4.2-requirement-feedback-1";
 import { getSystemAdapter } from "./system-adapter.mjs";
 
@@ -72,7 +72,7 @@ export class SharedProjectService {
     return contribution;
   }
 
-  static async start({ stationUuid, projectUuid, leaderUuid, batches = 1 }) {
+  static async start({ stationUuid, projectUuid, leaderUuid, batches = 1, paymentItems = [] }) {
     const { stationActor, station, actor: leader, item, definition } = await this.#documents(stationUuid, projectUuid, leaderUuid);
     if (!leader) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ActorMissing"));
     this.#assertEligible(leader, station, definition);
@@ -83,10 +83,16 @@ export class SharedProjectService {
     if (!definition.repeatable && states.some(state => state.projectUuid === projectUuid && state.completed && state.leaderUuid === leaderUuid)) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ProjectAlreadyCompleted"));
     const quantity = Math.max(1, Math.floor(Number(batches) || 1));
     if (!(definition.rewards?.length || definition.characterRewards?.length)) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.RewardRequired"));
-    if (!(await ResourceService.has(leader, definition.ingredients ?? [], quantity))) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ResourcesMissing"));
-    const gold = round(Number(definition.goldCost ?? 0) * quantity, 6);
-    if (getSystemAdapter().capabilities.currency && gold > 0 && !(await GoldService.spendGold(leader, gold))) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.GoldMissing"));
-    if (!(await ResourceService.spend(leader, definition.ingredients ?? [], quantity))) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ResourcesMissing"));
+    const itemCosts = await ResourceService.itemCosts(definition.ingredients ?? []);
+    if (!(await ResourceService.has(leader, itemCosts, quantity))) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ResourcesMissing"));
+    const currencyCost = getSystemAdapter().capabilities.currency
+      ? await ResourceService.currencyCost(definition.ingredients ?? [], quantity)
+      : 0;
+    const gold = round(Number(definition.goldCost ?? 0) * quantity + currencyCost, 6);
+    if (getSystemAdapter().capabilities.currency && gold > 0 && !(await PaymentService.spend(
+      leader, station, gold, paymentItems, { reservedCosts: itemCosts, multiplier: quantity }
+    ))) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.GoldMissing"));
+    if (!(await ResourceService.spend(leader, itemCosts, quantity))) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ResourcesMissing"));
     const state = {
       id: foundry.utils.randomID(), projectUuid, projectName: item.name,
       leaderUuid, participantUuids: [leaderUuid], contributions: [{ actorUuid: leaderUuid, downtime: 0, progress: 0 }],
@@ -152,7 +158,14 @@ export class SharedProjectService {
       contribution.progress = round(Math.max(0, contribution.progress + recovered.progress), 6);
     }
     if (state.pendingRoll || state.awaitingCompletionCheck) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.RollRequired"));
-    const maximum = StationEngine.maxInvestment(station, state, DowntimeService.get(actor));
+    const progressRate = StationEngine.calculateProgress({
+      station,
+      downtime: 1,
+      rollRow: { addition: 0, multiplier: 1 },
+      actorValue: RewardService.getStationValue(actor, stationActor, station),
+      actorSources: StationEngine.actorProgressSources(actor, check)
+    }).progress;
+    const maximum = StationEngine.maxInvestment(station, state, DowntimeService.get(actor), progressRate);
     const requested = Number(amount);
     if (!Number.isFinite(requested) || requested <= 0 || requested > maximum + 1e-9) throw new Error(game.i18n.format("DOWNTIME_MANAGER.Errors.InvalidDowntime", { maximum }));
     if (!(await DowntimeService.spend(actor, requested))) throw new Error(game.i18n.localize("DOWNTIME_MANAGER.Errors.DowntimeMissing"));

@@ -2,13 +2,14 @@ import { craftingAccess } from "./crafting-access.mjs";
 import { ITEM_RARITY_COLORS, ITEM_RARITY_ORDER } from "./constants.mjs";
 import { DowntimeService } from "./downtime-service.mjs";
 import { GoldService } from "./gold-service.mjs";
-import { ProjectService } from "./project-service.mjs?v=3.8.5-applied-roll-progress-1";
+import { PaymentService } from "./payment-service.mjs";
+import { ProjectService } from "./project-service.mjs?v=3.13.0-investment-cap-1";
 import { ResourceService } from "./resource-service.mjs";
 import { RewardService } from "./reward-service.mjs";
-import { StationConfigApp } from "./station-config-app.mjs?v=3.4.2-progress-item-controls-1";
-import { StationEngine } from "./station-engine.mjs";
-import { SharedProjectService } from "./shared-project-service.mjs?v=3.8.5-applied-roll-progress-1";
-import { sharedProjectAction } from "./shared-project-socket.mjs?v=3.8.5-applied-roll-progress-1";
+import { StationConfigApp } from "./station-config-app.mjs?v=3.13.0-station-payment-items-1";
+import { StationEngine } from "./station-engine.mjs?v=3.13.0-investment-cap-1";
+import { SharedProjectService } from "./shared-project-service.mjs?v=3.13.0-investment-cap-1";
+import { sharedProjectAction } from "./shared-project-socket.mjs?v=3.13.0-investment-cap-1";
 import { getSystemAdapter } from "./system-adapter.mjs";
 import {
   actorKnowsSpell,
@@ -198,6 +199,57 @@ async function craftQuantity(name, img, repeatable) {
   });
 }
 
+async function projectPayment(actor, stationActor, projectUuid, batches = 1) {
+  const station = getStationData(stationActor);
+  const existing = ProjectService.findState(actor, stationActor, projectUuid);
+  if (existing && !existing.completed) return [];
+  const { definition } = await ProjectService.project(projectUuid, actor, stationActor);
+  const quantity = Math.max(1, Math.floor(Number(batches) || 1));
+  const currencyCost = getSystemAdapter().capabilities.currency
+    ? await ResourceService.currencyCost(definition.ingredients ?? [], quantity)
+    : 0;
+  const cost = round(Number(definition.goldCost ?? 0) * quantity + currencyCost, 6);
+  const itemCosts = await ResourceService.itemCosts(definition.ingredients ?? []);
+  const options = PaymentService.options(actor, station, itemCosts, quantity);
+  if (cost <= 0 || !options.length) return [];
+
+  const rows = options.map((entry, index) => {
+    const maximum = Math.min(entry.available, Math.max(1, Math.ceil(cost / entry.goldValue)));
+    return `<div class="sc-payment-row"><img src="${foundry.utils.escapeHTML(entry.img || "icons/svg/item-bag.svg")}" alt=""><span><strong>${foundry.utils.escapeHTML(entry.name || entry.uuid)}</strong><small>${game.i18n.format("DOWNTIME_MANAGER.Payment.ValueAvailable", { value: entry.goldValue, available: entry.available })}</small></span><input type="number" name="payment.${index}" value="0" min="0" max="${maximum}" step="1" data-payment-uuid="${foundry.utils.escapeHTML(entry.uuid)}" data-gold-value="${entry.goldValue}"></div>`;
+  }).join("");
+  return foundry.applications.api.DialogV2.prompt({
+    classes: ["downtime-manager", "sc-payment-dialog"],
+    window: { title: game.i18n.localize("DOWNTIME_MANAGER.Payment.Title") },
+    position: { width: 460, height: "auto" },
+    content: `<div class="standard-form"><p>${game.i18n.format("DOWNTIME_MANAGER.Payment.Cost", { cost })}</p><div class="sc-payment-options">${rows}</div><div class="sc-payment-summary" data-payment-summary></div><p class="notification warning" data-payment-overpayment hidden></p></div>`,
+    ok: {
+      label: game.i18n.localize("DOWNTIME_MANAGER.Payment.PayAndStart"),
+      callback: (_event, button) => options.map((entry, index) => ({
+        uuid: entry.uuid,
+        quantity: Math.max(0, Math.floor(Number(button.form?.elements[`payment.${index}`]?.value) || 0))
+      })).filter(entry => entry.quantity > 0)
+    },
+    render: (_event, dialog) => {
+      const inputs = Array.from(dialog.element.querySelectorAll("[data-payment-uuid]"));
+      const summary = dialog.element.querySelector("[data-payment-summary]");
+      const overpayment = dialog.element.querySelector("[data-payment-overpayment]");
+      const button = dialog.element.querySelector('button[data-action="ok"]');
+      const update = () => {
+        const replacement = round(inputs.reduce((sum, input) => sum + Math.max(0, Math.floor(Number(input.value) || 0)) * Number(input.dataset.goldValue), 0), 6);
+        const gold = round(Math.max(0, cost - replacement), 6);
+        const extra = round(Math.max(0, replacement - cost), 6);
+        summary.textContent = game.i18n.format("DOWNTIME_MANAGER.Payment.Summary", { items: replacement, gold });
+        overpayment.textContent = game.i18n.format("DOWNTIME_MANAGER.Payment.Overpayment", { amount: extra });
+        overpayment.hidden = extra <= 0;
+        if (button) button.disabled = GoldService.getGold(actor) + 1e-9 < gold;
+      };
+      for (const input of inputs) input.addEventListener("input", update);
+      update();
+    },
+    rejectClose: false
+  });
+}
+
 function projectClassification(item) {
   if (!item || item.documentName !== "Item") {
     return {
@@ -364,10 +416,21 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
     apply({ rebuildSubtypes: true, selectedSubtype: this._catalogState.subtype });
     for (const select of catalog.querySelectorAll("[data-check-for], [data-shared-check-for]")) {
       select.addEventListener("change", () => {
-        const rate = select.selectedOptions[0]?.dataset.progressPerDowntime;
+        const selected = select.selectedOptions[0];
+        const rate = selected?.dataset.progressPerDowntime;
         if (rate === undefined) return;
         for (const output of select.closest("[data-project-entry]")?.querySelectorAll("[data-progress-per-downtime]") ?? []) {
           output.textContent = rate;
+        }
+        const shared = select.hasAttribute("data-shared-check-for");
+        const uuid = shared ? select.dataset.sharedCheckFor : select.dataset.checkFor;
+        const input = this.element.querySelector(
+          `[${shared ? "data-shared-downtime-for" : "data-downtime-for"}="${CSS.escape(uuid)}"]`
+        );
+        const maximum = Number(selected.dataset.maxInvestment);
+        if (input && Number.isFinite(maximum)) {
+          input.max = String(maximum);
+          input.value = String(Math.min(1, maximum));
         }
       });
     }
@@ -494,11 +557,17 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const checkSelectionRequired = Boolean(projectStation.progressSources?.checkProficiency?.enabled);
       const stationToolOk = hasRequiredTool(actor, station.requiredTool);
       const projectToolsOk = (definition.requiredTools ?? []).every(tool => hasRequiredTool(actor, tool));
-      const startItemsOk = await ResourceService.has(actor, definition.ingredients ?? []);
-      const startGoldOk = !adapter.capabilities.currency || GoldService.getGold(actor) + 1e-9 >= Number(definition.goldCost ?? 0);
       const projectCurrencyCost = adapter.capabilities.currency
         ? await ResourceService.currencyCost(definition.ingredients ?? [])
         : 0;
+      const startItemCosts = await ResourceService.itemCosts(definition.ingredients ?? []);
+      const startItemsOk = await ResourceService.has(actor, startItemCosts);
+      const startGoldOk = !adapter.capabilities.currency || PaymentService.canPay(
+        actor,
+        station,
+        Number(definition.goldCost ?? 0) + projectCurrencyCost,
+        startItemCosts
+      );
       const quantityState = state && !state.completed ? state : sharedState ?? state;
       const batchQuantity = Math.max(1, Math.floor(Number(quantityState?.batches) || 1));
       const showBatchQuantity = Boolean(quantityState && batchQuantity > 1);
@@ -509,11 +578,18 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const progress = Number(state?.progress ?? 0);
       const requiredProgress = Number(state?.requiredProgress ?? definition.requiredProgress);
       const maxInvestment = state
-        ? StationEngine.maxInvestment(projectStation, state, DowntimeService.get(actor))
+        ? StationEngine.maxInvestment(projectStation, state, DowntimeService.get(actor), defaultProgressPerDowntime)
         : 0;
       const sharedMaxInvestment = sharedState && sharedJoined
-        ? StationEngine.maxInvestment(projectStation, sharedState, DowntimeService.get(actor))
+        ? StationEngine.maxInvestment(projectStation, sharedState, DowntimeService.get(actor), defaultProgressPerDowntime)
         : 0;
+      const investmentState = sharedState ?? state;
+      const investmentChecks = checks.map(check => ({
+        ...check,
+        maxInvestment: investmentState
+          ? StationEngine.maxInvestment(projectStation, investmentState, DowntimeService.get(actor), check.progressPerDowntime)
+          : 0
+      }));
       const levelAccess = await craftingAccess(actor, item, definition);
       if (definition.spellScroll && (state?.completed || (!state && (knownSpell || levelAccess.blocked)))) continue;
       const sharedEligible = !levelAccess.blocked && station.enabled && stationToolOk && projectToolsOk && !knownSpell;
@@ -578,7 +654,7 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
         lastCompletionCheck: state?.lastCompletionCheck ?? null,
         maxInvestment,
         investmentDefault: Math.min(1, maxInvestment),
-        checks,
+        checks: investmentChecks,
         requiresRoll: projectStation.requiresRoll !== false,
         showCheckSelection: checkSelectionRequired,
         canStart: !levelAccess.blocked && !knownSpell && station.enabled && stationToolOk && projectToolsOk &&
@@ -667,16 +743,19 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
     );
     if (quantity === null || quantity === undefined) return;
     try {
+      const paymentItems = await projectPayment(actor, this.stationActor, target.dataset.uuid, quantity);
+      if (paymentItems === null || paymentItems === undefined) return;
       if (target.dataset.collaborative === "true") {
         await sharedProjectAction("start", {
           stationUuid: this.stationActor.uuid,
           projectUuid: target.dataset.uuid,
           leaderUuid: actor.uuid,
-          batches: quantity
+          batches: quantity,
+          paymentItems
         });
         ui.notifications.info(game.i18n.localize("DOWNTIME_MANAGER.Notifications.SharedProjectStarted"));
       } else {
-        await ProjectService.start(actor, this.stationActor, target.dataset.uuid, quantity);
+        await ProjectService.start(actor, this.stationActor, target.dataset.uuid, quantity, paymentItems);
         ui.notifications.info(game.i18n.localize("DOWNTIME_MANAGER.Notifications.ProjectStarted"));
       }
       this.render();
@@ -688,7 +767,9 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!actor) return ui.notifications.error(game.i18n.localize("DOWNTIME_MANAGER.Errors.ActorMissing"));
     try {
       const quantity = this.element.querySelector(`[data-quantity-for="${CSS.escape(target.dataset.uuid)}"]`)?.value ?? 1;
-      await ProjectService.start(actor, this.stationActor, target.dataset.uuid, quantity);
+      const paymentItems = await projectPayment(actor, this.stationActor, target.dataset.uuid, quantity);
+      if (paymentItems === null || paymentItems === undefined) return;
+      await ProjectService.start(actor, this.stationActor, target.dataset.uuid, quantity, paymentItems);
       ui.notifications.info(game.i18n.localize("DOWNTIME_MANAGER.Notifications.ProjectStarted"));
       this.render();
     } catch (error) { ui.notifications.error(error.message); }
@@ -796,7 +877,9 @@ export class StationApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const actor = getActiveCrafter(); if (!actor) return;
     try {
       const batches = this.element.querySelector(`[data-shared-quantity-for="${CSS.escape(target.dataset.uuid)}"]`)?.value ?? 1;
-      await sharedProjectAction("start", { stationUuid: this.stationActor.uuid, projectUuid: target.dataset.uuid, leaderUuid: actor.uuid, batches });
+      const paymentItems = await projectPayment(actor, this.stationActor, target.dataset.uuid, batches);
+      if (paymentItems === null || paymentItems === undefined) return;
+      await sharedProjectAction("start", { stationUuid: this.stationActor.uuid, projectUuid: target.dataset.uuid, leaderUuid: actor.uuid, batches, paymentItems });
       ui.notifications.info(game.i18n.localize("DOWNTIME_MANAGER.Notifications.SharedProjectStarted")); this.render();
     } catch (error) { ui.notifications.error(error.message); }
   }

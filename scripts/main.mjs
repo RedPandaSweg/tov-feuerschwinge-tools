@@ -1,5 +1,5 @@
 import { MODULE_ID } from "./core/constants.mjs";
-import { activateDowntime, registerDowntime } from "./downtime/main.mjs?v=3.8.5-raffle-withdraw-9";
+import { activateDowntime, registerDowntime } from "./downtime/main.mjs?v=3.13.0-investment-cap-1";
 import { activateVoidTaint, registerVoidTaint } from "./void-taint/main.mjs?v=3.3.0-void-taint-1";
 import { installBlackFlagCompatibility } from "./integrations/black-flag-compatibility.mjs?v=3.7.8-forward-consumption-1";
 import {
@@ -36,7 +36,7 @@ const BLACK_FLAG_FEATURE_MODULES = Object.freeze({
   settingsCategories: "./settings-categories.mjs",
   help: "./help-config.mjs",
   activityChaining: "./activity-chaining.mjs?v=3.3.1-follow-up-filter-2",
-  compatibility: "./integrations/compatibility-layer.mjs?v=3.12.5-blocked-spell-sources-1",
+  compatibility: "./integrations/compatibility-layer.mjs?v=3.12.6-wyrd-pact-progression-2",
   compendiumUsability: "./compendium-usability.mjs",
   chatImagePopouts: "./chat-image-popout.mjs",
   chatMessageDeletion: "./chat-message-deletion.mjs",

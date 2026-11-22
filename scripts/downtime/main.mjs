@@ -10,8 +10,8 @@ import {
   MODULE_ID,
   SETTINGS
 } from "./constants.mjs";
-import { StationApp } from "./station-app.mjs?v=3.12.2-project-progress-rate-1";
-import { StationConfigApp } from "./station-config-app.mjs?v=3.4.2-progress-item-controls-1";
+import { StationApp } from "./station-app.mjs?v=3.13.0-investment-cap-1";
+import { StationConfigApp } from "./station-config-app.mjs?v=3.13.0-station-payment-items-1";
 import { ModuleItemSettingsApp } from "./module-item-settings-app.mjs";
 import { PlayerActorFolderSettingsApp } from "./player-actor-folder-settings-app.mjs";
 import { SessionRewardConfigApp } from "./session-reward-config-app.mjs";
@@ -25,7 +25,7 @@ import { UserTransferApp } from "../transfer/user-transfer-app.mjs";
 import { DowntimeItemApp } from "./downtime-item-app.mjs";
 import { StationPresetApp } from "./station-preset-app.mjs";
 import { playerCharacters, sessionProgress, SessionService } from "./session-service.mjs";
-import { registerSharedProjectSocket } from "./shared-project-socket.mjs?v=3.8.5-applied-roll-progress-1";
+import { registerSharedProjectSocket } from "./shared-project-socket.mjs?v=3.13.0-investment-cap-1";
 import { downtimeItemData, DowntimeItemService } from "./downtime-item-service.mjs";
 import { addHeaderControl, defaultStationData, isRecipeItem, isStation } from "./utils.mjs";
 import {
