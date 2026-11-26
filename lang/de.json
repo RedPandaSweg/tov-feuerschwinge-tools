@@ -682,6 +682,18 @@
         "PlayerMissing": "Der Bibliotheksindex muss zunächst von einem GM erstellt werden."
       },
       "Open": "Feuerschwinge-Bibliothek",
+      "Landing": {
+        "Title": "Kategorie auswählen",
+        "Hint": "Wähle oben eine Kategorie. Ihre Einträge werden erst dann geladen."
+      },
+      "Pagination": {
+        "PageSize": "Pro Seite",
+        "Navigation": "Ergebnisseiten",
+        "Previous": "Vorherige Seite",
+        "Next": "Nächste Seite",
+        "Status": "Seite {page} von {pages}",
+        "Range": "{start}–{end} von {count} Treffern"
+      },
       "Search": "In dieser Kategorie suchen …",
       "AllSources": "Alle Quellen",
       "All": "Alle",

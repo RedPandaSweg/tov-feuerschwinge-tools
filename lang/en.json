@@ -683,6 +683,18 @@
         "PlayerMissing": "A GM must build the library index first."
       },
       "Open": "Feuerschwinge Library",
+      "Landing": {
+        "Title": "Choose a category",
+        "Hint": "Choose a category above. Its entries are loaded only when selected."
+      },
+      "Pagination": {
+        "PageSize": "Per page",
+        "Navigation": "Result pages",
+        "Previous": "Previous page",
+        "Next": "Next page",
+        "Status": "Page {page} of {pages}",
+        "Range": "{start}–{end} of {count} results"
+      },
       "Search": "Search this category…",
       "AllSources": "All sources",
       "All": "All",

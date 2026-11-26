@@ -44,8 +44,8 @@ export function createSessionUserBundle(actors, participants = actors) {
     if (assigned.length) assigned.forEach(id => users.add(id));
     else for (const user of game.users) {
       const mainCharacter = (user.character?.id ?? user.character) === actor.id;
-      const playerOwner = [1, 2].includes(user.role) && Number(actor.ownership?.[user.id] ?? 0) >= 3;
-      if (mainCharacter || playerOwner) users.add(user.id);
+      const explicitOwner = Number(actor.ownership?.[user.id] ?? 0) >= CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER;
+      if (mainCharacter || explicitOwner) users.add(user.id);
     }
   }
   return createUserBundle({ actors, userIds: [...users] });

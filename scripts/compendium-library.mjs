@@ -4,6 +4,7 @@ import {
   normalizedDocumentName,
   packageIdFor
 } from "./core/compendium-deduplication.mjs";
+import { emitModuleEvent, subscribeModuleEvent } from "./core/events.mjs?v=3.7.8-module-events-1";
 import { canonicalSpellName, spellMarkerState } from "./spell-name-markers.mjs?v=3.5.0-spell-markers-1";
 
 const CHARACTER_TYPES = new Set(["background", "class", "heritage", "lineage", "subclass", "talent"]);
@@ -18,22 +19,53 @@ const SOURCE_MODULES = packageId => (
 );
 const FALLBACK_ITEM_IMAGE = "icons/svg/item-bag.svg";
 const LIBRARY_INDEX_PACK = "tov-feuerschwinge-library-index";
-const LIBRARY_INDEX_VERSION = 10;
+const LIBRARY_INDEX_VERSION = 11;
+const LIBRARY_INDEX_EVENT = "libraryIndexUpdated";
+const LIBRARY_PAGE_SIZES = [100, 200, 500];
 const DND5E_SOURCE_ID = "dnd5e";
 const KCTG_5E_SOURCE_ID = "kctg-5e";
 const KCTG_5E_SOURCE_BOOK = "KCTG-5e";
+
+let libraryManifestCache = null;
+const libraryCategoryCache = new Map();
 
 function libraryIndexPack() {
   return game.packs.get(`world.${LIBRARY_INDEX_PACK}`);
 }
 
-async function loadLibraryIndex() {
+function indexMeta(entry) {
+  return foundry.utils.getProperty(entry, `flags.${MODULE_ID}.libraryIndexMeta`);
+}
+
+function clearLibraryIndexCache() {
+  libraryManifestCache = null;
+  libraryCategoryCache.clear();
+}
+
+async function loadLibraryManifest() {
+  if (libraryManifestCache) return libraryManifestCache;
   const pack = libraryIndexPack();
   if (!pack) return null;
-  const documents = await pack.getDocuments();
-  const document = documents.find(entry => entry.flags?.[MODULE_ID]?.libraryIndex);
-  const cache = document?.flags?.[MODULE_ID]?.libraryIndex;
-  return cache?.version === LIBRARY_INDEX_VERSION && Array.isArray(cache.entries) ? cache : null;
+  const index = await pack.getIndex({ fields: [`flags.${MODULE_ID}.libraryIndexMeta`] });
+  const manifest = index.map(indexMeta).find(meta => meta?.kind === "manifest");
+  if (manifest?.version !== LIBRARY_INDEX_VERSION || !manifest.categories) return null;
+  libraryManifestCache = manifest;
+  return manifest;
+}
+
+async function loadLibraryCategory(category, manifest) {
+  if (libraryCategoryCache.has(category)) return libraryCategoryCache.get(category);
+  const pack = libraryIndexPack();
+  const categoryMeta = manifest?.categories?.[category];
+  if (!pack || !categoryMeta?.documentId) return [];
+  const document = await pack.getDocument(categoryMeta.documentId);
+  const meta = indexMeta(document);
+  const entries = foundry.utils.getProperty(document, `flags.${MODULE_ID}.libraryIndexEntries`);
+  if (meta?.kind !== "category" || meta.version !== LIBRARY_INDEX_VERSION || meta.category !== category || !Array.isArray(entries)) {
+    return [];
+  }
+  libraryCategoryCache.set(category, entries);
+  return entries;
 }
 
 async function saveLibraryIndex(entries) {
@@ -45,12 +77,75 @@ async function saveLibraryIndex(entries) {
       name: LIBRARY_INDEX_PACK
     });
   }
-  const documents = await pack.getDocuments();
-  const existing = documents.find(entry => entry.flags?.[MODULE_ID]?.libraryIndex);
-  const cache = { version: LIBRARY_INDEX_VERSION, updatedAt: Date.now(), entries };
-  if (existing) await existing.update({ [`flags.${MODULE_ID}.libraryIndex`]: cache });
-  else await JournalEntry.create({ name: "Feuerschwinge-Bibliotheksindex", flags: { [MODULE_ID]: { libraryIndex: cache } } }, { pack: pack.collection });
-  return cache;
+  const index = await pack.getIndex({
+    fields: [
+      `flags.${MODULE_ID}.libraryIndexMeta`,
+      `flags.${MODULE_ID}.libraryIndex.version`
+    ]
+  });
+  const documentsByCategory = new Map(index
+    .map(entry => [indexMeta(entry)?.category, entry])
+    .filter(([category, entry]) => category && indexMeta(entry)?.kind === "category"));
+  const grouped = new Map(CATEGORIES.map(category => [category.id, []]));
+  for (const entry of entries) grouped.get(entry.category)?.push(entry);
+
+  const categoryDocuments = {};
+  const updatedAt = Date.now();
+  for (const category of CATEGORIES) {
+    const categoryEntries = grouped.get(category.id) ?? [];
+    const meta = {
+      kind: "category",
+      version: LIBRARY_INDEX_VERSION,
+      category: category.id,
+      count: deduplicateEntries(categoryEntries).length
+    };
+    const existing = documentsByCategory.get(category.id);
+    const data = {
+      name: `Feuerschwinge-Bibliotheksindex: ${category.id}`,
+      [`flags.${MODULE_ID}.libraryIndexMeta`]: meta,
+      [`flags.${MODULE_ID}.libraryIndexEntries`]: categoryEntries
+    };
+    let documentId = existing?._id;
+    if (documentId) {
+      await pack.documentClass.updateDocuments([{ _id: documentId, ...data }], { pack: pack.collection });
+    } else {
+      const [created] = await pack.documentClass.createDocuments([{
+        name: data.name,
+        flags: { [MODULE_ID]: { libraryIndexMeta: meta, libraryIndexEntries: categoryEntries } }
+      }], { pack: pack.collection });
+      documentId = created.id;
+    }
+    categoryDocuments[category.id] = { documentId, count: meta.count };
+  }
+
+  const manifest = {
+    kind: "manifest",
+    version: LIBRARY_INDEX_VERSION,
+    updatedAt,
+    count: entries.length,
+    categories: categoryDocuments
+  };
+  const existingManifest = index.find(entry => indexMeta(entry)?.kind === "manifest")
+    ?? index.find(entry => foundry.utils.getProperty(entry, `flags.${MODULE_ID}.libraryIndex.version`));
+  const manifestData = {
+    name: "Feuerschwinge-Bibliotheksindex",
+    [`flags.${MODULE_ID}.libraryIndexMeta`]: manifest,
+    [`flags.${MODULE_ID}.-=libraryIndex`]: null,
+    [`flags.${MODULE_ID}.-=libraryIndexEntries`]: null
+  };
+  if (existingManifest) {
+    await pack.documentClass.updateDocuments([{ _id: existingManifest._id, ...manifestData }], { pack: pack.collection });
+  } else {
+    await pack.documentClass.createDocuments([{
+      name: manifestData.name,
+      flags: { [MODULE_ID]: { libraryIndexMeta: manifest } }
+    }], { pack: pack.collection });
+  }
+
+  libraryManifestCache = manifest;
+  libraryCategoryCache.clear();
+  for (const category of CATEGORIES) libraryCategoryCache.set(category.id, grouped.get(category.id) ?? []);
+  return manifest;
 }
 
 const CATEGORIES = [
@@ -692,6 +787,8 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       selectDetail: this.#selectDetail,
       selectExtra: this.#selectExtra,
       setLayout: this.#setLayout,
+      previousPage: this.#previousPage,
+      nextPage: this.#nextPage,
       openDocument: this.#openDocument,
       openPack: this.#openPack
     }
@@ -703,7 +800,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
 
   #entries = null;
   #indexMeta = null;
-  #category = "monsters";
+  #category = "";
   #sources = null;
   #query = "";
   #subcategory = "";
@@ -739,15 +836,29 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
   #monsterLegendary = false;
   #monsterMulti = { movement: new Set(), senses: new Set(), resistances: new Set(), immunities: new Set(), vulnerabilities: new Set(), conditionImmunities: new Set() };
   #layout = "list";
+  #page = 1;
+  #pageSize = LIBRARY_PAGE_SIZES[0];
+  #searchTimer = null;
+  #restoreSearchFocus = false;
   #tableBuilder = false;
   #tableEntries = new Set();
 
   get hasLibraryIndex() { return Boolean(this.#indexMeta); }
 
+  async #loadManifest() {
+    const manifest = await loadLibraryManifest();
+    this.#indexMeta = manifest ? {
+      updatedAt: manifest.updatedAt,
+      count: manifest.count,
+      categories: manifest.categories
+    } : null;
+  }
+
   async #loadEntries() {
-    const cache = await loadLibraryIndex();
-    this.#entries = cache?.entries ?? [];
-    this.#indexMeta = cache ? { updatedAt: cache.updatedAt, count: cache.entries.length } : null;
+    if (!this.#indexMeta) await this.#loadManifest();
+    this.#entries = this.#category && this.#indexMeta
+      ? await loadLibraryCategory(this.#category, libraryManifestCache)
+      : [];
   }
 
   async #scanEntries() {
@@ -872,6 +983,35 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   async _prepareContext(options) {
+    if (!this.#indexMeta) await this.#loadManifest();
+    const categories = CATEGORIES.map(category => ({
+      ...category,
+      active: category.id === this.#category,
+      count: this.#indexMeta?.categories?.[category.id]?.count ?? 0
+    }));
+    const primaryCategoryIds = new Set(["monsters", "spells", "magicItems", "characters", "items"]);
+    const primaryCategories = categories.filter(category => primaryCategoryIds.has(category.id));
+    const moreCategories = categories.filter(category => !primaryCategoryIds.has(category.id));
+    const activeMoreCategory = moreCategories.find(category => category.active);
+    const indexContext = {
+      primaryCategories,
+      moreCategories,
+      activeMoreCategory,
+      moreCategoryActive: Boolean(activeMoreCategory),
+      categorySelected: Boolean(this.#category),
+      hasLibraryIndex: Boolean(this.#indexMeta),
+      libraryIndexUpdated: this.#indexMeta?.updatedAt
+        ? new Intl.DateTimeFormat(game.i18n.lang, { dateStyle: "short", timeStyle: "short" }).format(this.#indexMeta.updatedAt)
+        : "",
+      libraryIndexCount: this.#indexMeta?.count ?? 0,
+      isGM: game.user.isGM
+    };
+    if (!this.#category) {
+      return {
+        ...(await super._prepareContext(options)),
+        ...indexContext
+      };
+    }
     if (!this.#entries) await this.#loadEntries();
     const query = this.#query.toLocaleLowerCase(game.i18n.lang);
     const allCategoryEntries = this.#entries.filter(entry => entry.category === this.#category);
@@ -967,33 +1107,34 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     const weaponPropertyEntries = weaponDamageEntries.filter(entry => !this.#weaponProperty || entry.weaponProperties.includes(this.#weaponProperty));
     const weaponTraits = this.#spellOptionCounts(weaponPropertyEntries, entry => entry.weaponTraits, value => configLabel(CONFIG.BlackFlag.weaponOptions, value));
     if (this.#weaponTrait && !weaponTraits.some(option => option.value === this.#weaponTrait)) this.#weaponTrait = "";
-    const spellCastingTimes = this.#spellOptionCounts(spellFilterEntries, entry => [entry.spellCastingTime], value => (
+    const spellEntries = this.#category === "spells" ? spellFilterEntries : [];
+    const spellCastingTimes = this.#spellOptionCounts(spellEntries, entry => [entry.spellCastingTime], value => (
       game.i18n.localize(`TOVF.Library.SpellCastingTime.${value}`) !== `TOVF.Library.SpellCastingTime.${value}`
         ? game.i18n.localize(`TOVF.Library.SpellCastingTime.${value}`)
         : humanize(value)
     ));
-    const spellDurations = this.#spellOptionCounts(spellFilterEntries, entry => [entry.spellDuration], value => {
-      const duration = spellFilterEntries.find(entry => entry.spellDuration === value)?.spellDurationData;
+    const spellDurations = this.#spellOptionCounts(spellEntries, entry => [entry.spellDuration], value => {
+      const duration = spellEntries.find(entry => entry.spellDuration === value)?.spellDurationData;
       return spellDurationLabel(duration ?? { unit: "", value: "" });
     });
     spellDurations.sort((left, right) => {
-      const leftRank = spellFilterEntries.find(entry => entry.spellDuration === left.value)?.spellDurationData?.rank ?? Number.MAX_SAFE_INTEGER;
-      const rightRank = spellFilterEntries.find(entry => entry.spellDuration === right.value)?.spellDurationData?.rank ?? Number.MAX_SAFE_INTEGER;
+      const leftRank = spellEntries.find(entry => entry.spellDuration === left.value)?.spellDurationData?.rank ?? Number.MAX_SAFE_INTEGER;
+      const rightRank = spellEntries.find(entry => entry.spellDuration === right.value)?.spellDurationData?.rank ?? Number.MAX_SAFE_INTEGER;
       return leftRank - rightRank || left.label.localeCompare(right.label, game.i18n.lang);
     });
-    const spellRanges = this.#spellOptionCounts(spellFilterEntries, entry => [entry.spellRange], value => (
-      spellFilterEntries.find(entry => entry.spellRange === value)?.spellRangeData?.label ?? humanize(value)
+    const spellRanges = this.#spellOptionCounts(spellEntries, entry => [entry.spellRange], value => (
+      spellEntries.find(entry => entry.spellRange === value)?.spellRangeData?.label ?? humanize(value)
     ));
     spellRanges.sort((left, right) => {
-      const leftRank = spellFilterEntries.find(entry => entry.spellRange === left.value)?.spellRangeData?.rank ?? Number.MAX_SAFE_INTEGER;
-      const rightRank = spellFilterEntries.find(entry => entry.spellRange === right.value)?.spellRangeData?.rank ?? Number.MAX_SAFE_INTEGER;
+      const leftRank = spellEntries.find(entry => entry.spellRange === left.value)?.spellRangeData?.rank ?? Number.MAX_SAFE_INTEGER;
+      const rightRank = spellEntries.find(entry => entry.spellRange === right.value)?.spellRangeData?.rank ?? Number.MAX_SAFE_INTEGER;
       return leftRank - rightRank || left.label.localeCompare(right.label, game.i18n.lang);
     });
-    const spellDamageTypes = this.#spellOptionCounts(spellFilterEntries, entry => entry.spellDamageTypes, value => (
+    const spellDamageTypes = this.#spellOptionCounts(spellEntries, entry => entry.spellDamageTypes, value => (
       CONFIG.BlackFlag.damageTypes?.localized?.[value] ?? humanize(value)
     ));
-    const spellConditions = this.#spellOptionCounts(spellFilterEntries, entry => entry.spellConditions, conditionLabel);
-    const spellComponents = this.#spellOptionCounts(spellFilterEntries, entry => entry.spellComponents, value => (
+    const spellConditions = this.#spellOptionCounts(spellEntries, entry => entry.spellConditions, conditionLabel);
+    const spellComponents = this.#spellOptionCounts(spellEntries, entry => entry.spellComponents, value => (
       CONFIG.BlackFlag.spellComponents?.[value]?.label
         ? game.i18n.localize(CONFIG.BlackFlag.spellComponents[value].label)
         : humanize(value)
@@ -1010,8 +1151,9 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     pruneSpellSelection("damage", spellDamageTypes);
     pruneSpellSelection("condition", spellConditions);
     pruneSpellSelection("component", spellComponents);
+    const monsterEntries = this.#category === "monsters" ? spellFilterEntries : [];
     const monsterOptions = (field, labelFor = humanize) => this.#spellOptionCounts(
-      spellFilterEntries,
+      monsterEntries,
       entry => Array.isArray(entry.monster?.[field]) ? entry.monster[field] : [entry.monster?.[field]],
       labelFor
     );
@@ -1074,40 +1216,52 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       && (!query || (entry.searchName ?? entry.lowerName).includes(query))
       );
     });
-    const entries = deduplicateEntries(matchingEntries).map(entry => ({
+    const filteredEntries = deduplicateEntries(matchingEntries);
+    if (this.#category === "magicItems" && this.#magicItemSort === "price") {
+      filteredEntries.sort((left, right) => left.priceGold - right.priceGold || left.name.localeCompare(right.name, game.i18n.lang));
+    } else if (this.#category === "spells" && this.#spellSort === "circle") {
+      filteredEntries.sort((left, right) => (left.spellCircle ?? Number.MAX_SAFE_INTEGER) - (right.spellCircle ?? Number.MAX_SAFE_INTEGER)
+        || left.name.localeCompare(right.name, game.i18n.lang));
+    } else {
+      filteredEntries.sort((left, right) => left.name.localeCompare(right.name, game.i18n.lang));
+    }
+    const resultCount = filteredEntries.length;
+    const pageCount = Math.ceil(resultCount / this.#pageSize);
+    this.#page = pageCount ? Math.min(Math.max(this.#page, 1), pageCount) : 1;
+    const pageStart = (this.#page - 1) * this.#pageSize;
+    const entries = filteredEntries.slice(pageStart, pageStart + this.#pageSize).map(entry => ({
       ...entry,
       tableSelectable: true,
       tableSelected: this.#tableEntries.has(entry.uuid)
     }));
-    if (this.#category === "magicItems" && this.#magicItemSort === "price") {
-      entries.sort((left, right) => left.priceGold - right.priceGold || left.name.localeCompare(right.name, game.i18n.lang));
-    } else if (this.#category === "spells" && this.#spellSort === "circle") {
-      entries.sort((left, right) => (left.spellCircle ?? Number.MAX_SAFE_INTEGER) - (right.spellCircle ?? Number.MAX_SAFE_INTEGER)
-        || left.name.localeCompare(right.name, game.i18n.lang));
-    } else {
-      entries.sort((left, right) => left.name.localeCompare(right.name, game.i18n.lang));
-    }
     const sources = [...new Map(
       this.#entries
         .filter(entry => entry.category === this.#category)
         .map(entry => [entry.source, entry.sourceLabel])
     )].map(([value, label]) => ({ value, label, selected: this.#sources === null || this.#sources.has(value) }))
       .sort((a, b) => a.label.localeCompare(b.label, game.i18n.lang));
-    const categories = CATEGORIES.map(category => ({
-      ...category,
-      active: category.id === this.#category,
-      count: deduplicateEntries(this.#entries.filter(entry => entry.category === category.id)).length
-    }));
-    const primaryCategoryIds = new Set(["monsters", "spells", "magicItems", "characters", "items"]);
-    const primaryCategories = categories.filter(category => primaryCategoryIds.has(category.id));
-    const moreCategories = categories.filter(category => !primaryCategoryIds.has(category.id));
-    const activeMoreCategory = moreCategories.find(category => category.active);
+    const spellPropertyOptionData = this.#category === "spells" ? [
+      { value: "concentration", label: game.i18n.localize("TOVF.Library.Concentration"), count: deduplicateEntries(spellEntries.filter(entry => entry.spellConcentration)).length },
+      { value: "ritual", label: game.i18n.localize("TOVF.Library.Ritual"), count: deduplicateEntries(spellEntries.filter(entry => entry.spellRitual)).length },
+      { value: "void", label: game.i18n.localize("TOVF.Library.VoidSpells"), count: deduplicateEntries(spellEntries.filter(entry => entry.spellVoid)).length }
+    ] : [];
+    const ritualOption = spellPropertyOptionData.find(option => option.value === "ritual");
+    const spellFilterCounts = Object.fromEntries(Object.entries(this.#spellMulti).map(([key, selection]) => [key, {
+      total: selection.include.size + selection.exclude.size,
+      include: selection.include.size,
+      exclude: selection.exclude.size,
+      open: this.#openSpellFilter === key
+    }]));
+    if (ritualOption) {
+      const ritualIncluded = this.#spellMulti.property.include.has("ritual") ? 1 : 0;
+      const ritualExcluded = this.#spellMulti.property.exclude.has("ritual") ? 1 : 0;
+      spellFilterCounts.castingTime.include += ritualIncluded;
+      spellFilterCounts.castingTime.exclude += ritualExcluded;
+      spellFilterCounts.castingTime.total += ritualIncluded + ritualExcluded;
+    }
     return {
       ...(await super._prepareContext(options)),
-      primaryCategories,
-      moreCategories,
-      activeMoreCategory,
-      moreCategoryActive: Boolean(activeMoreCategory),
+      ...indexContext,
       entries,
       subcategories,
       details,
@@ -1137,7 +1291,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       selectedWeaponDamageType: this.#weaponDamageType,
       selectedWeaponProperty: this.#weaponProperty,
       selectedWeaponTrait: this.#weaponTrait,
-      magicAttunementOptions: ["none", "optional", "required"].map(value => ({
+      magicAttunementOptions: (this.#category === "magicItems" ? ["none", "optional", "required"] : []).map(value => ({
         value,
         label: game.i18n.localize(`TOVF.Library.Attunement.${value}`),
         count: deduplicateEntries(spellFilterEntries.filter(entry => entry.magicAttunement === value)).length
@@ -1170,7 +1324,10 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       monsterLegendary: this.#monsterLegendary,
       monsterFilterCount: [this.#monsterType, this.#monsterSize, this.#monsterCrMin, this.#monsterCrMax, this.#monsterAcMin, this.#monsterAcMax, this.#monsterHpMin, this.#monsterHpMax, this.#monsterSpellcaster, this.#monsterLegendary]
         .filter(Boolean).length + Object.values(this.#monsterMulti).reduce((count, set) => count + set.size, 0),
-      spellCastingTimes: this.#spellFilterOptions("castingTime", spellCastingTimes),
+      spellCastingTimes: [
+        ...this.#spellFilterOptions("castingTime", spellCastingTimes),
+        ...this.#spellFilterOptions("property", ritualOption ? [ritualOption] : [])
+      ],
       spellDurations: this.#spellFilterOptions("duration", spellDurations),
       spellRanges: this.#spellFilterOptions("range", spellRanges),
       spellDamageTypes: this.#spellFilterOptions("damage", spellDamageTypes),
@@ -1180,17 +1337,8 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
         value,
         label: game.i18n.localize(`TOVF.Library.SpellResolution.${value}`)
       }))),
-      spellPropertyOptions: this.#spellFilterOptions("property", [
-        { value: "concentration", label: game.i18n.localize("TOVF.Library.Concentration"), count: deduplicateEntries(spellFilterEntries.filter(entry => entry.spellConcentration)).length },
-        { value: "ritual", label: game.i18n.localize("TOVF.Library.Ritual"), count: deduplicateEntries(spellFilterEntries.filter(entry => entry.spellRitual)).length },
-        { value: "void", label: game.i18n.localize("TOVF.Library.VoidSpells"), count: deduplicateEntries(spellFilterEntries.filter(entry => entry.spellVoid)).length }
-      ]),
-      spellFilterCounts: Object.fromEntries(Object.entries(this.#spellMulti).map(([key, selection]) => [key, {
-        total: selection.include.size + selection.exclude.size,
-        include: selection.include.size,
-        exclude: selection.exclude.size,
-        open: this.#openSpellFilter === key
-      }])),
+      spellPropertyOptions: this.#spellFilterOptions("property", spellPropertyOptionData),
+      spellFilterCounts,
       spellAdvancedFilterCount: Object.values(this.#spellMulti).reduce((count, selection) => count + selection.include.size + selection.exclude.size, 0),
       selectedSpellSort: this.#spellSort,
       subcategoryLabel: this.#category === "spells" ? "Circle" : "Subcategory",
@@ -1200,18 +1348,19 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       listLayout: this.#layout === "list",
       gridLayout: this.#layout === "grid",
       sources,
-      isGM: game.user.isGM,
-      hasLibraryIndex: Boolean(this.#indexMeta),
-      libraryIndexUpdated: this.#indexMeta?.updatedAt
-        ? new Intl.DateTimeFormat(game.i18n.lang, { dateStyle: "short", timeStyle: "short" }).format(this.#indexMeta.updatedAt)
-        : "",
-      libraryIndexCount: this.#indexMeta?.count ?? 0,
       allSourcesSelected: this.#sources === null,
       sourceSelectionLabel: this.#sources === null
         ? game.i18n.localize("TOVF.Library.AllSources")
         : game.i18n.format("TOVF.Library.SelectedSources", { count: this.#sources.size }),
       query: this.#query,
-      resultCount: entries.length,
+      resultCount,
+      page: this.#page,
+      pageCount,
+      pageStart: resultCount ? pageStart + 1 : 0,
+      pageEnd: Math.min(pageStart + this.#pageSize, resultCount),
+      pageSizes: LIBRARY_PAGE_SIZES.map(value => ({ value, label: String(value), selected: value === this.#pageSize })),
+      hasPreviousPage: this.#page > 1,
+      hasNextPage: this.#page < pageCount,
       tableBuilder: this.#tableBuilder,
       tableSelectionCount: this.#tableEntries.size
     };
@@ -1264,6 +1413,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     const selection = this.#spellMulti[key];
     return options.map(option => ({
       ...option,
+      filterKey: key,
       included: selection.include.has(option.value),
       excluded: selection.exclude.has(option.value)
     }));
@@ -1285,8 +1435,16 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     const search = this.element.querySelector("[data-library-search]");
     search?.addEventListener("input", event => {
       this.#query = event.currentTarget.value;
-      this.#filterRenderedEntries();
+      this.#page = 1;
+      this.#restoreSearchFocus = true;
+      clearTimeout(this.#searchTimer);
+      this.#searchTimer = setTimeout(() => this.render(), 150);
     });
+    if (search && this.#restoreSearchFocus) {
+      this.#restoreSearchFocus = false;
+      search.focus();
+      search.setSelectionRange(search.value.length, search.value.length);
+    }
     for (const source of this.element.querySelectorAll("[data-library-source]")) {
       source.addEventListener("change", event => {
         const value = event.currentTarget.value;
@@ -1303,6 +1461,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           else this.#sources.delete(value);
           if (availableSources.every(sourceId => this.#sources.has(sourceId))) this.#sources = null;
         }
+        this.#page = 1;
         this.render();
       });
     }
@@ -1359,13 +1518,14 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
         } else if (property === "monsterSpellcaster") {
           this.#monsterSpellcaster = event.currentTarget.value;
         }
+        this.#page = 1;
         this.render();
       });
     }
     for (const checkbox of this.element.querySelectorAll("[data-library-spell-multi]")) {
       checkbox.addEventListener("change", event => {
         const target = event.currentTarget;
-        this.#openSpellFilter = target.dataset.librarySpellMulti;
+        this.#openSpellFilter = target.dataset.librarySpellPanel;
         const selection = this.#spellMulti[target.dataset.librarySpellMulti];
         if (!selection) return;
         const mode = target.dataset.librarySpellMode;
@@ -1374,6 +1534,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
           selection[mode].add(target.value);
           selection[opposite].delete(target.value);
         } else selection[mode].delete(target.value);
+        this.#page = 1;
         this.render();
       });
     }
@@ -1395,6 +1556,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
         if (!selection) return;
         if (event.currentTarget.checked) selection.add(event.currentTarget.value);
         else selection.delete(event.currentTarget.value);
+        this.#page = 1;
         this.render();
       });
     }
@@ -1402,6 +1564,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       input.addEventListener("change", event => {
         const setters = { CrMin: value => this.#monsterCrMin = value, CrMax: value => this.#monsterCrMax = value, AcMin: value => this.#monsterAcMin = value, AcMax: value => this.#monsterAcMax = value, HpMin: value => this.#monsterHpMin = value, HpMax: value => this.#monsterHpMax = value };
         setters[event.currentTarget.dataset.libraryMonsterNumber]?.(event.currentTarget.value);
+        this.#page = 1;
         this.render();
       });
     }
@@ -1409,9 +1572,17 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
       input.addEventListener("change", event => {
         if (event.currentTarget.dataset.libraryItemPrice === "min") this.#itemPriceMin = event.currentTarget.value;
         else this.#itemPriceMax = event.currentTarget.value;
+        this.#page = 1;
         this.render();
       });
     }
+    this.element.querySelector("[data-library-page-size]")?.addEventListener("change", event => {
+      const pageSize = Number(event.currentTarget.value);
+      if (!LIBRARY_PAGE_SIZES.includes(pageSize)) return;
+      this.#pageSize = pageSize;
+      this.#page = 1;
+      this.render();
+    });
     for (const row of this.element.querySelectorAll("[data-library-entry]")) {
       const image = row.querySelector("img");
       image?.addEventListener("error", () => {
@@ -1446,34 +1617,29 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     this.element.querySelector("[data-library-spell-reset]")?.addEventListener("click", event => {
       event.preventDefault();
       this.#resetSpellFilters();
+      this.#page = 1;
       this.render();
     });
     this.element.querySelector("[data-library-monster-legendary]")?.addEventListener("click", event => {
       event.preventDefault();
       this.#monsterLegendary = !this.#monsterLegendary;
+      this.#page = 1;
       this.render();
     });
     this.element.querySelector("[data-library-monster-reset]")?.addEventListener("click", event => {
       event.preventDefault();
       this.#resetMonsterFilters();
+      this.#page = 1;
       this.render();
     });
   }
 
-  #filterRenderedEntries() {
-    const query = this.#query.trim().toLocaleLowerCase(game.i18n.lang);
-    let visible = 0;
-    for (const row of this.element.querySelectorAll("[data-library-entry]")) {
-      const matches = !query || row.dataset.name.includes(query);
-      row.hidden = !matches;
-      if (matches) visible++;
-    }
-    const count = this.element.querySelector("[data-library-count]");
-    if (count) count.textContent = game.i18n.format("TOVF.Library.Results", { count: visible });
-  }
-
   static #selectCategory(_event, target) {
+    clearTimeout(this.#searchTimer);
+    this.#restoreSearchFocus = false;
     this.#category = target.dataset.category;
+    this.#entries = null;
+    this.#page = 1;
     this.#sources = null;
     this.#query = "";
     this.#subcategory = "";
@@ -1485,6 +1651,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#magicCategory = this.#magicType = this.#magicBase = "";
     this.#itemBase = this.#itemPriceMin = this.#itemPriceMax = "";
     this.#weaponType = this.#weaponDamageType = this.#weaponProperty = this.#weaponTrait = "";
+    this.#resetMonsterFilters();
     this.render();
   }
 
@@ -1494,6 +1661,7 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#extra = "";
     this.#magicCategory = this.#magicType = this.#magicBase = "";
     this.#weaponType = this.#weaponDamageType = this.#weaponProperty = this.#weaponTrait = "";
+    this.#page = 1;
     this.render();
   }
 
@@ -1501,11 +1669,24 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     this.#detail = target.dataset.detail;
     this.#extra = "";
     this.#magicCategory = this.#magicType = this.#magicBase = "";
+    this.#page = 1;
     this.render();
   }
 
   static #selectExtra(_event, target) {
     this.#extra = target.dataset.extra;
+    this.#page = 1;
+    this.render();
+  }
+
+  static #previousPage() {
+    if (this.#page <= 1) return;
+    this.#page -= 1;
+    this.render();
+  }
+
+  static #nextPage() {
+    this.#page += 1;
     this.render();
   }
 
@@ -1571,8 +1752,9 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async #createRollTable() {
     if (!game.user.isGM || !this.#tableEntries.size) return;
+    const loadedEntries = [...libraryCategoryCache.values()].flat();
     const selected = [...this.#tableEntries]
-      .map(uuid => this.#entries.find(entry => entry.uuid === uuid))
+      .map(uuid => loadedEntries.find(entry => entry.uuid === uuid))
       .filter(Boolean);
     if (!selected.length) return;
     const name = await foundry.applications.api.DialogV2.prompt({
@@ -1616,15 +1798,26 @@ class CompendiumLibrary extends HandlebarsApplicationMixin(ApplicationV2) {
     game.packs.get(target.dataset.pack)?.render(true);
   }
 
+  invalidateIndex() {
+    this.#indexMeta = null;
+    this.#entries = null;
+    void this.render();
+  }
+
   async rebuildIndex() {
     if (!game.user.isGM) return;
     ui.notifications.info(game.i18n.localize("TOVF.Library.Index.Building"));
     try {
       const entries = await this.#scanEntries();
-      const cache = await saveLibraryIndex(entries);
-      this.#entries = entries;
-      this.#indexMeta = { updatedAt: cache.updatedAt, count: entries.length };
+      const manifest = await saveLibraryIndex(entries);
+      this.#entries = this.#category ? libraryCategoryCache.get(this.#category) ?? [] : null;
+      this.#indexMeta = {
+        updatedAt: manifest.updatedAt,
+        count: manifest.count,
+        categories: manifest.categories
+      };
       ui.notifications.info(game.i18n.format("TOVF.Library.Index.Complete", { count: entries.length }));
+      emitModuleEvent(LIBRARY_INDEX_EVENT, { version: manifest.version, updatedAt: manifest.updatedAt });
       this.render();
     } catch (error) {
       console.error(`${MODULE_ID} | Failed to build library index.`, error);
@@ -1656,6 +1849,11 @@ function addLibraryButton(_app, html) {
 }
 
 export function registerCompendiumLibrary() {
+  subscribeModuleEvent(LIBRARY_INDEX_EVENT, (_payload, event) => {
+    if (event?.senderId === game.user.id) return;
+    clearLibraryIndexCache();
+    if (library?.rendered) library.invalidateIndex();
+  });
   Hooks.on("renderCompendiumDirectory", addLibraryButton);
   Hooks.on("getHeaderControlsApplicationV2", (app, controls) => {
     if (!(app instanceof CompendiumLibrary) || !game.user.isGM || !Array.isArray(controls)) return;

@@ -8,6 +8,7 @@
 # Lokale Diagnose-, Sicherungs- und Build-Artefakte
 /debug.log
 /development/
+/tests/
 /module.release.tmp.zip
 
 # Abhängigkeiten und Testausgaben

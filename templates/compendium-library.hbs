@@ -1,7 +1,7 @@
 <div class="tovf-library-root">
   <nav class="tovf-library-categories">
     {{#each primaryCategories}}
-    <button type="button" class="{{#if active}}active{{/if}}" data-action="selectCategory" data-category="{{id}}">
+    <button type="button" class="{{#if active}}active{{/if}}" data-action="selectCategory" data-category="{{id}}" {{#unless @root.hasLibraryIndex}}disabled{{/unless}}>
       <i class="{{icon}}" inert></i>
       <span>{{localize label}}</span>
       <small>{{count}}</small>
@@ -15,7 +15,7 @@
       </summary>
       <div>
         {{#each moreCategories}}
-        <button type="button" class="{{#if active}}active{{/if}}" data-action="selectCategory" data-category="{{id}}">
+        <button type="button" class="{{#if active}}active{{/if}}" data-action="selectCategory" data-category="{{id}}" {{#unless @root.hasLibraryIndex}}disabled{{/unless}}>
           <i class="{{icon}}" inert></i><span>{{localize label}}</span><small>{{count}}</small>
         </button>
         {{/each}}
@@ -24,6 +24,16 @@
   </nav>
 
   <section class="tovf-library-content">
+    {{#unless hasLibraryIndex}}<p class="tovf-library-index-notice">{{#if isGM}}{{localize "TOVF.Library.Index.GmMissing"}}{{else}}{{localize "TOVF.Library.Index.PlayerMissing"}}{{/if}}</p>{{/unless}}
+    {{#unless categorySelected}}
+      {{#if hasLibraryIndex}}
+      <div class="tovf-library-landing">
+        <i class="fa-solid fa-books" inert></i>
+        <h2>{{localize "TOVF.Library.Landing.Title"}}</h2>
+        <p>{{localize "TOVF.Library.Landing.Hint"}}</p>
+      </div>
+      {{/if}}
+    {{else}}
     <header>
       <input type="search" value="{{query}}" placeholder="{{localize 'TOVF.Library.Search'}}" data-library-search>
       <details class="tovf-library-source-filter">
@@ -46,7 +56,6 @@
                 title="Grid View"><i class="fa-solid fa-grid-2" inert></i></button>
       </div>
     </header>
-    {{#unless hasLibraryIndex}}<p class="tovf-library-index-notice">{{#if isGM}}{{localize "TOVF.Library.Index.GmMissing"}}{{else}}{{localize "TOVF.Library.Index.PlayerMissing"}}{{/if}}</p>{{/unless}}
     {{#if tableBuilder}}
     <div class="tovf-library-table-builder">
       <strong><i class="fa-solid fa-dice-d20"></i> Rolltable-Ersteller</strong>
@@ -183,7 +192,7 @@
           <summary><span>{{label}}</span>{{#if counts.total}}<span class="tovf-library-filter-state">{{#if counts.include}}<small class="include">+{{counts.include}}</small>{{/if}}{{#if counts.exclude}}<small class="exclude">−{{counts.exclude}}</small>{{/if}}</span>{{/if}}</summary>
           <div>
             <div class="tovf-library-spell-multi-head" aria-hidden="true"><span></span><span>{{localize "TOVF.Library.SpellFilters.Include"}}</span><span>{{localize "TOVF.Library.SpellFilters.Exclude"}}</span><span></span></div>
-            {{#each options}}<label><span>{{label}}</span><input type="checkbox" value="{{value}}" data-library-spell-multi="{{../key}}" data-library-spell-mode="include" aria-label="{{localize 'TOVF.Library.SpellFilters.Include'}}: {{label}}" {{checked included}}><input type="checkbox" value="{{value}}" data-library-spell-multi="{{../key}}" data-library-spell-mode="exclude" aria-label="{{localize 'TOVF.Library.SpellFilters.Exclude'}}: {{label}}" {{checked excluded}}><small>{{count}}</small></label>{{/each}}
+            {{#each options}}<label><span>{{label}}</span><input type="checkbox" value="{{value}}" data-library-spell-panel="{{../key}}" data-library-spell-multi="{{filterKey}}" data-library-spell-mode="include" aria-label="{{localize 'TOVF.Library.SpellFilters.Include'}}: {{label}}" {{checked included}}><input type="checkbox" value="{{value}}" data-library-spell-panel="{{../key}}" data-library-spell-multi="{{filterKey}}" data-library-spell-mode="exclude" aria-label="{{localize 'TOVF.Library.SpellFilters.Exclude'}}: {{label}}" {{checked excluded}}><small>{{count}}</small></label>{{/each}}
           </div>
         </details>
         {{/inline}}
@@ -203,7 +212,22 @@
     </details>
     {{/if}}
     </div>
-    <p class="hint" data-library-count>{{localize "TOVF.Library.Results" count=resultCount}}</p>
+    <div class="tovf-library-pagination">
+      <p class="hint" data-library-count>{{localize "TOVF.Library.Pagination.Range" start=pageStart end=pageEnd count=resultCount}}</p>
+      <label>
+        <span>{{localize "TOVF.Library.Pagination.PageSize"}}</span>
+        <select data-library-page-size>
+          {{#each pageSizes}}<option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>{{/each}}
+        </select>
+      </label>
+      {{#if pageCount}}
+      <nav aria-label="{{localize 'TOVF.Library.Pagination.Navigation'}}">
+        <button type="button" data-action="previousPage" title="{{localize 'TOVF.Library.Pagination.Previous'}}" {{#unless hasPreviousPage}}disabled{{/unless}}><i class="fa-solid fa-chevron-left" inert></i></button>
+        <span>{{localize "TOVF.Library.Pagination.Status" page=page pages=pageCount}}</span>
+        <button type="button" data-action="nextPage" title="{{localize 'TOVF.Library.Pagination.Next'}}" {{#unless hasNextPage}}disabled{{/unless}}><i class="fa-solid fa-chevron-right" inert></i></button>
+      </nav>
+      {{/if}}
+    </div>
 
     <ol class="tovf-library-results {{#if gridLayout}}grid{{/if}}">
       {{#each entries}}
@@ -211,7 +235,7 @@
           data-name="{{lowerName}}">
         {{#if @root.tableBuilder}}<span class="tovf-library-table-select-slot"><input class="tovf-library-table-select" type="checkbox"
           data-table-entry-select aria-label="{{name}} für Rolltable auswählen" {{checked tableSelected}}></span>{{/if}}
-        <img src="{{img}}" alt="">
+        <img src="{{img}}" alt="" loading="lazy" decoding="async">
         <button type="button" data-action="openDocument">
           <strong>{{name}}{{#if spellConcentration}} <abbr class="tovf-spell-marker concentration" title="Concentration">C</abbr>{{/if}}{{#if spellRitual}} <abbr class="tovf-spell-marker ritual" title="Ritual">R</abbr>{{/if}}</strong>
           <span title="{{packLabel}}">{{packLabel}}</span>
@@ -227,5 +251,6 @@
       <li class="empty">{{localize "TOVF.Library.Empty"}}</li>
       {{/each}}
     </ol>
+    {{/unless}}
   </section>
 </div>

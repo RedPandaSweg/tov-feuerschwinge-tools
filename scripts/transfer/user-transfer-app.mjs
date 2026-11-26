@@ -78,7 +78,7 @@ export async function reviewSessionUsers(bundle, sessionActors = []) {
     buttons: [
       { action: "import", label: uiText("TOVF.Interface.IncludeUsers_3bb4a2", "Benutzer mitnehmen"), callback: (_event, button) => { const data = new FormData(button.form); return { choices: Object.fromEntries(bundle.users.map(u => [u.id, data.get(`user.${u.id}`)])), actorUserChoices: Object.fromEntries(actorAssignments.map(({ source }) => [source.transferId, data.get(`actorUser.${source.transferId}`)])) }; } },
       { action: "skip", label: uiText("TOVF.Interface.ContinueWithoutUsers_85ba3f", "Ohne Benutzer fortfahren"), callback: () => ({ skip: true }) },
-      { action: "cancel", label: uiText("TOVF.Interface.Cancel_07af7c", "Abbrechen"), callback: () => null }
+      { action: "cancel", label: uiText("TOVF.Interface.Cancel_07af7c", "Abbrechen"), callback: () => ({ cancel: true }) }
     ], rejectClose: false
   });
 }

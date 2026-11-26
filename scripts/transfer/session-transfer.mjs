@@ -829,7 +829,7 @@ export async function importSession(file) {
     && !bundle.users?.users?.some(user => user.character?.id === entry.transferId));
   if (bundle.users?.users?.length || hasUnassignedParticipants) {
     const selection = await reviewSessionUsers(bundle.users, bundle.actors);
-    if (!selection) return;
+    if (!selection || selection.cancel) return;
     if (!selection.skip) {
       actorUserChoices = selection.actorUserChoices ?? {};
       if (bundle.users?.users?.length) userImport = await importUserBundle(bundle.users, { choices: selection.choices, applyActors: false, sessionPlayers: true });
